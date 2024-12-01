@@ -1,7 +1,6 @@
 
 public class AutoMapper
 {
-   // Método para mapear uma lista de entidades para uma lista de DTOs de forma dinâmica
    public static List<TDto> MapEntitiesToDtoList<TEntity, TDto>(List<TEntity> entities)
        where TEntity : class
        where TDto : class, new()

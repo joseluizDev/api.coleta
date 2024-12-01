@@ -20,14 +20,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return new UsuarioResponseDTO
-        {
-            Id = usuario.Id,
-            NomeCompleto = usuario.NomeCompleto,
-            Email = usuario.Email,
-            CPF = usuario.CPF,
-            Telefone = usuario.Telefone
-        };
+        return AutoMapper.MapEntityToDto<Usuario, UsuarioResponseDTO>(usuario);
     }
 
     public UsuarioResponseDTO? Login(string login, string senha)
@@ -37,14 +30,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return new UsuarioResponseDTO
-        {
-            Id = usuario.Id,
-            NomeCompleto = usuario.NomeCompleto,
-            Email = usuario.Email,
-            CPF = usuario.CPF,
-            Telefone = usuario.Telefone
-        };
+        return AutoMapper.MapEntityToDto<Usuario, UsuarioResponseDTO>(usuario);
     }
 
     public bool Cadastrar(UsuarioResquestDTO usuario)
@@ -84,55 +70,9 @@ public class UsuarioService : ServiceBase
                 return false;
             }
         }
-
-
         var usuarioEntidade = new Usuario(usuario);
         _usuarioRepository.Atualizar(usuarioEntidade);
         UnitOfWork.Commit();
         return true;
-    }
-
-
-
-}
-public class DynamicMapper
-{
-    // Método para mapear uma lista de entidades para uma lista de DTOs de forma dinâmica
-    public static List<TDto> MapToDtoList<TEntity, TDto>(List<TEntity> entities)
-        where TEntity : class
-        where TDto : class, new()
-    {
-        var dtoList = new List<TDto>();
-
-        foreach (var entity in entities)
-        {
-            var dto = MapToDto<TEntity, TDto>(entity);
-            dtoList.Add(dto);
-        }
-
-        return dtoList;
-    }
-
-    public static TDto MapToDto<TEntity, TDto>(TEntity entity)
-        where TEntity : class
-        where TDto : class, new()
-    {
-        if (entity == null) return null;
-
-        var dto = new TDto();
-
-        var entityProperties = entity.GetType().GetProperties();
-        var dtoProperties = dto.GetType().GetProperties();
-
-        foreach (var entityProperty in entityProperties)
-        {
-            var dtoProperty = dtoProperties.FirstOrDefault(p => p.Name == entityProperty.Name);
-            if (dtoProperty != null)
-            {
-                dtoProperty.SetValue(dto, entityProperty.GetValue(entity));
-            }
-        }
-
-        return dto;
     }
 }
