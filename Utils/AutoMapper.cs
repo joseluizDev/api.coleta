@@ -1,41 +1,48 @@
-
 public class AutoMapper
 {
-   public static List<TDto> MapEntitiesToDtoList<TEntity, TDto>(List<TEntity> entities)
-       where TEntity : class
-       where TDto : class, new()
+   public static dynamic Map<TSource, TDestination>(object sourceObjects)
+       where TSource : class
+       where TDestination : class, new()
    {
-      var dtoList = new List<TDto>();
-
-      foreach (var entity in entities)
+      if (sourceObjects is IEnumerable<TSource> sourceList)
       {
-         var dto = MapEntityToDto<TEntity, TDto>(entity);
-         dtoList.Add(dto);
+         var destinationList = new List<TDestination>();
+         foreach (var source in sourceList)
+         {
+            var destination = MapSingle<TSource, TDestination>(source);
+            destinationList.Add(destination);
+         }
+         return destinationList;
       }
-
-      return dtoList;
+      else if (sourceObjects is TSource source)
+      {
+         return MapSingle<TSource, TDestination>(source);
+      }
+      else
+      {
+         throw new ArgumentException("O parâmetro não é uma lista nem um único objeto do tipo esperado.");
+      }
    }
 
-   public static TDto MapEntityToDto<TEntity, TDto>(TEntity entity)
-       where TEntity : class
-       where TDto : class, new()
+   private static TDestination MapSingle<TSource, TDestination>(TSource source)
+       where TSource : class
+       where TDestination : class, new()
    {
-      if (entity == null) return new TDto();
+      if (source == null) return new TDestination();
 
-      var dto = new TDto();
+      var destination = new TDestination();
+      var sourceProperties = source.GetType().GetProperties();
+      var destinationProperties = destination.GetType().GetProperties();
 
-      var entityProperties = entity.GetType().GetProperties();
-      var dtoProperties = dto.GetType().GetProperties();
-
-      foreach (var entityProperty in entityProperties)
+      foreach (var sourceProperty in sourceProperties)
       {
-         var dtoProperty = dtoProperties.FirstOrDefault(p => p.Name == entityProperty.Name);
-         if (dtoProperty != null)
+         var destinationProperty = destinationProperties.FirstOrDefault(p => p.Name == sourceProperty.Name);
+         if (destinationProperty != null)
          {
-            dtoProperty.SetValue(dto, entityProperty.GetValue(entity));
+            destinationProperty.SetValue(destination, sourceProperty.GetValue(source));
          }
       }
 
-      return dto;
+      return destination;
    }
 }

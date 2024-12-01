@@ -20,7 +20,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return AutoMapper.MapEntityToDto<Usuario, UsuarioResponseDTO>(usuario);
+        return AutoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
     }
 
     public UsuarioResponseDTO? Login(string login, string senha)
@@ -30,7 +30,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return AutoMapper.MapEntityToDto<Usuario, UsuarioResponseDTO>(usuario);
+        return AutoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
     }
 
     public bool Cadastrar(UsuarioResquestDTO usuario)
