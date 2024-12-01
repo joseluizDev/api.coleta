@@ -1,0 +1,6 @@
+@api.coleta_HostAddress = http://localhost:5004
+
+GET {{api.coleta_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
