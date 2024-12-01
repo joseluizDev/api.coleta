@@ -7,9 +7,12 @@ using whtsapp.Data.Repository;
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
-    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
+    private readonly AutoMapper _autoMapper;
+    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, AutoMapper autoMapper) : base(unitOfWork)
     {
         _usuarioRepository = usuarioRepository;
+        _autoMapper = autoMapper;
+
     }
 
     public UsuarioResponseDTO? BuscarUsuarioPorId(Guid id)
@@ -20,7 +23,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return AutoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
+        return _autoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
     }
 
     public UsuarioResponseDTO? Login(string login, string senha)
@@ -30,7 +33,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return AutoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
+        return _autoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
     }
 
     public bool Cadastrar(UsuarioResquestDTO usuario)
@@ -47,7 +50,7 @@ public class UsuarioService : ServiceBase
             return false;
         }
 
-        var usuarioEntidade = new Usuario(usuario);
+        var usuarioEntidade = _autoMapper.Map<UsuarioResquestDTO, Usuario>(usuario);
         _usuarioRepository.Adicionar(usuarioEntidade);
         UnitOfWork.Commit();
         return true;
@@ -70,7 +73,7 @@ public class UsuarioService : ServiceBase
                 return false;
             }
         }
-        var usuarioEntidade = new Usuario(usuario);
+        var usuarioEntidade = _autoMapper.Map<Usuario, UsuarioResquestDTO>(usuario);
         _usuarioRepository.Atualizar(usuarioEntidade);
         UnitOfWork.Commit();
         return true;

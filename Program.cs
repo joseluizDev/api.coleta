@@ -39,6 +39,8 @@ builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<ColetaRepository>();
 builder.Services.AddScoped<ColetaService>();
 
+builder.Services.AddScoped<AutoMapper>();
+
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 builder.Services.AddCors(options =>

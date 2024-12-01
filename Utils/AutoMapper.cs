@@ -1,6 +1,6 @@
 public class AutoMapper
 {
-   public static dynamic Map<TSource, TDestination>(object sourceObjects)
+   public dynamic Map<TSource, TDestination>(object sourceObjects)
        where TSource : class
        where TDestination : class, new()
    {
