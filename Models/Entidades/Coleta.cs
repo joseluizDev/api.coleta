@@ -20,12 +20,7 @@ namespace api.coleta.Models.Entidades
         {
         }
 
-        public Coleta(ColetasRequestDTO coleta)
-        {
-            Nome = coleta.Nome;
-            Lat = coleta.location.Lat;
-            Lng = coleta.location.Lng;
-        }
+        
     }
 }
 

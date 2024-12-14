@@ -11,10 +11,6 @@ namespace whtsapp.Data.Repository
         {
             return Context.Usuarios.FirstOrDefault(x => x.Email == login && x.Senha == senha);
         }
-        public Usuario? BuscarPorID(Guid id)
-        {
-            return Context.Usuarios.FirstOrDefault(x => x.Id == id);
-        }
         public Usuario? ObterPorEmail(string email)
         {
             return Context.Usuarios.FirstOrDefault(x => x.Email == email);

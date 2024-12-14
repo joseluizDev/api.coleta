@@ -22,7 +22,7 @@ builder.Services.AddOutputCache();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    var connectionString = "server=100.42.187.253;port=3310;database=server;user=mariadb;password=123456789;";
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var versao = ServerVersion.AutoDetect(connectionString);
 
     options.UseMySql(connectionString, versao);
