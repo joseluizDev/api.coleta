@@ -41,13 +41,13 @@ public class UsuarioService : ServiceBase
         var usuarioExistente = _usuarioRepository.ObterPorEmail(usuario.Email);
         if (usuarioExistente != null)
         {
-            return false;
+            throw new Exception("Email já cadastrado");
         }
 
         var cpfExistente = _usuarioRepository.ObterPorCpf(usuario.CPF);
         if (cpfExistente != null)
         {
-            return false;
+            throw new Exception("CPF já cadastrado");
         }
 
         var usuarioEntidade = _autoMapper.Map<UsuarioResquestDTO, Usuario>(usuario);
