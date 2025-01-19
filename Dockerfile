@@ -11,7 +11,7 @@ WORKDIR /src
 
 # Copiar apenas o arquivo de projeto para restaurar as dependências primeiro (melhora o cache do Docker)
 COPY ["api.coleta.csproj", "./"]
-RUN dotnet restore "api.coleta/api.coleta.csproj"
+RUN dotnet restore "./api.coleta.csproj"
 
 # Copiar o restante do código
 COPY . .
