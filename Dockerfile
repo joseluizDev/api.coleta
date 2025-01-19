@@ -16,6 +16,10 @@ COPY ["api.posto.csproj", "./"]
 RUN dotnet restore "./api.posto.csproj"
 COPY . .
 WORKDIR "/src/"
+
+RUN ls -la
+
+
 RUN dotnet build "./api.posto.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Esta fase é usada para publicar o projeto de serviço a ser copiado para a fase final
