@@ -13,7 +13,7 @@ WORKDIR /src
 COPY ["api.coleta.csproj", "./"]
 
 # Passo 2: Restaurar dependências
-RUN ls -la api.coleta/ && dotnet restore "./api.coleta.csproj"
+RUN ls -la api.coleta/ && dotnet restore "api.coleta.csproj"
 
 # Passo 3: Copiar o restante do código
 COPY . .
