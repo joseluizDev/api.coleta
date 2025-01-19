@@ -1,4 +1,4 @@
-# Base para a execução da aplicação
+# Base para execução
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
@@ -9,12 +9,16 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copiar apenas o arquivo de projeto para restaurar as dependências primeiro (melhora o cache do Docker)
+# Passo 1: Copiar o arquivo de projeto
 COPY ["api.coleta.csproj", "./"]
-RUN dotnet restore "./api.coleta.csproj"
 
-# Copiar o restante do código
+# Passo 2: Restaurar dependências
+RUN ls -la api.coleta/ && dotnet restore "./api.coleta.csproj"
+
+# Passo 3: Copiar o restante do código
 COPY . .
+
+# Passo 4: Compilar o projeto
 WORKDIR "/src/api.coleta"
 RUN dotnet build "api.coleta.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
