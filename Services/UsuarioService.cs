@@ -2,17 +2,18 @@
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
+using AutoMapper;
 using whtsapp.Data.Repository;
-
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
-    private readonly AutoMapper _autoMapper;
-    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, AutoMapper autoMapper) : base(unitOfWork)
+    private readonly IMapper _mapper;
+
+    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IMapper mapper)
+        : base(unitOfWork)
     {
         _usuarioRepository = usuarioRepository;
-        _autoMapper = autoMapper;
-
+        _mapper = mapper;
     }
 
     public UsuarioResponseDTO? BuscarUsuarioPorId(Guid id)
@@ -23,7 +24,9 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return _autoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
+
+        // Mapeando a entidade para o DTO
+        return _mapper.Map<UsuarioResponseDTO>(usuario);
     }
 
     public UsuarioResponseDTO? Login(string login, string senha)
@@ -33,7 +36,9 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return _autoMapper.Map<Usuario, UsuarioResponseDTO>(usuario);
+
+        // Mapeando a entidade para o DTO
+        return _mapper.Map<UsuarioResponseDTO>(usuario);
     }
 
     public bool Cadastrar(UsuarioResquestDTO usuario)
@@ -50,7 +55,8 @@ public class UsuarioService : ServiceBase
             throw new Exception("CPF já cadastrado");
         }
 
-        var usuarioEntidade = _autoMapper.Map<UsuarioResquestDTO, Usuario>(usuario);
+        // Mapeando o DTO para a entidade
+        var usuarioEntidade = _mapper.Map<Usuario>(usuario);
         _usuarioRepository.Adicionar(usuarioEntidade);
         UnitOfWork.Commit();
         return true;
@@ -73,7 +79,9 @@ public class UsuarioService : ServiceBase
                 return false;
             }
         }
-        var usuarioEntidade = _autoMapper.Map<Usuario, UsuarioResquestDTO>(usuario);
+
+        // Atualizando a entidade com os dados do DTO
+        var usuarioEntidade = _mapper.Map(usuario, usuarioExistente);
         _usuarioRepository.Atualizar(usuarioEntidade);
         UnitOfWork.Commit();
         return true;

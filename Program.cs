@@ -39,7 +39,7 @@ builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<ColetaRepository>();
 builder.Services.AddScoped<ColetaService>();
 
-builder.Services.AddScoped<AutoMapper>();
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
