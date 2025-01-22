@@ -15,7 +15,7 @@ WORKDIR /src
 COPY ["api.coleta.csproj", "./"]
 RUN dotnet restore "./api.coleta.csproj"
 COPY . .
-WORKDIR "/src/api.posto"
+WORKDIR "/src/api.coleta"
 RUN dotnet build "./api.coleta.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Esta fase é usada para publicar o projeto de serviço a ser copiado para a fase final
