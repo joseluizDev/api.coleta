@@ -20,10 +20,11 @@ builder.Services.AddScoped<ApplicationDbContext>();
 builder.Services.AddOutputCache();
 
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-
+    
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var versao = ServerVersion.AutoDetect(connectionString);
 
