@@ -12,7 +12,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["api.posto/api.posto.csproj", "api.posto/"]
+COPY ["api.posto.csproj", "api.posto/"]
 RUN dotnet restore "./api.posto/api.posto.csproj"
 COPY . .
 WORKDIR "/src/api.posto"
