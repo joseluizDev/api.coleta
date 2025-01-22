@@ -21,7 +21,6 @@ builder.Services.AddOutputCache();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var versao = ServerVersion.AutoDetect(connectionString);
 
