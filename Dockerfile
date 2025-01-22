@@ -33,7 +33,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY ./*.csproj ./api.coleta/
 RUN dotnet restore api.coleta/api.coleta.csproj
-COPY ./ ./
+COPY . ./
 WORKDIR /src/api.coleta
 RUN dotnet publish -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
