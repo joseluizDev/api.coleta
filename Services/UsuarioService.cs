@@ -2,18 +2,15 @@
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
-using AutoMapper;
 using whtsapp.Data.Repository;
+using AutoMapper;
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
-    private readonly IMapper _mapper;
-
     public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IMapper mapper)
-        : base(unitOfWork)
+        : base(unitOfWork, mapper)
     {
         _usuarioRepository = usuarioRepository;
-        _mapper = mapper;
     }
 
     public UsuarioResponseDTO? BuscarUsuarioPorId(Guid id)
@@ -25,7 +22,6 @@ public class UsuarioService : ServiceBase
             return null;
         }
 
-        // Mapeando a entidade para o DTO
         return _mapper.Map<UsuarioResponseDTO>(usuario);
     }
 
@@ -37,7 +33,6 @@ public class UsuarioService : ServiceBase
             return null;
         }
 
-        // Mapeando a entidade para o DTO
         return _mapper.Map<UsuarioResponseDTO>(usuario);
     }
 
@@ -55,35 +50,10 @@ public class UsuarioService : ServiceBase
             throw new Exception("CPF já cadastrado");
         }
 
-        // Mapeando o DTO para a entidade
         var usuarioEntidade = _mapper.Map<Usuario>(usuario);
         _usuarioRepository.Adicionar(usuarioEntidade);
         UnitOfWork.Commit();
         return true;
     }
 
-    public bool Atualizar(UsuarioResquestDTO usuario)
-    {
-        var usuarioExistente = _usuarioRepository.ObterPorId(usuario.Id);
-        if (usuarioExistente == null)
-        {
-            return false;
-        }
-
-        if (usuarioExistente.Id != usuario.Id)
-        {
-            var cpfExistente = _usuarioRepository.ObterPorCpf(usuario.CPF);
-
-            if (cpfExistente == null)
-            {
-                return false;
-            }
-        }
-
-        // Atualizando a entidade com os dados do DTO
-        var usuarioEntidade = _mapper.Map(usuario, usuarioExistente);
-        _usuarioRepository.Atualizar(usuarioEntidade);
-        UnitOfWork.Commit();
-        return true;
-    }
 }

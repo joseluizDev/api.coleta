@@ -1,5 +1,6 @@
 ﻿using api.coleta.Models.DTOs;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace api.coleta.Models.Entidades;
 
@@ -19,6 +20,11 @@ public class Usuario : Entity
 
     [MaxLength(100)]
     public string Senha { get; set; }
+
+    [ForeignKey(nameof(UsuarioSupervisor))]
+    public Guid? UsuarioSupervisorID { get; set; }
+    public Usuario? UsuarioSupervisor { get; set; }
+
     public Usuario()
     {
     }
@@ -30,26 +36,6 @@ public class Usuario : Entity
         Telefone = usuario.Telefone;
         Senha = usuario.Senha;
         Validador();
-    }
-
-    public void AtualizarSenha(string senha)
-    {
-        Senha = senha;
-    }
-
-    public void AtualizarTelefone(string telefone)
-    {
-        Telefone = telefone;
-    }
-
-    public void AtualizarEmail(string email)
-    {
-        Email = email;
-    }
-
-    public void AtualizarNomeCompleto(string nomeCompleto)
-    {
-        NomeCompleto = nomeCompleto;
     }
 
     private void Validador()

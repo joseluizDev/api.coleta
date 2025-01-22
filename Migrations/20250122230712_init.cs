@@ -52,13 +52,24 @@ namespace api.coleta.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Senha = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    UsuarioSupervisorID = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Usuarios", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Usuarios_Usuarios_UsuarioSupervisorID",
+                        column: x => x.UsuarioSupervisorID,
+                        principalTable: "Usuarios",
+                        principalColumn: "Id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_UsuarioSupervisorID",
+                table: "Usuarios",
+                column: "UsuarioSupervisorID");
         }
 
         /// <inheritdoc />

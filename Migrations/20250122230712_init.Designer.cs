@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250122132714_init")]
+    [Migration("20250122230712_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -97,9 +97,23 @@ namespace api.coleta.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<Guid?>("UsuarioSupervisorID")
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("UsuarioSupervisorID");
+
                     b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Usuario", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "UsuarioSupervisor")
+                        .WithMany()
+                        .HasForeignKey("UsuarioSupervisorID");
+
+                    b.Navigation("UsuarioSupervisor");
                 });
 #pragma warning restore 612, 618
         }

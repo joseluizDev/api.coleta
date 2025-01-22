@@ -36,14 +36,6 @@ namespace api.coleta.Controllers
             return Ok(usuarioCadastrado);
         }
 
-        [HttpGet]
-        [Route("atualziar")]
-        public IActionResult Atualizar([FromBody] UsuarioResquestDTO usuario)
-        {
-            var usuarioAtualizado = _usuarioService.Atualizar(usuario);
-            if (usuarioAtualizado == null)
-                return BadRequest("Erro ao atualizar usuário");
-            return Ok(usuarioAtualizado);
-        }
+       
     }
 }

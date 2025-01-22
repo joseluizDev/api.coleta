@@ -38,6 +38,11 @@ namespace whtsapp.Data.Repositories
         {
             return DbSet.FirstOrDefault(x => x.Id == id);
         }
+
+        public void Deletar(Entity entity)
+        {
+            Context.Remove(entity);
+        }
     }
 }
 

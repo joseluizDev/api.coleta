@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-
+﻿
 namespace api.coleta.models
 {
-    public class ColetasRequestDTO
+    public class ColetaRequestDTO
     {
         public string Nome { get; set; }
         public string Endereco { get; set; }
@@ -12,7 +11,7 @@ namespace api.coleta.models
         public string Place_Id { get; set; }
     }
 
-    public class ColetasResponseDTO
+    public class ColetaResponseDTO
     {
         public Guid Id { get; set; }
         public string Nome { get; set; }
