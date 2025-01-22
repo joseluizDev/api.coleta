@@ -11,12 +11,12 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copia o arquivo de projeto e restaura as dependências
-COPY ["api.coleta/api.coleta.csproj", "api.coleta/"]
-RUN dotnet restore "./api.coleta/api.coleta.csproj"
+COPY ["api.coleta.csproj", "./"]
+RUN dotnet restore "./api.coleta.csproj"
 
 # Copia o restante do código para o container e compila
 COPY . .
-WORKDIR "/src/api.coleta"
+WORKDIR "/src"
 RUN dotnet build "./api.coleta.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publicação da aplicação
