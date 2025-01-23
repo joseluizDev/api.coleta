@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using api.coleta.models;
 
 namespace api.coleta.Models.Entidades
 {
@@ -19,8 +18,6 @@ namespace api.coleta.Models.Entidades
         public Coleta()
         {
         }
-
-        
     }
 }
 

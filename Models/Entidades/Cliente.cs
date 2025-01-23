@@ -1,11 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace api.cliente.Models.Entidades
+namespace api.coleta.Models.Entidades
 {
    public class Cliente : Entity
    {
       [MaxLength(255)]
-
       public string Nome { get; set; }
       [MaxLength(11)]
       public string CPF { get; set; }

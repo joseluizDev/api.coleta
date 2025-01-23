@@ -1,11 +1,8 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
-using api.cliente.Models.Entidades;
 using api.fazenda.Models.Entidades;
 
-
-namespace
- api.VinculoClienteFazenda.Models.Entidades
+namespace api.coleta.Models.Entidades
 {
    public class VinculoClienteFazenda : Entity
    {

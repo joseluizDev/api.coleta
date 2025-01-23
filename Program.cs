@@ -3,8 +3,8 @@ using api.coleta.repositories;
 using api.coleta.Repositories; // Possível duplicação ou erro de digitação.
 using api.coleta.Settings;
 using Microsoft.EntityFrameworkCore;
-using whtsapp.Data;
-using whtsapp.Data.Repository;
+using api.coleta.Data;
+using api.coleta.Data.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +24,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    
+
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var versao = ServerVersion.AutoDetect(connectionString);
 

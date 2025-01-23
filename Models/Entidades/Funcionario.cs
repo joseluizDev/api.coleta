@@ -1,9 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace api.funcionario.Models.Entidades
+namespace api.coleta.Models.Entidades
 {
-
    public class Funcionario : Entity
    {
       [MaxLength(100)]

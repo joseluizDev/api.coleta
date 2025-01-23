@@ -1,7 +1,7 @@
 ﻿using api.coleta.Models.Entidades;
-using whtsapp.Data.Repositories;
+using api.coleta.Data.Repositories;
 
-namespace whtsapp.Data.Repository
+namespace api.coleta.Data.Repository
 {
     public class UsuarioRepository : GenericRepository<Usuario>
     {

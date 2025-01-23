@@ -1,6 +1,6 @@
 ﻿using api.coleta.Models.Entidades;
 using Microsoft.AspNetCore.Mvc;
-using whtsapp.Data.Repositories;
+using api.coleta.Data.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;

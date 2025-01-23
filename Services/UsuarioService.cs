@@ -2,7 +2,7 @@
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
-using whtsapp.Data.Repository;
+using api.coleta.Data.Repository;
 using AutoMapper;
 public class UsuarioService : ServiceBase
 {

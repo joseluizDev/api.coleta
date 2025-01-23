@@ -1,4 +1,4 @@
-﻿namespace whtsapp.Data
+﻿namespace api.coleta.Data
 {
     public class UnitOfWorkImplements : IUnitOfWork, IDisposable
     {
@@ -29,7 +29,7 @@
         }
 
         public void Dispose()
-        {                        
+        {
         }
     }
 }

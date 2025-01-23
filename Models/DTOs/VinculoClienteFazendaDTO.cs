@@ -1,4 +1,4 @@
-namespace api.VinculoClienteFazenda.Models.DTOs
+namespace api.vinculoClienteFazenda.Models.DTOs
 {
    public class VinculoRequestDTO
    {

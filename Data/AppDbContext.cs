@@ -1,4 +1,5 @@
 ﻿using api.coleta.Models.Entidades;
+using api.fazenda.Models.Entidades;
 using Microsoft.EntityFrameworkCore;
 
 public class ApplicationDbContext : DbContext
@@ -24,5 +25,10 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Coleta> Coletas { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
-
+    public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<Fazenda> Fazendas { get; set; }
+    public DbSet<Talhao> Talhoes { get; set; }
+    public DbSet<VinculoClienteFazenda> VinculoClienteFazendas { get; set; }
+    public DbSet<Safra> Safras { get; set; }
+    public DbSet<Funcionario> Funcionarios { get; set; }
 }

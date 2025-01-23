@@ -1,11 +1,10 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using api.coleta.Models.Entidades;
 using api.fazenda.Models.Entidades;
 
 
-namespace api.safra.Models.Entidades
+namespace api.coleta.Models.Entidades
 {
    public class Safra : Entity
    {

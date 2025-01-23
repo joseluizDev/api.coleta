@@ -1,6 +1,6 @@
 ﻿using api.coleta.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using whtsapp.Controllers;
+using api.coleta.Controllers;
 
 namespace api.coleta.Controllers
 {
@@ -36,6 +36,6 @@ namespace api.coleta.Controllers
             return Ok(usuarioCadastrado);
         }
 
-       
+
     }
 }

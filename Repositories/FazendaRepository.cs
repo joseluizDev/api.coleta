@@ -1,5 +1,5 @@
 using api.fazenda.Models.Entidades;
-using whtsapp.Data.Repositories;
+using api.coleta.Data.Repositories;
 
 namespace api.fazenda.repositories
 {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace whtsapp.Controllers
+namespace api.coleta.Controllers
 {
     public abstract class BaseController : ControllerBase
     {

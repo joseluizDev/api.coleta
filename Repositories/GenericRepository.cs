@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 
-namespace whtsapp.Data.Repositories
+namespace api.coleta.Data.Repositories
 {
     public abstract class GenericRepository<T> where T : Entity
     {

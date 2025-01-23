@@ -4,7 +4,7 @@ using api.coleta.Models.Entidades;
 using api.fazenda.Models.Entidades;
 
 
-namespace api.talhao.Models.Entidades
+namespace api.coleta.Models.Entidades
 {
    public class Talhao : Entity
    {
