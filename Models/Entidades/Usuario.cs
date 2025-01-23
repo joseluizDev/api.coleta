@@ -20,11 +20,6 @@ public class Usuario : Entity
 
     [MaxLength(100)]
     public string Senha { get; set; }
-
-    [ForeignKey(nameof(UsuarioSupervisor))]
-    public Guid? UsuarioSupervisorID { get; set; }
-    public Usuario? UsuarioSupervisor { get; set; }
-
     public Usuario()
     {
     }

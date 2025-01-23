@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using api.cliente.Models.Entidades;
 using api.coleta.Models.Entidades;
 
 namespace api.fazenda.Models.Entidades
@@ -15,9 +16,9 @@ namespace api.fazenda.Models.Entidades
       [MaxLength(12)]
       public double Lng { get; set; }
 
-      [ForeignKey("Usuarios")]
-      public Guid UsuarioID { get; set; }
-      public virtual Usuario Usuario { get; set; }
+      [ForeignKey("Cliente")]
+      public Guid ClienteID { get; set; }
+      public virtual Cliente Cliente { get; set; }
       public Fazenda()
       {
       }
