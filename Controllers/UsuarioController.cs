@@ -52,14 +52,26 @@ namespace api.coleta.Controllers
         [Authorize]
         public IActionResult BuscarUsuarioPorId()
         {
-            var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.Name);
-            if (userIdClaim == null)
-                return BadRequest("Usuário não encontrado");
-            var userId = userIdClaim.Value;
-            if (!Guid.TryParse(userId, out var userIdGuid))
-                return BadRequest("ID de usuário inválido");
-            var usuario = _usuarioService.BuscarUsuarioPorId(userIdGuid);
-            return Ok(usuario);
+            try
+            {
+                var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.Name);
+                if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
+                    return BadRequest("Reivindicação de ID de usuário não encontrada ou inválida.");
+                if (!Guid.TryParse(userIdClaim.Value, out var userIdGuid))
+                    return BadRequest("ID de usuário inválido.");
+
+                var usuario = _usuarioService.BuscarUsuarioPorId(userIdGuid);
+                if (usuario == null)
+                    return NotFound("Usuário não encontrado.");
+
+                return Ok(usuario);
+            }
+            catch (Exception ex)
+            {
+
+                return StatusCode(500, "Ocorreu um erro ao processar sua solicitação.");
+            }
         }
+
     }
 }
