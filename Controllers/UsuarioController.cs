@@ -22,9 +22,9 @@ namespace api.coleta.Controllers
 
         [HttpGet]
         [Route("login")]
-        public IActionResult Login(string email, string senha)
+        public IActionResult Login([FromQuery] UsuarioLoginDTO usuarioLogin)
         {
-            var usuario = _usuarioService.Login(email, senha);
+            var usuario = _usuarioService.Login(usuarioLogin.Email, usuarioLogin.Senha);
             if (usuario == null)
                 return NotFound("Usuário não encontrado");
             return Ok(usuario);
