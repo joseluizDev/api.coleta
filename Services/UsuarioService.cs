@@ -17,16 +17,14 @@ public class UsuarioService : ServiceBase
         _jwtToken = jwtToken;
     }
 
-    public String? BuscarUsuarioPorId(Guid id)
+    public UsuarioResquestDTO? BuscarUsuarioPorId(Guid id)
     {
         var usuario = _usuarioRepository.ObterPorId(id);
-
         if (usuario == null)
         {
             return null;
         }
-        return _jwtToken.GerarToken(usuario);
-
+        return _mapper.Map<UsuarioResquestDTO>(usuario);
     }
 
     public String? Login(string email, string senha)
