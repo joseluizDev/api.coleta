@@ -35,7 +35,5 @@ namespace api.coleta.Controllers
                 return BadRequest("Erro ao cadastrar usuário");
             return Ok(usuarioCadastrado);
         }
-
-
     }
 }

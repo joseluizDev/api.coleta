@@ -55,5 +55,4 @@ public class UsuarioService : ServiceBase
         UnitOfWork.Commit();
         return true;
     }
-
 }
