@@ -59,4 +59,9 @@ public class UsuarioService : ServiceBase
         UnitOfWork.Commit();
         return true;
     }
+
+    internal object BuscarUsuarioPorId(string userId)
+    {
+        throw new NotImplementedException();
+    }
 }

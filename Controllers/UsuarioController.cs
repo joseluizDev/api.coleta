@@ -53,8 +53,13 @@ namespace api.coleta.Controllers
         public IActionResult BuscarUsuarioPorId()
         {
             var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.Name);
-
-            return Ok(new { userId = userIdClaim.Value });
+            if (userIdClaim == null)
+                return BadRequest("Usuário não encontrado");
+            var userId = userIdClaim.Value;
+            if (!Guid.TryParse(userId, out var userIdGuid))
+                return BadRequest("ID de usuário inválido");
+            var usuario = _usuarioService.BuscarUsuarioPorId(userIdGuid);
+            return Ok(usuario);
         }
     }
 }
