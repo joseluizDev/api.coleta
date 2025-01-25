@@ -54,16 +54,7 @@ namespace api.coleta.Controllers
         {
             var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.Name);
 
-            if (userIdClaim == null)
-                return Unauthorized("Token inválido ou expirado");
-
-            var userId = Guid.Parse(userIdClaim.Value);
-            var usuario = _usuarioService.BuscarUsuarioPorId(userId);
-
-            if (usuario == null)
-                return NotFound("Usuário não encontrado");
-
-            return Ok(usuario);
+            return Ok(new { userId = userIdClaim.Value });
         }
     }
 }
