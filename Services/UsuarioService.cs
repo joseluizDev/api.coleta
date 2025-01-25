@@ -4,16 +4,20 @@ using api.coleta.Models.Entidades;
 using api.coleta.Services;
 using api.coleta.Data.Repository;
 using AutoMapper;
+using api.cliente.Interfaces;
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
-    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IMapper mapper)
+    private readonly IJwtToken _jwtToken;
+
+    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IMapper mapper, IJwtToken jwtToken)
         : base(unitOfWork, mapper)
     {
         _usuarioRepository = usuarioRepository;
+        _jwtToken = jwtToken;
     }
 
-    public UsuarioResponseDTO? BuscarUsuarioPorId(Guid id)
+    public String? BuscarUsuarioPorId(Guid id)
     {
         var usuario = _usuarioRepository.ObterPorId(id);
 
@@ -21,11 +25,11 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
+        return _jwtToken.GerarToken(usuario);
 
-        return _mapper.Map<UsuarioResponseDTO>(usuario);
     }
 
-    public UsuarioResponseDTO? Login(string email, string senha)
+    public String? Login(string email, string senha)
     {
         var usuario = _usuarioRepository.Login(email, senha);
         if (usuario == null)
@@ -33,7 +37,7 @@ public class UsuarioService : ServiceBase
             return null;
         }
 
-        return _mapper.Map<UsuarioResponseDTO>(usuario);
+        return _jwtToken.GerarToken(usuario);
     }
 
     public bool Cadastrar(UsuarioResquestDTO usuario)

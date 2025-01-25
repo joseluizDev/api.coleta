@@ -1,6 +1,8 @@
 ﻿using api.coleta.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using api.coleta.Controllers;
+using api.cliente.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace api.coleta.Controllers
 {
@@ -10,8 +12,10 @@ namespace api.coleta.Controllers
     {
         private readonly UsuarioService _usuarioService;
         private readonly INotificador _notificador;
-        public UsuarioController(UsuarioService usuarioService, INotificador notificador)
+
+        public UsuarioController(UsuarioService usuarioService, INotificador notificador, IJwtToken jwtToken)
         {
+
             _usuarioService = usuarioService;
             _notificador = notificador;
         }
@@ -35,5 +39,17 @@ namespace api.coleta.Controllers
                 return BadRequest("Erro ao cadastrar usuário");
             return Ok(usuarioCadastrado);
         }
+
+        [HttpGet]
+        [Route("buscar")]
+        [Authorize]
+        public IActionResult BuscarUsuarioPorId(Guid id)
+        {
+            var usuario = _usuarioService.BuscarUsuarioPorId(id);
+            if (usuario == null)
+                return NotFound("Usuário não encontrado");
+            return Ok(usuario);
+        }
+
     }
 }

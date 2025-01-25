@@ -15,8 +15,52 @@ using api.safra.Repositories;
 using api.safra.Services;
 using api.funcionario.Services;
 using api.funcionario.Repositories;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using api.cliente.Interfaces;
+using BackAppPromo.Infrastructure.Authentication;
+using api.minionStorage.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Insira o token JWT no formato: Bearer {seu-token}"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
+});
+
+
+builder.Services.AddSingleton<IMinioStorage>(provider =>
+    new MinioStorage(
+        endpoint: builder.Configuration["Minio:Endpoint"],
+        accessKey: builder.Configuration["Minio:AccessKey"],
+        secretKey: builder.Configuration["Minio:SecretKey"]
+    )
+);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -44,6 +88,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 
 builder.Services.Configure<GoogleApiSettings>(builder.Configuration.GetSection("GoogleApi"));
+
+
+builder.Services.AddScoped<IJwtToken, JwtTokenService>();
 
 builder.Services.AddScoped<INotificador, Notificador>();
 builder.Services.AddScoped<UsuarioRepository>();
@@ -79,7 +126,6 @@ var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 builder.Services.AddCors(options =>
 {
-
     options.AddPolicy(
         MyAllowSpecificOrigins,
         builder => builder.SetIsOriginAllowed(_ => true)
@@ -88,6 +134,36 @@ builder.Services.AddCors(options =>
                           .AllowCredentials());
 });
 
+string corsPolicyName = "AllowAnyOrigin";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: corsPolicyName, policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!)
+            ),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+
 builder.Services.AddMvc().AddJsonOptions(opts =>
 {
     opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
@@ -95,6 +171,8 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 
 var app = builder.Build();
 
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseSwagger();
 app.UseSwaggerUI();
