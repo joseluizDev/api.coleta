@@ -27,7 +27,13 @@ namespace api.coleta.Controllers
             var usuario = _usuarioService.Login(usuarioLogin.Email, usuarioLogin.Senha);
             if (usuario == null)
                 return NotFound("Usuário não encontrado");
-            return Ok(usuario);
+            return Ok(
+
+                new
+                {
+                    Token = usuario
+                }
+            );
         }
 
         [HttpPost]
