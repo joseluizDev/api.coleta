@@ -25,9 +25,9 @@ public class UsuarioService : ServiceBase
         return _mapper.Map<UsuarioResponseDTO>(usuario);
     }
 
-    public UsuarioResponseDTO? Login(string login, string senha)
+    public UsuarioResponseDTO? Login(string email, string senha)
     {
-        var usuario = _usuarioRepository.Login(login, senha);
+        var usuario = _usuarioRepository.Login(email, senha);
         if (usuario == null)
         {
             return null;

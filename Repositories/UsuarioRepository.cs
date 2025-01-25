@@ -7,9 +7,9 @@ namespace api.coleta.Data.Repository
     {
         public UsuarioRepository(ApplicationDbContext context) : base(context)
         { }
-        public Usuario? Login(string login, string senha)
+        public Usuario? Login(string email, string senha)
         {
-            return Context.Usuarios.FirstOrDefault(x => x.Email == login && x.Senha == senha);
+            return Context.Usuarios.FirstOrDefault(x => x.Email == email && x.Senha == senha);
         }
         public Usuario? ObterPorEmail(string email)
         {
