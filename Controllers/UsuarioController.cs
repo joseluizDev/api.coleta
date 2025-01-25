@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using api.coleta.Controllers;
 using api.cliente.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace api.coleta.Controllers
 {
@@ -49,13 +50,20 @@ namespace api.coleta.Controllers
         [HttpGet]
         [Route("buscar")]
         [Authorize]
-        public IActionResult BuscarUsuarioPorId(Guid id)
+        public IActionResult BuscarUsuarioPorId()
         {
-            var usuario = _usuarioService.BuscarUsuarioPorId(id);
+            var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.Name);
+
+            if (userIdClaim == null)
+                return Unauthorized("Token inválido ou expirado");
+
+            var userId = Guid.Parse(userIdClaim.Value);
+            var usuario = _usuarioService.BuscarUsuarioPorId(userId);
+
             if (usuario == null)
                 return NotFound("Usuário não encontrado");
+
             return Ok(usuario);
         }
-
     }
 }
