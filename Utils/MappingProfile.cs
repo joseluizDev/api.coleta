@@ -14,10 +14,11 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         // Mapeamentos para Usuario
+        CreateMap<Usuario, UsuarioResquestDTO>();
         CreateMap<Usuario, UsuarioResponseDTO>();
         CreateMap<UsuarioResquestDTO, Usuario>();
 
-        // Mapeamentos para Cliente
+
         CreateMap<Cliente, ClienteResponseDTO>();
         CreateMap<ClienteRequestDTO, Cliente>();
 
