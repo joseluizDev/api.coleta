@@ -69,7 +69,7 @@ namespace api.coleta.Controllers
             catch (Exception ex)
             {
 
-                return StatusCode(500, "Ocorreu um erro ao processar sua solicitação.");
+                return StatusCode(500, ex.Message);
             }
         }
 
