@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using api.cliente.Models.DTOs;
 using api.cliente.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.cliente.Controllers
@@ -27,10 +29,31 @@ namespace api.cliente.Controllers
 
       [HttpPost]
       [Route("salvar")]
+      [Authorize]
       public IActionResult SalvarClientes([FromBody] ClienteRequestDTO clientes)
       {
-         _clienteService.AtualizarCliente(clientes);
-         return Ok();
+
+            try
+            {
+                var userIdClam = HttpContext.User.FindFirst(ClaimTypes.Name);
+                if (userIdClam == null || string.IsNullOrWhiteSpace(userIdClam.Value))
+                {
+                    return BadRequest("Reinvindicação de ID de usuário não encontrado ou inválido.");
+                }
+                if (!Guid.TryParse(userIdClam.Value, out var userIdGuid))
+                {
+                    return BadRequest("Id de usuário inválido.");
+                }
+
+                _clienteService.AtualizarCliente(clientes);
+                return Ok();
+
+
+            }
+            catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+
       }
 
       [HttpPut]
