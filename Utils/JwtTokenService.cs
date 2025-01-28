@@ -64,5 +64,20 @@ namespace BackAppPromo.Infrastructure.Authentication
                 return false;
             }
         }
+
+        public Guid? ObterUsuarioIdDoToken(string token)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
+
+            if (jwtToken == null)
+                return null;
+
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name);
+            if (userIdClaim == null)
+                return null;
+
+            return Guid.TryParse(userIdClaim.Value, out var userId) ? userId : (Guid?)null;
+        }
     }
 }

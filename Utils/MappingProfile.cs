@@ -22,23 +22,18 @@ public class MappingProfile : Profile
         CreateMap<Cliente, ClienteResponseDTO>();
         CreateMap<ClienteRequestDTO, Cliente>();
 
-        // Mapeamentos para Funcionario
         CreateMap<Funcionario, FuncionarioResponseDTO>();
         CreateMap<FuncionarioRequestDTO, Funcionario>();
 
-        // Mapeamentos para Fazenda
         CreateMap<Fazenda, FazendaResponseDTO>();
         CreateMap<FazendaRequestDTO, Fazenda>();
 
-        // Mapeamentos para Safra
         CreateMap<Safra, SafraResponseDTO>();
         CreateMap<SafraRequestDTO, Safra>();
 
-        // Mapeamentos para Talhao
         CreateMap<Talhao, TalhaoResponseDTO>();
         CreateMap<TalhaoRequestDTO, Talhao>();
 
-        // Mapeamentos para VinculoClienteFazenda
         CreateMap<VinculoClienteFazenda, VinculoResponseDTO>();
         CreateMap<VinculoRequestDTO, VinculoClienteFazenda>();
     }

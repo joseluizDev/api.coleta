@@ -6,5 +6,6 @@ namespace api.cliente.Interfaces
     {
         string GerarToken(Usuario usuario);
         bool ValidarToken(string token);
+        Guid? ObterUsuarioIdDoToken(string token);
     }
 }

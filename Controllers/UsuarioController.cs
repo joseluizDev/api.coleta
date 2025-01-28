@@ -9,58 +9,67 @@ namespace api.coleta.Controllers
 {
     [ApiController]
     [Route("usuario")]
-    public class UsuarioController : ControllerBase
+    public class UsuarioController : BaseController
     {
         private readonly UsuarioService _usuarioService;
         private readonly INotificador _notificador;
+        private readonly IJwtToken _jwtToken;
 
         public UsuarioController(UsuarioService usuarioService, INotificador notificador, IJwtToken jwtToken)
+            : base(notificador)
         {
-
             _usuarioService = usuarioService;
             _notificador = notificador;
+            _jwtToken = jwtToken;
         }
 
-        [HttpGet]
-        [Route("login")]
+        [HttpGet("login")]
         public IActionResult Login([FromQuery] UsuarioLoginDTO usuarioLogin)
         {
-            var usuario = _usuarioService.Login(usuarioLogin.Email, usuarioLogin.Senha);
-            if (usuario == null)
-                return NotFound("Usuário não encontrado");
-            return Ok(
+            try
+            {
+                var usuario = _usuarioService.Login(usuarioLogin.Email, usuarioLogin.Senha);
+                if (usuario == null)
+                    return NotFound("Usuário não encontrado.");
 
-                new
-                {
-                    Token = usuario
-                }
-            );
+                return Ok(new { Token = usuario });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao realizar o login: " + ex.Message);
+            }
         }
 
-        [HttpPost]
-        [Route("cadastrar")]
+        [HttpPost("cadastrar")]
         public IActionResult Cadastrar([FromBody] UsuarioResquestDTO usuario)
         {
-            var usuarioCadastrado = _usuarioService.Cadastrar(usuario);
-            if (usuarioCadastrado == null)
-                return BadRequest("Erro ao cadastrar usuário");
-            return Ok(usuarioCadastrado);
+            try
+            {
+                var usuarioCadastrado = _usuarioService.Cadastrar(usuario);
+                if (usuarioCadastrado == null)
+                    return BadRequest("Erro ao cadastrar usuário.");
+
+                return Ok(usuarioCadastrado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao cadastrar o usuário: " + ex.Message);
+            }
         }
 
-        [HttpGet]
-        [Route("buscar")]
+        [HttpGet("buscar")]
         [Authorize]
         public IActionResult BuscarUsuarioPorId()
         {
             try
             {
-                var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.Name);
-                if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-                    return BadRequest("Reivindicação de ID de usuário não encontrada ou inválida.");
-                if (!Guid.TryParse(userIdClaim.Value, out var userIdGuid))
-                    return BadRequest("ID de usuário inválido.");
+                var token = ObterTokenDoHeader();
+                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-                var usuario = _usuarioService.BuscarUsuarioPorId(userIdGuid);
+                if (userId == null)
+                    return BadRequest("Token inválido ou ID do usuário não encontrado.");
+
+                var usuario = _usuarioService.BuscarUsuarioPorId(userId.Value);
                 if (usuario == null)
                     return NotFound("Usuário não encontrado.");
 
@@ -68,10 +77,8 @@ namespace api.coleta.Controllers
             }
             catch (Exception ex)
             {
-
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, "Ocorreu um erro ao buscar o usuário: " + ex.Message);
             }
         }
-
     }
 }
