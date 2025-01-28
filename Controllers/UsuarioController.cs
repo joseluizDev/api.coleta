@@ -63,7 +63,7 @@ namespace api.coleta.Controllers
         {
             try
             {
-                var token = ObterTokenDoHeader();
+                var token = ObterIDDoToken();
                 var userId = _jwtToken.ObterUsuarioIdDoToken(token);
 
                 if (userId == null)

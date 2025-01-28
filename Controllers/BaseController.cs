@@ -21,7 +21,7 @@ namespace api.coleta.Controllers
 
             return Ok(result);
         }
-        protected string ObterTokenDoHeader()
+        protected string ObterIDDoToken()
         {
             var authorizationHeader = HttpContext.Request.Headers["Authorization"].ToString();
             return authorizationHeader.StartsWith("Bearer ")
