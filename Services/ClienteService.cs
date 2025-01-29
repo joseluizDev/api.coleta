@@ -26,9 +26,10 @@ namespace api.cliente.Services
          return _mapper.Map<ClienteResponseDTO>(cliente);
       }
 
-      public void SalvarCliente(ClienteRequestDTO clienteDto)
+      public void SalvarCliente(ClienteRequestDTO clienteDto, Guid idUser)
       {
-         var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
+          var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
+          clienteEntidade.UsuarioID = idUser;
          _clienteRepository.Adicionar(clienteEntidade);
          UnitOfWork.Commit();
       }

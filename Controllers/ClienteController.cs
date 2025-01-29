@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using api.cliente.Interfaces;
 using api.cliente.Models.DTOs;
 using api.cliente.Services;
+using api.coleta.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,13 +10,18 @@ namespace api.cliente.Controllers
 {
    [ApiController]
    [Route("cliente")]
-   public class ClienteController : ControllerBase
-   {
+   public class ClienteController : BaseController
+    {
       private readonly ClienteService _clienteService;
+        private readonly INotificador _notificador;
+        private readonly IJwtToken _jwtToken;
 
-      public ClienteController(ClienteService clienteService)
+      public ClienteController(ClienteService clienteService, INotificador 
+          notificador, IJwtToken jwtToken) : base(notificador)
       {
          _clienteService = clienteService;
+         _notificador = notificador;
+         _jwtToken = jwtToken;
       }
 
       [HttpGet]
@@ -27,28 +34,20 @@ namespace api.cliente.Controllers
          return Ok(cliente);
       }
 
-      [HttpPost]
-      [Route("salvar")]
+      [HttpPost("salvar")]
       [Authorize]
       public IActionResult SalvarClientes([FromBody] ClienteRequestDTO clientes)
       {
 
             try
             {
-                var userIdClam = HttpContext.User.FindFirst(ClaimTypes.Name);
-                if (userIdClam == null || string.IsNullOrWhiteSpace(userIdClam.Value))
-                {
-                    return BadRequest("Reinvindicação de ID de usuário não encontrado ou inválido.");
-                }
-                if (!Guid.TryParse(userIdClam.Value, out var userIdGuid))
-                {
-                    return BadRequest("Id de usuário inválido.");
-                }
-
-                _clienteService.AtualizarCliente(clientes);
+                var token = ObterIDDoToken();
+                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userId == null)
+                    return BadRequest("Token inválido ou ID do usuário não encontrado.");
+                
+                _clienteService.SalvarCliente(clientes, userId.Value);
                 return Ok();
-
-
             }
             catch (Exception ex) {
                 return StatusCode(500, ex.Message);
