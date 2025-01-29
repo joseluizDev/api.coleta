@@ -73,7 +73,8 @@ namespace BackAppPromo.Infrastructure.Authentication
             if (jwtToken == null)
                 return null;
 
-            var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name);
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "unique_name");
+            //var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name);
             if (userIdClaim == null)
                 return null;
 
