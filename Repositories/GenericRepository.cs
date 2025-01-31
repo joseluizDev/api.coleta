@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
+using System.Linq;
 
 namespace api.coleta.Data.Repositories
 {
@@ -43,6 +44,18 @@ namespace api.coleta.Data.Repositories
         {
             Context.Remove(entity);
         }
+
+        public List<T> BuscaPaginada(IQueryable<T> query, int page = 1, int limit = 0) 
+        {
+            
+            if (limit < 1) {
+                return [.. query];
+            }
+
+            int skip = (page - 1) * limit;
+
+            return [.. query.Take(page).Skip(skip)];
+        }
     }
 }
 
@@ -51,4 +64,5 @@ public interface IGenericRepository<T>
     public void Adicionar(Entity entity);
     public void Atualizar(Entity entity);
     T? ObterPorId(Guid id);
+    List<T> BuscaPaginada(Guid id, int page = 0, int pageSize = 0);
 }
