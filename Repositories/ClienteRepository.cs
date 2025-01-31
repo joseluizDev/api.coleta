@@ -1,5 +1,6 @@
 using api.coleta.Data.Repositories;
 using api.coleta.Models.Entidades;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.cliente.Repositories
 {
@@ -30,5 +31,17 @@ namespace api.cliente.Repositories
       {
          Deletar(cliente);
       }
-   }
+
+        public List<Cliente> BuscaPaginadaCliente(Guid id, int page = 1, int limit = 0)
+        {
+
+            IQueryable<Cliente> query = Context.Clientes.
+                Where((cliente) => cliente.UsuarioID == id).
+                OrderBy((cliente) => cliente.DataInclusao).AsQueryable();
+            
+            var clientes = BuscaPaginada(query, page, limit);
+            
+            return clientes;
+        }
+    }
 }

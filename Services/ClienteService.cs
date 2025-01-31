@@ -16,6 +16,15 @@ namespace api.cliente.Services
          _clienteRepository = clienteRepository;
       }
 
+      public  List<ClienteResponseDTO> BuscarClientesPaginados(Guid id, int page=-1, int limit=-1)
+        {
+
+           var clientesBd = _clienteRepository.BuscaPaginadaCliente(id, page, limit);
+
+            return _mapper.Map<List<ClienteResponseDTO>>(clientesBd);
+
+        }
+
       public ClienteResponseDTO? BuscarClientePorId(Guid id)
       {
          var cliente = _clienteRepository.ObterPorId(id);

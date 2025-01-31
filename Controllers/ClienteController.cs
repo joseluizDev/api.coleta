@@ -24,6 +24,31 @@ namespace api.cliente.Controllers
          _jwtToken = jwtToken;
       }
 
+        [HttpGet("listar")]
+        [Authorize]
+        public IActionResult ListarClientes(
+          [FromQuery] int? page,
+          [FromQuery] int? limit
+      )
+      {
+            try {
+                var token = ObterIDDoToken();
+                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userId == null)
+                    return BadRequest("Token inválido ou ID do usuário não encontrado.");
+
+                List<ClienteResponseDTO> clientes = _clienteService.BuscarClientesPaginados(
+                    userId.Value, page ?? 0, limit ?? 0  
+                );
+                return Ok(clientes);
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+
+      }
+
       [HttpGet]
       [Route("buscar")]
       public IActionResult BuscarClientePorId(Guid id)
