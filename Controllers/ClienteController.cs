@@ -28,7 +28,8 @@ namespace api.cliente.Controllers
         [Authorize]
         public IActionResult ListarClientes(
           [FromQuery] int? page,
-          [FromQuery] int? limit
+          [FromQuery] int? limit,
+          [FromQuery] string? searchTerm
       )
       {
             try {
@@ -37,8 +38,11 @@ namespace api.cliente.Controllers
                 if (userId == null)
                     return BadRequest("Token inválido ou ID do usuário não encontrado.");
 
-                List<ClienteResponseDTO> clientes = _clienteService.BuscarClientesPaginados(
-                    userId.Value, page ?? 0, limit ?? 0  
+                List<ClienteResponseDTO> clientes = _clienteService.BuscarClientes(
+                    userId.Value, 
+                    page ?? 0, 
+                    limit ?? 0,
+                    searchTerm ?? ""
                 );
                 return Ok(clientes);
             }
