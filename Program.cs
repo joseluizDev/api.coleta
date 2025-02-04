@@ -117,6 +117,8 @@ builder.Services.AddScoped<VinculoClienteFazendaService>();
 builder.Services.AddScoped<SafraRepository>();
 builder.Services.AddScoped<SafraService>();
 
+builder.Services.AddScoped<UtilsService>();
+
 
 
 
