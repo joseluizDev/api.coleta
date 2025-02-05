@@ -8,7 +8,7 @@ namespace api.coleta.Models.Entidades
     {
         [MaxLength(255)]
         public string Nome { get; set; }
-        [MaxLength(11)]
+        [MaxLength(14)]
         public string CPF { get; set; }
         [MaxLength(100)]
         public string Email { get; set; }
@@ -17,6 +17,14 @@ namespace api.coleta.Models.Entidades
         [ForeignKey("Usuario")]
         public Guid UsuarioID { get; set; }
         public virtual Usuario Usuario { get; set; }
+        [MaxLength(8)]
+        public string Cep { get; set; }
+        [MaxLength(255)]
+        public string Endereco { get; set; }
+        [MaxLength(100)]
+        public string Cidade { get; set; }
+        [MaxLength(2)]
+        public string Estado { get; set; }
         public Cliente()
         {
         }
