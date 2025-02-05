@@ -24,4 +24,16 @@ namespace api.cliente.Models.DTOs
       public string Cidade { get; set; }
       public string Estado { get; set; }
    }
+
+   public class ClienteResponsePaginacaoDto
+   {
+      public int PaginaAtual { get; set; }
+      public int TamanhoPagina { get; set; }
+      public int Total { get; set; }
+      public int TotalPaginas { get; set; }
+      public bool ProximaPagina { get; set; }
+      public bool PaginaAnterior { get; set; }
+      public List<ClienteResponseDTO> Clientes { get; set; }
+
+   }
 }

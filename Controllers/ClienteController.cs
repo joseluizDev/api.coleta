@@ -3,6 +3,7 @@ using api.cliente.Interfaces;
 using api.cliente.Models.DTOs;
 using api.cliente.Services;
 using api.coleta.Controllers;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,6 +27,8 @@ namespace api.cliente.Controllers
 
         [HttpGet("listar")]
         [Authorize]
+        [ProducesResponseType(typeof(ClienteResponsePaginacaoDto), 200, "Application/json")]
+        [ProducesResponseType(typeof(string), 400, "text/plain")]
         public IActionResult ListarClientes(
           [FromQuery] int? page,
           [FromQuery] int? limit,
@@ -41,25 +44,35 @@ namespace api.cliente.Controllers
 
                 var totalClientes = _clienteService.TotalClientes(userId.Value, searchTerm ?? "");
 
-                List<ClienteResponseDTO> clientes = _clienteService.BuscarClientes(
-                    userId.Value,
-                    page ?? 0,
-                    limit ?? 0,
-                    searchTerm ?? ""
-                );
-
                 double totalPages = 1;
 
-                if (limit != null && limit > 0)
+                if (limit != null && limit > totalClientes)
+                {
+                    return StatusCode(400, "Limite inválido");
+                }
+
+
+                if (limit != null && limit > 0 && limit <= totalClientes)
                 {
                     totalPages = totalClientes / limit.Value;
                     totalPages = Math.Ceiling(totalPages);
+                }
+
+                if (page != null && (page > totalPages || page < 1))
+                {
+                    return StatusCode(400, "Página inválida.");
                 }
 
                 bool hasNextPage = page != null && page.Value < totalPages;
                 bool hasPreviousPage = page != null && page.Value > 1;
 
 
+                List<ClienteResponseDTO> clientes = _clienteService.BuscarClientes(
+                    userId.Value,
+                    page ?? 0,
+                    limit ?? 0,
+                    searchTerm ?? ""
+                );
 
                 var jsonResponse = new
                 {
@@ -69,7 +82,7 @@ namespace api.cliente.Controllers
                     totalPaginas = totalPages,
                     proximaPagina = hasNextPage,
                     paginaAnterior = hasPreviousPage,
-                    clientes = clientes,
+                    clientes = clientes
                 };
 
                 return Ok(jsonResponse);
