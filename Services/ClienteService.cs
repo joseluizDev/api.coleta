@@ -16,19 +16,24 @@ namespace api.cliente.Services
          _clienteRepository = clienteRepository;
       }
 
-      public  List<ClienteResponseDTO> BuscarClientes(
+      public List<ClienteResponseDTO> BuscarClientes(
           Guid id,
-          int page=-1, 
-          int limit=-1,
+          int page = -1,
+          int limit = -1,
           string searchTerm = ""
         )
-        {
+      {
 
-           var clientesBd = _clienteRepository.BuscarClientes(id, page, limit, searchTerm);
+         var clientesBd = _clienteRepository.BuscarClientes(id, page, limit, searchTerm);
 
-            return _mapper.Map<List<ClienteResponseDTO>>(clientesBd);
+         return _mapper.Map<List<ClienteResponseDTO>>(clientesBd);
 
-        }
+      }
+
+      public int TotalClientes(Guid id, string searchTerm)
+      {
+         return _clienteRepository.TotalClientes(id, searchTerm);
+      }
 
       public ClienteResponseDTO? BuscarClientePorId(Guid id)
       {
@@ -42,8 +47,8 @@ namespace api.cliente.Services
 
       public void SalvarCliente(ClienteRequestDTO clienteDto, Guid idUser)
       {
-          var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
-          clienteEntidade.UsuarioID = idUser;
+         var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
+         clienteEntidade.UsuarioID = idUser;
          _clienteRepository.Adicionar(clienteEntidade);
          UnitOfWork.Commit();
       }
