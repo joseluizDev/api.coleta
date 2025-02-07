@@ -98,6 +98,13 @@ namespace api.cliente.Controllers
         [Route("buscar")]
         public IActionResult BuscarClientePorId(Guid id)
         {
+
+            string token = ObterIDDoToken();
+            Guid? userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+                return BadRequest("Token inválido ou ID do usuário não encontrado.");
+
             var cliente = _clienteService.BuscarClientePorId(id);
             if (cliente == null)
                 return NotFound("Cliente não encontrado");
