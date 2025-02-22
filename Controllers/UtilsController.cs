@@ -6,7 +6,7 @@ using api.utils.DTOs;
 namespace api.utils.Controllers
 {
     [ApiController]
-    [Route("utils")]
+    [Route("api/utils")]
     public class UtilsController : ControllerBase
     {
         private readonly UtilsService _utilsService;

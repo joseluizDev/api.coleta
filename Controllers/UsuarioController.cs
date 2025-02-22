@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace api.coleta.Controllers
 {
     [ApiController]
-    [Route("usuario")]
+    [Route("api/usuario")]
     public class UsuarioController : BaseController
     {
         private readonly UsuarioService _usuarioService;
@@ -64,12 +64,12 @@ namespace api.coleta.Controllers
             try
             {
                 var token = ObterIDDoToken();
-                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+                Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
 
                 if (userId == null)
                     return BadRequest("Token inválido ou ID do usuário não encontrado.");
 
-                var usuario = _usuarioService.BuscarUsuarioPorId(userId.Value);
+                var usuario = _usuarioService.BuscarUsuarioPorId(userId);
                 if (usuario == null)
                     return NotFound("Usuário não encontrado.");
 

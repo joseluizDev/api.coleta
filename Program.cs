@@ -124,18 +124,6 @@ builder.Services.AddScoped<UtilsService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        MyAllowSpecificOrigins,
-        builder => builder.SetIsOriginAllowed(_ => true)
-                          .AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials());
-});
-
 string corsPolicyName = "AllowAnyOrigin";
 builder.Services.AddCors(options =>
 {
@@ -179,7 +167,7 @@ app.UseAuthorization();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors(MyAllowSpecificOrigins);
+app.UseCors(corsPolicyName);
 
 app.UseHttpsRedirection();
 

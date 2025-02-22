@@ -2,6 +2,7 @@ using api.cliente.Models.DTOs;
 using api.cliente.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
+using api.coleta.Utils;
 using AutoMapper;
 
 namespace api.cliente.Services
@@ -24,20 +25,28 @@ namespace api.cliente.Services
         )
       {
 
-         var clientesBd = _clienteRepository.BuscarClientes(id, page, limit, searchTerm);
+         var clientesBd = _clienteRepository.BuscarClientes(id, page);
 
          return _mapper.Map<List<ClienteResponseDTO>>(clientesBd);
 
       }
 
-      public int TotalClientes(Guid id, string searchTerm)
+      public PagedResult<ClienteResponseDTO> TotalClientes(Guid id, int page)
       {
-         return _clienteRepository.TotalClientes(id, searchTerm);
+
+         var clientes = _clienteRepository.listarClientes(id, page);
+         var clienteDtos = _mapper.Map<List<ClienteResponseDTO>>(clientes.Items);
+         return new PagedResult<ClienteResponseDTO>
+         {
+            Items = clienteDtos,
+            TotalPages = clientes.TotalPages,
+            CurrentPage = clientes.CurrentPage
+         };
       }
 
-      public ClienteResponseDTO? BuscarClientePorId(Guid id)
+      public ClienteResponseDTO? BuscarClientePorId(Guid userId, Guid id)
       {
-         var cliente = _clienteRepository.ObterPorId(id);
+         var cliente = _clienteRepository.BuscarClienteId(userId, id);
          if (cliente == null)
          {
             return null;
@@ -45,26 +54,53 @@ namespace api.cliente.Services
          return _mapper.Map<ClienteResponseDTO>(cliente);
       }
 
-      public void SalvarCliente(ClienteRequestDTO clienteDto, Guid idUser)
+      public ClienteResponseDTO SalvarCliente(ClienteRequestDTO clienteDto, Guid idUser)
       {
          var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
          clienteEntidade.UsuarioID = idUser;
          _clienteRepository.Adicionar(clienteEntidade);
          UnitOfWork.Commit();
+         return _mapper.Map<ClienteResponseDTO>(clienteEntidade);
       }
 
-      public void AtualizarCliente(ClienteRequestDTO clienteDto)
+      public ClienteResponseDTO? AtualizarCliente(Guid userId, ClienteRequestDTO clienteDto)
       {
          var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
-         _clienteRepository.Atualizar(clienteEntidade);
-         UnitOfWork.Commit();
+         var cliente = _clienteRepository.BuscarClienteId(userId, clienteEntidade.Id);
+         if (cliente != null)
+         {
+            cliente.Nome = clienteEntidade.Nome;
+            cliente.CPF = clienteEntidade.CPF;
+            cliente.Email = clienteEntidade.Email;
+            cliente.Telefone = clienteEntidade.Telefone;
+            cliente.Cep = clienteEntidade.Cep;
+            cliente.Endereco = clienteEntidade.Endereco;
+            cliente.Cidade = clienteEntidade.Cidade;
+            cliente.Estado = clienteEntidade.Estado;
+            _clienteRepository.Atualizar(cliente);
+            UnitOfWork.Commit();
+
+            return _mapper.Map<ClienteResponseDTO>(cliente);
+         }
+         return null;
       }
 
-      public void DeletarCliente(Guid id)
+      public ClienteResponseDTO? DeletarCliente(Guid userId, Guid id)
       {
-         var cliente = _clienteRepository.ObterPorId(id);
-         _clienteRepository.Deletar(cliente);
-         UnitOfWork.Commit();
+         var cliente = _clienteRepository.BuscarClienteId(userId, id);
+         if (cliente != null)
+         {
+            _clienteRepository.Deletar(cliente);
+            UnitOfWork.Commit();
+            return _mapper.Map<ClienteResponseDTO>(cliente);
+         }
+         return null;
+      }
+
+      public List<ClienteResponseDTO> ListarTodosClientes(Guid userId)
+      {
+         var clientes = _clienteRepository.ListarTodosClientes(userId);
+         return _mapper.Map<List<ClienteResponseDTO>>(clientes);
       }
    }
 }

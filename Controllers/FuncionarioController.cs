@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace api.funcionario.Controllers
 {
    [ApiController]
-   [Route("funcionario")]
+   [Route("api/funcionario")]
    public class FuncionarioController : ControllerBase
    {
       private readonly FuncionarioService _funcionarioService;

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace api.cliente.Controllers
 {
     [ApiController]
-    [Route("cliente")]
+    [Route("api/cliente")]
     public class ClienteController : BaseController
     {
         private readonly ClienteService _clienteService;
@@ -27,81 +27,36 @@ namespace api.cliente.Controllers
 
         [HttpGet("listar")]
         [Authorize]
-        [ProducesResponseType(typeof(ClienteResponsePaginacaoDto), 200, "Application/json")]
-        [ProducesResponseType(typeof(string), 400, "text/plain")]
-        public IActionResult ListarClientes(
-          [FromQuery] int? page,
-          [FromQuery] int? limit,
-          [FromQuery] string? searchTerm
-      )
+        public IActionResult ListarClientes([FromQuery] int page)
         {
-            try
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
             {
-                var token = ObterIDDoToken();
-                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-                if (userId == null)
-                    return BadRequest("Token inválido ou ID do usuário não encontrado.");
-
-                var totalClientes = _clienteService.TotalClientes(userId.Value, searchTerm ?? "");
-
-                double totalPages = 1;
-
-                if (limit != null && limit > totalClientes)
-                {
-                    return StatusCode(400, "Limite inválido");
-                }
-
-
-                if (limit != null && limit > 0 && limit <= totalClientes)
-                {
-                    totalPages = totalClientes / limit.Value;
-                    totalPages = Math.Ceiling(totalPages);
-                }
-
-                if (page != null && (page > totalPages || page < 1))
-                {
-                    return StatusCode(400, "Página inválida.");
-                }
-
-                bool hasNextPage = page != null && page.Value < totalPages;
-                bool hasPreviousPage = page != null && page.Value > 1;
-
-
-                List<ClienteResponseDTO> clientes = _clienteService.BuscarClientes(
-                    userId.Value,
-                    page ?? 0,
-                    limit ?? 0,
-                    searchTerm ?? ""
-                );
-
-                var jsonResponse = new
-                {
-                    paginaAtual = page ?? 1,
-                    tamanhoPagina = limit ?? 10,
-                    total = totalClientes,
-                    totalPaginas = totalPages,
-                    proximaPagina = hasNextPage,
-                    paginaAnterior = hasPreviousPage,
-                    clientes = clientes
-                };
-
-                return Ok(jsonResponse);
+                var response = _clienteService.TotalClientes(userId, page);
+                return Ok(response);
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
 
         }
 
         [HttpGet]
         [Route("buscar")]
+        [Authorize]
         public IActionResult BuscarClientePorId(Guid id)
         {
-            var cliente = _clienteService.BuscarClientePorId(id);
-            if (cliente == null)
-                return NotFound("Cliente não encontrado");
-            return Ok(cliente);
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var response = _clienteService.BuscarClientePorId(userId, id);
+                if (response != null)
+                {
+                    return Ok(response);
+                }
+                return NotFound(new { message = "Cliente não encontrado." });
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
         [HttpPost("salvar")]
@@ -112,12 +67,12 @@ namespace api.cliente.Controllers
             try
             {
                 var token = ObterIDDoToken();
-                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+                Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
                 if (userId == null)
                     return BadRequest("Token inválido ou ID do usuário não encontrado.");
 
-                _clienteService.SalvarCliente(clientes, userId.Value);
-                return Ok();
+                var cliente = _clienteService.SalvarCliente(clientes, userId);
+                return Ok(cliente);
             }
             catch (Exception ex)
             {
@@ -128,18 +83,51 @@ namespace api.cliente.Controllers
 
         [HttpPut]
         [Route("atualizar")]
+        [Authorize]
         public IActionResult AtualizarCliente([FromBody] ClienteRequestDTO cliente)
         {
-            _clienteService.AtualizarCliente(cliente);
-            return Ok();
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var c = _clienteService.AtualizarCliente(userId, cliente);
+                if (c != null)
+                {
+                    return Ok(c);
+                }
+                return NotFound(new { message = "Cliente não encontrado." });
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
         [HttpDelete]
         [Route("deletar")]
+        [Authorize]
         public IActionResult DeletarCliente(Guid id)
         {
-            _clienteService.DeletarCliente(id);
-            return Ok();
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var cliente = _clienteService.DeletarCliente(userId, id);
+                return Ok(cliente);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
+        [HttpGet]
+        [Route("all")]
+        [Authorize]
+        public IActionResult ListarTodosClientes()
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var clientes = _clienteService.ListarTodosClientes(userId);
+                return Ok(clientes);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
     }
 }

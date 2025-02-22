@@ -18,6 +18,8 @@ namespace api.fazenda.Models.Entidades
       [ForeignKey("Cliente")]
       public Guid ClienteID { get; set; }
       public virtual Cliente Cliente { get; set; }
+      public Guid UsuarioID { get; set; }
+      public virtual Usuario Usuario { get; set; }
       public Fazenda()
       {
       }

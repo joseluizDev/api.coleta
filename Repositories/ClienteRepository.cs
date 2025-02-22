@@ -1,5 +1,6 @@
 using api.coleta.Data.Repositories;
 using api.coleta.Models.Entidades;
+using api.coleta.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.cliente.Repositories
@@ -22,6 +23,11 @@ namespace api.cliente.Repositories
             return ObterPorId(id);
         }
 
+        public Cliente? BuscarClienteId(Guid idUser, Guid id)
+        {
+            return Context.Clientes.FirstOrDefault(c => c.Id == id && c.UsuarioID == idUser);
+        }
+
         public void AtualizarCliente(Cliente cliente)
         {
             Atualizar(cliente);
@@ -32,41 +38,47 @@ namespace api.cliente.Repositories
             Deletar(cliente);
         }
 
-        public List<Cliente> BuscarClientes(
-            Guid id,
-            int page = 1,
-            int limit = 0,
-            string searchTerm = ""
-        )
+        public List<Cliente> BuscarClientes(Guid id, int page)
         {
 
-            var query = _FiltrarClientePorUsuario(id, searchTerm);
-
-            var clientes = BuscaPaginada(query, page, limit);
+            List<Cliente> clientes = Context.Clientes
+                .OrderBy(f => f.Id)
+                .Skip((page - 1) * 10)
+                .Take(10)
+                .Where(c => c.UsuarioID == id)
+                .ToList();
 
             return clientes;
         }
 
-        public int TotalClientes(Guid id, string searchTerm)
+        public PagedResult<Cliente> listarClientes(Guid id, int page)
         {
-            return _FiltrarClientePorUsuario(id, searchTerm).Count();
+            if (page < 1) page = 1;
+
+            int totalItems = Context.Clientes.Count();
+            int pageSize = 10;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            List<Cliente> clientes = Context.Clientes
+                .Where(c => c.UsuarioID == id)
+                .OrderBy(f => f.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PagedResult<Cliente>
+            {
+                Items = clientes,
+                TotalPages = totalPages,
+                CurrentPage = page
+            };
         }
 
-        private IQueryable<Cliente> _FiltrarClientePorUsuario(Guid id, string searchTerm)
+
+
+        public List<Cliente> ListarTodosClientes(Guid userId)
         {
-            IQueryable<Cliente> query = Context.Clientes.
-                Where((cliente) => cliente.UsuarioID == id);
-
-
-            if (!string.IsNullOrWhiteSpace(searchTerm))
-            {
-                query = query.Where(
-                    (cliente) => cliente.Nome.ToLower().Contains(searchTerm.ToLower())
-                );
-            }
-
-            query = query.OrderBy((cliente) => cliente.DataInclusao).AsQueryable();
-            return query;
+            return Context.Clientes.Where(c => c.UsuarioID == userId).ToList();
         }
     }
 
