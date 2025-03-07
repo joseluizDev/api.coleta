@@ -25,10 +25,16 @@ namespace api.talhao.Controllers
         [Route("buscar")]
         public IActionResult BuscarTalhaoPorId(Guid id)
         {
-            var talhao = _talhaoService.BuscarTalhaoPorId(id);
-            if (talhao == null)
-                return NotFound("Talhão não encontrado");
-            return Ok(talhao);
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var talhao = _talhaoService.BuscarTalhaoPorId(userId, id);
+                if (talhao == null)
+                    return NotFound("Talhão não encontrado");
+                return Ok(talhao);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
         [HttpPost]
@@ -45,20 +51,36 @@ namespace api.talhao.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
-        [HttpPut]
-        [Route("atualizar")]
-        public IActionResult AtualizarTalhao([FromBody] TalhaoRequestDTO talhao)
-        {
-            _talhaoService.AtualizarTalhao(talhao);
-            return Ok();
-        }
+        //     [HttpPut]
+        //     [Route("atualizar")]
+        //     public IActionResult AtualizarTalhao([FromBody] TalhaoRequestDTO talhao)
+        //     {
+        //         _talhaoService.AtualizarTalhao(talhao);
+        //         return Ok();
+        //     }
+
+        //     [HttpDelete]
+        //     [Route("deletar")]
+        //     public IActionResult DeletarTalhao(Guid id)
+        //     {
+        //         _talhaoService.DeletarTalhao(id);
+        //         return Ok();
+        //     }
 
         [HttpDelete]
         [Route("deletar")]
-        public IActionResult DeletarTalhao(Guid id)
+        public IActionResult DeletarTalhao([FromQuery] Guid id)
         {
-            _talhaoService.DeletarTalhao(id);
-            return Ok();
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var talhao = _talhaoService.DeletarTalhao(userId, id);
+                if (talhao == null)
+                    return NotFound("Talhão não encontrado");
+                return Ok(new { message = "Talhão deletado com sucesso" });
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
         [HttpGet]

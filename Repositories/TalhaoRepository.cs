@@ -32,6 +32,11 @@ namespace api.talhao.Repositories
             Deletar(talhao);
         }
 
+        public Talhao BuscarTalhaoId(Guid idUser, Guid id)
+        {
+            return Context.Talhoes.FirstOrDefault(c => c.Id == id && c.UsuarioID == idUser);
+        }
+
         public PagedResult<Talhao> ListarTalhao(Guid userId, int page)
         {
             if (page < 1) page = 1;
@@ -52,6 +57,17 @@ namespace api.talhao.Repositories
                 TotalPages = totalPages,
                 CurrentPage = page
             };
+        }
+
+        public void AdicionarCoordenadas(TalhaoJson coordenada){
+            Context.TalhaoJson.Add(coordenada);
+        }
+
+        public List<TalhaoJson> BuscarTalhaoJson(Guid id)
+        {
+            return Context.TalhaoJson
+                .Where(f => f.TalhaoID == id)
+                .ToList();
         }
     }
 }

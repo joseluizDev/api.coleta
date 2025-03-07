@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace api.coleta.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -198,27 +198,30 @@ namespace api.coleta.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nome = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Cultura = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Variedade = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Observacao = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Area = table.Column<double>(type: "double", maxLength: 20, nullable: false),
-                    LinkGeoJson = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
                     FazendaID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ClienteID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    UsuarioID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Talhoes", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_Talhoes_Clientes_ClienteID",
+                        column: x => x.ClienteID,
+                        principalTable: "Clientes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_Talhoes_Fazendas_FazendaID",
                         column: x => x.FazendaID,
                         principalTable: "Fazendas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Talhoes_Usuarios_UsuarioID",
+                        column: x => x.UsuarioID,
+                        principalTable: "Usuarios",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -247,6 +250,30 @@ namespace api.coleta.Migrations
                         name: "FK_VinculoClienteFazendas_Fazendas_FazendaId",
                         column: x => x.FazendaId,
                         principalTable: "Fazendas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "TalhaoJson",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    TalhaoID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Area = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Coordenadas = table.Column<string>(type: "JSON", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TalhaoJson", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TalhaoJson_Talhoes_TalhaoID",
+                        column: x => x.TalhaoID,
+                        principalTable: "Talhoes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -283,9 +310,24 @@ namespace api.coleta.Migrations
                 column: "UsuarioID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TalhaoJson_TalhaoID",
+                table: "TalhaoJson",
+                column: "TalhaoID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Talhoes_ClienteID",
+                table: "Talhoes",
+                column: "ClienteID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Talhoes_FazendaID",
                 table: "Talhoes",
                 column: "FazendaID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Talhoes_UsuarioID",
+                table: "Talhoes",
+                column: "UsuarioID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VinculoClienteFazendas_ClienteId",
@@ -311,10 +353,13 @@ namespace api.coleta.Migrations
                 name: "Safras");
 
             migrationBuilder.DropTable(
-                name: "Talhoes");
+                name: "TalhaoJson");
 
             migrationBuilder.DropTable(
                 name: "VinculoClienteFazendas");
+
+            migrationBuilder.DropTable(
+                name: "Talhoes");
 
             migrationBuilder.DropTable(
                 name: "Fazendas");

@@ -211,17 +211,8 @@ namespace api.coleta.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<double>("Area")
-                        .HasMaxLength(20)
-                        .HasColumnType("double");
-
                     b.Property<Guid>("ClienteID")
                         .HasColumnType("char(36)");
-
-                    b.Property<string>("Cultura")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
 
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
@@ -229,28 +220,8 @@ namespace api.coleta.Migrations
                     b.Property<Guid>("FazendaID")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("LinkGeoJson")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<string>("Observacao")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
                     b.Property<Guid>("UsuarioID")
                         .HasColumnType("char(36)");
-
-                    b.Property<string>("Variedade")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
 
@@ -261,6 +232,33 @@ namespace api.coleta.Migrations
                     b.HasIndex("UsuarioID");
 
                     b.ToTable("Talhoes");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.TalhaoJson", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Area")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Coordenadas")
+                        .IsRequired()
+                        .HasColumnType("JSON");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("TalhaoID")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TalhaoID");
+
+                    b.ToTable("TalhaoJson");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Usuario", b =>
@@ -433,6 +431,17 @@ namespace api.coleta.Migrations
                     b.Navigation("Fazenda");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.TalhaoJson", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Talhao", "Talhao")
+                        .WithMany()
+                        .HasForeignKey("TalhaoID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Talhao");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.VinculoClienteFazenda", b =>
