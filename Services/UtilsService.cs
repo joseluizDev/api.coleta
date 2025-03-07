@@ -22,14 +22,16 @@ namespace api.vinculoClienteFazenda.Services
          _vinculoRepository = vinculoRepository;
       }
 
-      public HexagonResponseDto GenerateHexagons(JsonElement polygonGeoJson, double hectares)
+      public JsonElement GenerateHexagons(JsonElement polygonGeoJson, double hectares)
       {
          try
          {
             var inputPolygon = ParsePolygon(polygonGeoJson);
             var transformedPolygon = TransformPolygon(inputPolygon, GetWgs84ToUtm());
             var hexagons = GenerateHexagonalGrid(transformedPolygon, hectares);
-            return ConvertHexagonsToGeoJson(hexagons);
+            var geoJson = ConvertHexagonsToGeoJson(hexagons);
+            return geoJson;
+
          }
          catch (Exception ex)
          {
@@ -105,21 +107,82 @@ namespace api.vinculoClienteFazenda.Services
          return _geometryFactory.CreatePolygon(vertices.ToArray());
       }
 
-      private HexagonResponseDto ConvertHexagonsToGeoJson(List<Geometry> hexagons)
+      private JsonElement ConvertHexagonsToGeoJson(List<Geometry> hexagons)
       {
          var transform = GetUtmToWgs84();
-         var features = hexagons.Select(hex => new
+         var geoJson = new
          {
-            type = "Feature",
-            properties = new { type = "hexagon" },
-            geometry = new
+            type = "FeatureCollection",
+            features = hexagons.Select(hex => new
             {
-               type = "Polygon",
-               coordinates = new[] { hex.Coordinates.Select(c => new[] { transform.Transform(new[] { c.X, c.Y })[0], transform.Transform(new[] { c.X, c.Y })[1] }).ToArray() }
+               type = "Feature",
+               properties = new { type = "hexagon" },
+               geometry = new
+               {
+                  type = "Polygon",
+                  coordinates = new[] { hex.Coordinates.Select(c => new[]
+                {
+                    transform.Transform(new[] { c.X, c.Y })[0],
+                    transform.Transform(new[] { c.X, c.Y })[1]
+                }).ToArray() }
+               }
+            }).ToList()
+         };
+
+         return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(geoJson));
+      }
+
+
+      public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
+      {
+         var inputPolygon = ParsePolygon(dados.Polygon);
+         var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(inputPolygon);
+         var bounds = inputPolygon.EnvelopeInternal;
+         var points = new List<Coordinate>();
+         var random = new Random();
+         int attempts = 0, maxAttempts = dados.QtdPontosNaArea * 20; // Aumenta tentativas para melhorar a precisão
+
+         while (points.Count < dados.QtdPontosNaArea && attempts < maxAttempts)
+         {
+            double x = bounds.MinX + (bounds.MaxX - bounds.MinX) * random.NextDouble();
+            double y = bounds.MinY + (bounds.MaxY - bounds.MinY) * random.NextDouble();
+
+            // Criando ponto com o mesmo sistema de coordenadas do polígono
+            var point = new Point(x, y) { SRID = inputPolygon.SRID };
+
+            // Verifica se o ponto está dentro do polígono
+            if (preparedPolygon.Contains(point))
+            {
+               points.Add(new Coordinate(x, y));
             }
+            attempts++;
+         }
+
+         return ConvertPointsToGeoJson(points);
+      }
+
+      private JsonElement ConvertPointsToGeoJson(List<Coordinate> points)
+      {
+         var transform = GetUtmToWgs84();
+
+         var features = points.Select(p =>
+         {
+            var transformedPoint = transform.Transform(new[] { p.X, p.Y });
+            return new
+            {
+               type = "Feature",
+               properties = new { type = "point" },
+               geometry = new
+               {
+                  type = "Point",
+                  coordinates = new[] { transformedPoint[0], transformedPoint[1] }
+               }
+            };
          }).ToList();
 
-         return new HexagonResponseDto { Hexagonal = features.Select(f => f.geometry.coordinates).ToArray() };
+         return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(features));
       }
+
+
    }
 }
