@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.OutputCaching;
 namespace api.coleta.Controllers
 {
     [ApiController]
-    [Route("coleta")]
+    [Route("api/coleta")]
     public class InitController : ControllerBase
     {
         private readonly ColetaService _coletaService;

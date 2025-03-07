@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250204012629_CriacaoEnderecoUsuario")]
-    partial class CriacaoEnderecoUsuario
+    [Migration("20250221145909_updateTalhaoAddColumn")]
+    partial class updateTalhaoAddColumn
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -175,7 +175,10 @@ namespace api.coleta.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime>("DataFim")
+                    b.Property<Guid>("ClienteID")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("DataFim")
                         .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("DataInclusao")
@@ -188,13 +191,19 @@ namespace api.coleta.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Observacao")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
+                    b.Property<Guid>("UsuarioID")
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("ClienteID");
+
                     b.HasIndex("FazendaID");
+
+                    b.HasIndex("UsuarioID");
 
                     b.ToTable("Safras");
                 });
@@ -208,6 +217,9 @@ namespace api.coleta.Migrations
                     b.Property<double>("Area")
                         .HasMaxLength(20)
                         .HasColumnType("double");
+
+                    b.Property<Guid>("ClienteID")
+                        .HasColumnType("char(36)");
 
                     b.Property<string>("Cultura")
                         .IsRequired()
@@ -241,6 +253,8 @@ namespace api.coleta.Migrations
                         .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClienteID");
 
                     b.HasIndex("FazendaID");
 
@@ -342,9 +356,14 @@ namespace api.coleta.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<Guid>("UsuarioID")
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClienteID");
+
+                    b.HasIndex("UsuarioID");
 
                     b.ToTable("Fazendas");
                 });
@@ -362,22 +381,46 @@ namespace api.coleta.Migrations
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Safra", b =>
                 {
+                    b.HasOne("api.coleta.Models.Entidades.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("api.fazenda.Models.Entidades.Fazenda", "Fazenda")
                         .WithMany()
                         .HasForeignKey("FazendaID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+
                     b.Navigation("Fazenda");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Talhao", b =>
                 {
+                    b.HasOne("api.coleta.Models.Entidades.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("api.fazenda.Models.Entidades.Fazenda", "Fazenda")
                         .WithMany()
                         .HasForeignKey("FazendaID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Cliente");
 
                     b.Navigation("Fazenda");
                 });
@@ -409,7 +452,15 @@ namespace api.coleta.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Cliente");
+
+                    b.Navigation("Usuario");
                 });
 #pragma warning restore 612, 618
         }

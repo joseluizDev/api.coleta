@@ -21,6 +21,11 @@ namespace api.safra.Repositories
          return ObterPorId(id);
       }
 
+      public Safra BuscarSafraId(Guid userId, Guid id)
+      {
+         return Context.Safras.FirstOrDefault(s => s.Id == id && s.UsuarioID == userId);
+      }
+
       public void AtualizarSafra(Safra safra)
       {
          Atualizar(safra);

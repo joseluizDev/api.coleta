@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace api.vinculoClienteFazenda.Controllers
 {
    [ApiController]
-   [Route("vinculo-cliente-fazenda")]
+   [Route("api/vinculo-cliente-fazenda")]
    public class VinculoClienteFazendaController : ControllerBase
    {
       private readonly VinculoClienteFazendaService _vinculoService;

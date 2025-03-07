@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using api.coleta.Models.Entidades;
+using api.coleta.Utils;
+using api.fazenda.Models.Entidades;
+using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 using System.Linq;
 
@@ -45,16 +48,39 @@ namespace api.coleta.Data.Repositories
             Context.Remove(entity);
         }
 
-        public List<T> BuscaPaginada(IQueryable<T> query, int page = 1, int limit = 0) 
+        public List<T> BuscaPaginada(IQueryable<T> query, int page = 1, int limit = 0)
         {
-            
-            if (limit < 1) {
+
+            if (limit < 1)
+            {
                 return [.. query];
             }
 
             int skip = (page - 1) * limit;
 
             return [.. query.Take(page).Skip(skip)];
+        }
+
+        public PagedResult<Safra> ListaSafra(Guid userId, int page)
+        {
+            if (page < 1) page = 1;
+            int totalItems = Context.Safras.Count();
+            int pageSize = 10;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            List<Safra> safras = Context.Safras
+                .OrderBy(f => f.Id)
+                .Skip(pageSize * (page - 1))
+                .Take(pageSize)
+                .Where(f => f.UsuarioID == userId)
+                .ToList();
+
+            return new PagedResult<Safra>
+            {
+                Items = safras,
+                TotalPages = totalPages,
+                CurrentPage = page
+            };
         }
     }
 }
