@@ -31,7 +31,7 @@ namespace api.utils.Controllers
         }
 
         //GetPointsInsideArea
-        [HttpPost("get-points-area")]
+        // [HttpPost("get-points-area")]
         //public IActionResult GetPointsInsideArea([FromBody] PontosDentro request)
         //{
         //    try
