@@ -71,17 +71,35 @@ namespace api.talhao.Services
 
             UnitOfWork.Commit();
             var response = _mapper.Map<TalhaoResponseDTO>(talhao);
-            response.Talhoes = _mapper.Map<List<Talhoes>>(talhaoRequestDTO.Talhoes); // Fixing the type conversion issue
-            return response; // Adding the missing semicolon
+            response.Talhoes = _mapper.Map<List<Talhoes>>(talhaoRequestDTO.Talhoes);
+            return response;
         }
 
-        // public void AtualizarTalhao(TalhaoRequestDTO talhaoRequestDTO)
-        // {
-        //     var talhao = _mapper.Map<Talhao>(talhaoRequestDTO);
-        //     _talhaoRepository.Atualizar(talhao);
-        // }
+        public TalhaoRequestDTO? AtualizarTalhao(Guid userId, TalhaoRequestDTO talhaoRequestDTO)
+        {
+            var talhao = _mapper.Map<Talhao>(talhaoRequestDTO);
+            var buscarTalhao = _talhaoRepository.BuscarTalhaoId(userId, talhao.Id);
+            if(buscarTalhao != null)
+            {
+                buscarTalhao.FazendaID = talhao.FazendaID;
+                buscarTalhao.ClienteID = talhao.ClienteID;
+                buscarTalhao.UsuarioID = userId;
+                _talhaoRepository.Atualizar(buscarTalhao);
+                var talhaoCoordenadas = _mapper.Map<List<TalhaoJson>>(talhaoRequestDTO.Talhoes);
+                var deletarTalhao = _talhaoRepository.DeletarTalhaoPorId(buscarTalhao.Id);
+                _talhaoRepository.Deletar(deletarTalhao);
+                foreach (var coordenada in talhaoCoordenadas)
+                {
+                    coordenada.TalhaoID = talhao.Id;
+                    _talhaoRepository.AdicionarCoordenadas(coordenada);
+                }
+                UnitOfWork.Commit();
+                return talhaoRequestDTO;
+            }
 
-        // Deletar talhão
+            return null;
+        }
+
         public void DeletarTalhao(Guid id)
         {
             var talhao = _talhaoRepository.ObterPorId(id);
@@ -136,6 +154,32 @@ namespace api.talhao.Services
             }
 
             return false;
+        }
+
+        public TalhaoResponseDTO? BuscarTalhaoPorTalhao(Guid userId, Guid id)
+        {
+            var talhao = _talhaoRepository.BuscarPorTalhao(id);
+            if (talhao != null)
+            {
+                var b = _talhaoRepository.BuscarTalhaoId(userId, talhao.TalhaoID);
+                if (b != null)
+                {
+                    var map = _mapper.Map<TalhaoResponseDTO>(b);
+                    map.Talhoes = new List<Talhoes> { _mapper.Map<Talhoes>(talhao) };
+                    var cliente = _clienteRepository.ObterPorId(b.ClienteID);
+                    if (cliente != null)
+                    {
+                        map.Cliente = _mapper.Map<ClienteResponseDTO>(cliente);
+                    }
+                    var fazenda = _fazendaRepository.ObterPorId(b.FazendaID);
+                    if (fazenda != null)
+                    {
+                        map.Fazenda = _mapper.Map<FazendaResponseDTO>(fazenda);
+                    }
+                    return map;
+                }
+            }
+            return null;
         }
     }
 }

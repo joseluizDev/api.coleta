@@ -37,6 +37,22 @@ namespace api.talhao.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
+        [HttpGet]
+        [Route("buscarPorTalhao")]
+        public IActionResult BuscarTalhaoPorTalhao(Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var talhaoEncontrado = _talhaoService.BuscarTalhaoPorTalhao(userId, id);
+                if (talhaoEncontrado == null)
+                    return NotFound("Talhão não encontrado");
+                return Ok(talhaoEncontrado);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
         [HttpPost]
         [Route("salvar")]
         public IActionResult SalvarTalhoes([FromBody] TalhaoRequestDTO talhoes)
@@ -51,21 +67,31 @@ namespace api.talhao.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
-        //     [HttpPut]
-        //     [Route("atualizar")]
-        //     public IActionResult AtualizarTalhao([FromBody] TalhaoRequestDTO talhao)
-        //     {
-        //         _talhaoService.AtualizarTalhao(talhao);
-        //         return Ok();
-        //     }
+        [HttpPut]
+        [Route("atualizar")]
+        public IActionResult AtualizarTalhao([FromBody] TalhaoRequestDTO talhao)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var t = _talhaoService.AtualizarTalhao(userId, talhao);
+                if (t != null)
+                {
+                    return Ok(t);
+                }
+                return NotFound("Talhão não encontrado");
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
 
-        //     [HttpDelete]
-        //     [Route("deletar")]
-        //     public IActionResult DeletarTalhao(Guid id)
-        //     {
-        //         _talhaoService.DeletarTalhao(id);
-        //         return Ok();
-        //     }
+        //[HttpDelete]
+        //[Route("deletar")]
+        //public IActionResult DeletarTalhao(Guid id)
+        //{
+        //    _talhaoService.DeletarTalhao(id);
+        //    return Ok();
+        //}
 
         [HttpDelete]
         [Route("deletar")]

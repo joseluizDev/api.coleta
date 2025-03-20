@@ -20,6 +20,7 @@ using System.Text;
 using api.cliente.Interfaces;
 using BackAppPromo.Infrastructure.Authentication;
 using api.minionStorage.Services;
+using api.coleta.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -115,9 +116,12 @@ builder.Services.AddScoped<VinculoClienteFazendaRepository>();
 builder.Services.AddScoped<VinculoClienteFazendaService>();
 
 builder.Services.AddScoped<SafraRepository>();
-builder.Services.AddScoped<SafraService>();
+builder.Services.AddScoped<SafraService>(); 
 
 builder.Services.AddScoped<UtilsService>();
+
+builder.Services.AddScoped<VisualizarMapaRepository>();
+builder.Services.AddScoped<VisualizarMapaService>();
 
 
 

@@ -133,33 +133,33 @@ namespace api.vinculoClienteFazenda.Services
       }
 
 
-      public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
-      {
-         var inputPolygon = ParsePolygon(dados.Polygon);
-         var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(inputPolygon);
-         var bounds = inputPolygon.EnvelopeInternal;
-         var points = new List<Coordinate>();
-         var random = new Random();
-         int attempts = 0, maxAttempts = dados.QtdPontosNaArea * 20; // Aumenta tentativas para melhorar a precisão
+      //public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
+      //{
+      //   var inputPolygon = ParsePolygon(dados.Polygon);
+      //   var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(inputPolygon);
+      //   var bounds = inputPolygon.EnvelopeInternal;
+      //   var points = new List<Coordinate>();
+      //   var random = new Random();
+      //   int attempts = 0, maxAttempts = dados.QtdPontosNaArea * 20; // Aumenta tentativas para melhorar a precisão
 
-         while (points.Count < dados.QtdPontosNaArea && attempts < maxAttempts)
-         {
-            double x = bounds.MinX + (bounds.MaxX - bounds.MinX) * random.NextDouble();
-            double y = bounds.MinY + (bounds.MaxY - bounds.MinY) * random.NextDouble();
+      //   while (points.Count < dados.QtdPontosNaArea && attempts < maxAttempts)
+      //   {
+      //      double x = bounds.MinX + (bounds.MaxX - bounds.MinX) * random.NextDouble();
+      //      double y = bounds.MinY + (bounds.MaxY - bounds.MinY) * random.NextDouble();
 
-            // Criando ponto com o mesmo sistema de coordenadas do polígono
-            var point = new Point(x, y) { SRID = inputPolygon.SRID };
+      //      // Criando ponto com o mesmo sistema de coordenadas do polígono
+      //      var point = new Point(x, y) { SRID = inputPolygon.SRID };
 
-            // Verifica se o ponto está dentro do polígono
-            if (preparedPolygon.Contains(point))
-            {
-               points.Add(new Coordinate(x, y));
-            }
-            attempts++;
-         }
+      //      // Verifica se o ponto está dentro do polígono
+      //      if (preparedPolygon.Contains(point))
+      //      {
+      //         points.Add(new Coordinate(x, y));
+      //      }
+      //      attempts++;
+      //   }
 
-         return ConvertPointsToGeoJson(points);
-      }
+      //   return ConvertPointsToGeoJson(points);
+      //}
 
       private JsonElement ConvertPointsToGeoJson(List<Coordinate> points)
       {

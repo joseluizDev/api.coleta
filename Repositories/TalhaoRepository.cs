@@ -58,6 +58,11 @@ namespace api.talhao.Repositories
                 CurrentPage = page
             };
         }
+         
+        public TalhaoJson BuscarPorTalhao(Guid id)
+        {
+            return Context.TalhaoJson.FirstOrDefault(c => c.Id == id);
+        }
 
         public void AdicionarCoordenadas(TalhaoJson coordenada){
             Context.TalhaoJson.Add(coordenada);
@@ -68,6 +73,13 @@ namespace api.talhao.Repositories
             return Context.TalhaoJson
                 .Where(f => f.TalhaoID == id)
                 .ToList();
+        }
+
+        public TalhaoJson DeletarTalhaoPorId(Guid id)
+        {
+            return Context.TalhaoJson
+                .Where(f => f.TalhaoID == id)
+                .FirstOrDefault();
         }
     }
 }

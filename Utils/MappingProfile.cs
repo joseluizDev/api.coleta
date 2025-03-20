@@ -9,6 +9,8 @@ using api.talhao.Models.DTOs;
 using api.vinculoClienteFazenda.Models.DTOs;
 using api.fazenda.models;
 using System.Text.Json;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 public class MappingProfile : Profile
 {
@@ -18,7 +20,6 @@ public class MappingProfile : Profile
         CreateMap<Usuario, UsuarioResquestDTO>();
         CreateMap<Usuario, UsuarioResponseDTO>();
         CreateMap<UsuarioResquestDTO, Usuario>();
-
 
         CreateMap<Cliente, ClienteResponseDTO>();
         CreateMap<ClienteRequestDTO, Cliente>();
@@ -41,8 +42,28 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Coordenadas, opt => opt.MapFrom(src => JsonSerializer.Serialize(src.Coordenadas, new JsonSerializerOptions())));
 
         CreateMap<TalhaoJson, Talhoes>()
+            .ForMember(dest => dest.TalhaoID, opt => opt.MapFrom(src => src.TalhaoID))
             .ForMember(dest => dest.Area, opt => opt.MapFrom(src => double.Parse(src.Area)))
             .ForMember(dest => dest.Coordenadas, opt => opt.MapFrom(src => JsonSerializer.Deserialize<List<Coordenada>>(src.Coordenadas, new JsonSerializerOptions())));
+
+        CreateMap<Coordenada, Coordenada>();
+
+        CreateMap<VisualizarMapInputDto, VisualizarMapa>();
+
+        CreateMap<VisualizarMapa, VisualizarMapOutputDto>();
+
+        CreateMap<VisualizarMapOutputDto, object>()
+    .ConvertUsing(dto => new
+    {
+        dto.Id,
+        dto.TalhaoID,
+        Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
+        dto.Funcionario,
+        dto.Observacao,
+        dto.TipoColeta,
+        dto.TipoAnalise,
+        dto.Profundidade
+    });
 
         CreateMap<VinculoClienteFazenda, VinculoResponseDTO>();
         CreateMap<VinculoRequestDTO, VinculoClienteFazenda>();

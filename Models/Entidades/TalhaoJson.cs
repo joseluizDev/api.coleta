@@ -13,6 +13,10 @@ namespace api.coleta.Models.Entidades
         public virtual Talhao Talhao { get; set; }
         [Column(TypeName = "JSON")]
         public string Coordenadas { get; set; }
+        [MaxLength(255)]
+        public string Nome { get; set; }
+        [MaxLength(255)]
+        public string? Observacao { get; set; }
         public TalhaoJson()
         {
         }

@@ -32,4 +32,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Safra> Safras { get; set; }
     public DbSet<Funcionario> Funcionarios { get; set; }
     public DbSet<TalhaoJson> TalhaoJson { get; set; }
+    public DbSet<VisualizarMapa> VisualizarMapas { get; set; }
+    public DbSet<Geojson> Geojson { get; set; }
 }

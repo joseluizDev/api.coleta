@@ -166,6 +166,28 @@ namespace api.coleta.Migrations
                     b.ToTable("Funcionarios");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.Geojson", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Grid")
+                        .IsRequired()
+                        .HasColumnType("JSON");
+
+                    b.Property<string>("Pontos")
+                        .IsRequired()
+                        .HasColumnType("JSON");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Geojson");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Safra", b =>
                 {
                     b.Property<Guid>("Id")
@@ -251,6 +273,15 @@ namespace api.coleta.Migrations
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<Guid>("TalhaoID")
                         .HasColumnType("char(36)");
 
@@ -325,6 +356,52 @@ namespace api.coleta.Migrations
                     b.HasIndex("FazendaId");
 
                     b.ToTable("VinculoClienteFazendas");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.VisualizarMapa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Funcionario")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("GeojsonID")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<int>("Profundidade")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TalhaoID")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("TipoAnalise")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoColeta")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UsuarioID")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeojsonID");
+
+                    b.HasIndex("TalhaoID");
+
+                    b.HasIndex("UsuarioID");
+
+                    b.ToTable("VisualizarMapas");
                 });
 
             modelBuilder.Entity("api.fazenda.Models.Entidades.Fazenda", b =>
@@ -461,6 +538,33 @@ namespace api.coleta.Migrations
                     b.Navigation("Cliente");
 
                     b.Navigation("Fazenda");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.VisualizarMapa", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Geojson", "Geojson")
+                        .WithMany()
+                        .HasForeignKey("GeojsonID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("api.coleta.Models.Entidades.TalhaoJson", "Talhao")
+                        .WithMany()
+                        .HasForeignKey("TalhaoID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Geojson");
+
+                    b.Navigation("Talhao");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("api.fazenda.Models.Entidades.Fazenda", b =>

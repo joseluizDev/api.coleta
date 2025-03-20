@@ -24,7 +24,12 @@ namespace api.talhao.Models.DTOs
 
     public class Talhoes
     {
+        public Guid? Id { get; set; }
         public double Area { get; set; }
+        public string Nome { get; set; }
+        public string? observacao { get; set; }
+        public Guid TalhaoID { get; set; }
+
         public List<Coordenada> Coordenadas { get; set; }
     }
 
