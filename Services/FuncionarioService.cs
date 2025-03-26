@@ -1,5 +1,6 @@
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
+using api.coleta.Utils;
 using api.funcionario.Models.DTOs;
 using api.funcionario.Repositories;
 using AutoMapper;
@@ -26,9 +27,10 @@ namespace api.funcionario.Services
          return _mapper.Map<FuncionarioResponseDTO>(funcionario);
       }
 
-      public void SalvarFuncionario(FuncionarioRequestDTO funcionarioDto)
+      public void SalvarFuncionario(Guid userId, FuncionarioRequestDTO funcionarioDto)
       {
          var funcionarioEntidade = _mapper.Map<Funcionario>(funcionarioDto);
+         funcionarioEntidade.UsuarioID = userId;
          _funcionarioRepository.Adicionar(funcionarioEntidade);
          UnitOfWork.Commit();
       }
@@ -38,6 +40,18 @@ namespace api.funcionario.Services
          var funcionarioEntidade = _mapper.Map<Funcionario>(funcionarioDto);
          _funcionarioRepository.Atualizar(funcionarioEntidade);
          UnitOfWork.Commit();
+      }
+      
+      public PagedResult<FuncionarioResponseDTO> ListarFuncionarios(Guid userId, int page)
+      {
+         var funcionarios = _funcionarioRepository.ListarFuncionarios(userId, page);
+         var funcionarioDtos = _mapper.Map<List<FuncionarioResponseDTO>>(funcionarios.Items);
+         return new PagedResult<FuncionarioResponseDTO>
+         {
+            Items = funcionarioDtos,
+            TotalPages = funcionarios.TotalPages,
+            CurrentPage = funcionarios.CurrentPage
+         };
       }
 
       public void DeletarFuncionario(Guid id)

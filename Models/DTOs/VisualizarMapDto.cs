@@ -7,7 +7,7 @@ namespace api.coleta.Models.DTOs
         public Guid? Id { get; set; }
         public Guid TalhaoID { get; set; }
         public string Geojson { get; set; }
-        public string Funcionario { get; set; }
+        public Guid Funcionario { get; set; }
         public string Observacao { get; set; }
         public TipoColeta TipoColeta { get; set; }
         public TipoAnalise TipoAnalise { get; set; }

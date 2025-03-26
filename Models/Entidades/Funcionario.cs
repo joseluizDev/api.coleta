@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-
 namespace api.coleta.Models.Entidades
 {
    public class Funcionario : Entity
@@ -14,7 +13,8 @@ namespace api.coleta.Models.Entidades
       public string Telefone { get; set; }
       [MaxLength(100)]
       public string Senha { get; set; }
-
+      public Guid UsuarioID { get; set; }
+      public virtual Usuario Usuario { get; set; }
       [MaxLength(255)]
       public string Observacao { get; set; }
 

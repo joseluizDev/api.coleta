@@ -9,7 +9,8 @@ namespace api.coleta.Models.Entidades
         public virtual TalhaoJson Talhao { get; set; }
         public Guid GeojsonID { get; set; }
         public virtual Geojson Geojson { get; set; }
-        public string Funcionario { get; set; }
+        public Guid FuncionarioID { get; set; }
+        public virtual Funcionario Funcionario { get; set; }
         [MaxLength(255)]
         public string? Observacao { get; set; }
         public TipoColeta TipoColeta { get; set; }
