@@ -2,6 +2,7 @@
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Utils;
+using api.coleta.Utils.Maps;
 using AutoMapper;
 
 namespace api.coleta.Services
@@ -9,21 +10,34 @@ namespace api.coleta.Services
     public class VisualizarMapaService : ServiceBase
     {
         private readonly VisualizarMapaRepository _visualizarMapaRepository;
-        public VisualizarMapaService(VisualizarMapaRepository visualizarMapaRepository, IUnitOfWork unitOfWork, IMapper mapper)
+        private readonly GeoJsonRepository _geoJsonRepository;
+        public VisualizarMapaService(VisualizarMapaRepository visualizarMapaRepository, IUnitOfWork unitOfWork, IMapper mapper, GeoJsonRepository geoJsonRepository)
             : base(unitOfWork, mapper)
         {
             _visualizarMapaRepository = visualizarMapaRepository;
+            _geoJsonRepository = geoJsonRepository;
         }
 
         public VisualizarMapOutputDto? Salvar(Guid userID, VisualizarMapInputDto visualizarMapa)
         {
-            var map = _mapper.Map<VisualizarMapa>(visualizarMapa);
-            map.UsuarioID = userID;
-            _visualizarMapaRepository.SalvarVisualizarMapa(map);
-            if (UnitOfWork.Commit())
+            Geojson montarJson = new Geojson
             {
-                return _mapper.Map<VisualizarMapOutputDto>(map);
+                Pontos = visualizarMapa.Geojson.ToString(),
+                Grid = "1"
+            };
+            Geojson? retorno = _geoJsonRepository.Adicionar(montarJson);
+            if (retorno != null)
+            {
+                visualizarMapa.GeojsonId = retorno.Id;
+                var map = VisualizarDto.MapVisualizar(visualizarMapa);
+                map.UsuarioID = userID;
+                _visualizarMapaRepository.SalvarVisualizarMapa(map);
+                if (UnitOfWork.Commit())
+                {
+                    return _mapper.Map<VisualizarMapOutputDto>(map);
+                }
             }
+          
             return null;
         }
 

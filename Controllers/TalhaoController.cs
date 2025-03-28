@@ -2,6 +2,7 @@ using api.cliente.Interfaces;
 using api.coleta.Controllers;
 using api.talhao.Models.DTOs;
 using api.talhao.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.talhao.Controllers
@@ -122,5 +123,21 @@ namespace api.talhao.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+        [HttpGet]
+        [Route("BuscarTalhaoPorFazendaID")]
+        [Authorize]
+        public IActionResult BuscarTalhaoPorFazendaID([FromQuery] Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var talhao = _talhaoService.BuscarTalhaoPorFazendaID(userId, id);
+                return Ok(talhao);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+        
     }
 }

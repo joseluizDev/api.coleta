@@ -48,17 +48,13 @@ public class MappingProfile : Profile
 
         CreateMap<Coordenada, Coordenada>();
 
-        CreateMap<VisualizarMapInputDto, VisualizarMapa>();
-
-        CreateMap<VisualizarMapa, VisualizarMapOutputDto>();
-
         CreateMap<VisualizarMapOutputDto, object>()
     .ConvertUsing(dto => new
     {
         dto.Id,
         dto.TalhaoID,
         Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
-        dto.Funcionario,
+        dto.FuncionarioID,
         dto.Observacao,
         dto.TipoColeta,
         dto.TipoAnalise,

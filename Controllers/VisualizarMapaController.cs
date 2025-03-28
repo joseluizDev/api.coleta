@@ -2,6 +2,7 @@
 using api.coleta.Models.DTOs;
 using api.coleta.Services;
 using api.safra.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.coleta.Controllers
@@ -23,6 +24,7 @@ namespace api.coleta.Controllers
         }
 
         [HttpPost("salvar")]
+        [Authorize]
         public IActionResult Salvar([FromBody] VisualizarMapInputDto visualizarMapa)
         {
             try

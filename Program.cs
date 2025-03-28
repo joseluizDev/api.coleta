@@ -123,6 +123,9 @@ builder.Services.AddScoped<UtilsService>();
 builder.Services.AddScoped<VisualizarMapaRepository>();
 builder.Services.AddScoped<VisualizarMapaService>();
 
+builder.Services.AddScoped<GeoJsonRepository>();
+builder.Services.AddScoped<GeoJsonService>();
+
 
 
 

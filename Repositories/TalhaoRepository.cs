@@ -81,5 +81,10 @@ namespace api.talhao.Repositories
                 .Where(f => f.TalhaoID == id)
                 .FirstOrDefault();
         }
+
+        public Talhao? BuscarTalhaoPorFazendaID(Guid userID, Guid id)
+        {
+            return Context.Talhoes.Where(item => item.FazendaID == id && item.UsuarioID == userID).FirstOrDefault();
+        }
     }
 }
