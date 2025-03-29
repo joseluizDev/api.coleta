@@ -133,33 +133,42 @@ namespace api.vinculoClienteFazenda.Services
       }
 
 
-      //public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
-      //{
-      //   var inputPolygon = ParsePolygon(dados.Polygon);
-      //   var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(inputPolygon);
-      //   var bounds = inputPolygon.EnvelopeInternal;
-      //   var points = new List<Coordinate>();
-      //   var random = new Random();
-      //   int attempts = 0, maxAttempts = dados.QtdPontosNaArea * 20; // Aumenta tentativas para melhorar a precisão
+      public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
+      {
+         try
+         {
+            var inputPolygonWgs84 = ParsePolygon(dados.GeoJsonAreas);
+            var transformToUtm = GetWgs84ToUtm();
+            var inputPolygonUtm = TransformPolygon(inputPolygonWgs84, transformToUtm);
+            var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(inputPolygonUtm);
+            var bounds = inputPolygonUtm.EnvelopeInternal;
+            var points = new List<Coordinate>();
 
-      //   while (points.Count < dados.QtdPontosNaArea && attempts < maxAttempts)
-      //   {
-      //      double x = bounds.MinX + (bounds.MaxX - bounds.MinX) * random.NextDouble();
-      //      double y = bounds.MinY + (bounds.MaxY - bounds.MinY) * random.NextDouble();
+            // Calculate spacing based on the area and number of points
+            double area = inputPolygonUtm.Area;
+            double spacing = Math.Sqrt(area / dados.QtdPontosNaArea);
 
-      //      // Criando ponto com o mesmo sistema de coordenadas do polígono
-      //      var point = new Point(x, y) { SRID = inputPolygon.SRID };
+            for (double x = bounds.MinX; x <= bounds.MaxX; x += spacing)
+            {
+               for (double y = bounds.MinY; y <= bounds.MaxY; y += spacing)
+               {
+                  var point = new Point(x, y) { SRID = inputPolygonUtm.SRID };
 
-      //      // Verifica se o ponto está dentro do polígono
-      //      if (preparedPolygon.Contains(point))
-      //      {
-      //         points.Add(new Coordinate(x, y));
-      //      }
-      //      attempts++;
-      //   }
+                  if (preparedPolygon.Contains(point))
+                  {
+                     points.Add(new Coordinate(x, y));
+                  }
+               }
+            }
 
-      //   return ConvertPointsToGeoJson(points);
-      //}
+            return ConvertPointsToGeoJson(points);
+         }
+         catch (Exception ex)
+         {
+            throw new Exception("Erro ao gerar pontos dentro da área: " + ex.Message);
+         }
+      }
+
 
       private JsonElement ConvertPointsToGeoJson(List<Coordinate> points)
       {

@@ -11,4 +11,11 @@ namespace api.utils.DTOs
    {
       public object Hexagonal { get; set; }
    }
+
+   public class PontosDentroDaAreaRequest
+   {
+      public JsonElement GeoJsonAreas { get; set; } // FeatureCollection
+      public int QtdPontosNaArea { get; set; }
+   }
+
 }
