@@ -24,14 +24,15 @@ public class MappingProfile : Profile
         CreateMap<Cliente, ClienteResponseDTO>();
         CreateMap<ClienteRequestDTO, Cliente>();
 
-        CreateMap<Funcionario, FuncionarioResponseDTO>();
-        CreateMap<FuncionarioRequestDTO, Funcionario>();
 
         CreateMap<Fazenda, FazendaResponseDTO>();
         CreateMap<FazendaRequestDTO, Fazenda>();
 
         CreateMap<Safra, SafraResponseDTO>();
         CreateMap<SafraRequestDTO, Safra>();
+
+        CreateMap<ConfiguracaoPadrao, ConfiguracaoPadraoResponseDTO>();
+        CreateMap<ConfiguracaoPadraoRequestDTO, ConfiguracaoPadrao>();
 
         CreateMap<Talhao, TalhaoResponseDTO>();
         CreateMap<TalhaoRequestDTO, Talhao>();
@@ -49,17 +50,24 @@ public class MappingProfile : Profile
         CreateMap<Coordenada, Coordenada>();
 
         CreateMap<VisualizarMapOutputDto, object>()
-    .ConvertUsing(dto => new
-    {
-        dto.Id,
-        dto.TalhaoID,
-        Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
-        dto.FuncionarioID,
-        dto.Observacao,
-        dto.TipoColeta,
-        dto.TipoAnalise,
-        dto.Profundidade
-    });
+            .ConvertUsing(dto => new
+            {
+                dto.Id,
+                dto.Talhao,
+                Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
+                dto.TalhaoID,
+                dto.FuncionarioID,
+                dto.Funcionario,
+                dto.Observacao,
+                dto.TipoColeta,
+                dto.TipoAnalise,
+                dto.Profundidade
+            });
+
+        CreateMap<Coleta, VisualizarMapOutputDto>()
+            .ForMember(dest => dest.FuncionarioID, opt => opt.MapFrom(src => src.UsuarioRespID.ToString()));
+
+
 
         CreateMap<VinculoClienteFazenda, VinculoResponseDTO>();
         CreateMap<VinculoRequestDTO, VinculoClienteFazenda>();

@@ -23,15 +23,16 @@ public class ApplicationDbContext : DbContext
         base.OnModelCreating(modelBuilder);
     }
 
-    public DbSet<Coleta> Coletas { get; set; }
+    public DbSet<MColeta> MColetas { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
     public DbSet<Fazenda> Fazendas { get; set; }
     public DbSet<Talhao> Talhoes { get; set; }
     public DbSet<VinculoClienteFazenda> VinculoClienteFazendas { get; set; }
+    public DbSet<ConfiguracaoPersonalizada> ConfiguracaoPersonalizadas { get; set; }
+    public DbSet<ConfiguracaoPadrao> ConfiguracaoPadraos { get; set; }
     public DbSet<Safra> Safras { get; set; }
-    public DbSet<Funcionario> Funcionarios { get; set; }
     public DbSet<TalhaoJson> TalhaoJson { get; set; }
-    public DbSet<VisualizarMapa> VisualizarMapas { get; set; }
+    public DbSet<Coleta> Coletas { get; set; }
     public DbSet<Geojson> Geojson { get; set; }
 }

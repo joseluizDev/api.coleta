@@ -5,11 +5,11 @@ namespace api.coleta.Utils.Maps;
 
 public static class VisualizarDto
 {
-    public static VisualizarMapa MapVisualizar(this VisualizarMapInputDto map)
+    public static Coleta MapVisualizar(this VisualizarMapInputDto map)
     {
-        return new VisualizarMapa
+        return new Coleta
         {
-          FuncionarioID =  map.FuncionarioID,
+          UsuarioRespID =  map.FuncionarioID,
           TipoAnalise = Enum.Parse<TipoAnalise>(map.TipoAnalise),
           TipoColeta = Enum.Parse<TipoColeta>(map.TipoColeta),
           TalhaoID = map.TalhaoID,
@@ -19,7 +19,7 @@ public static class VisualizarDto
         };
     }
 
-    public static List<VisualizarMapa> MapVisualizar(this List<VisualizarMapInputDto> map)
+    public static List<Coleta> MapVisualizar(this List<VisualizarMapInputDto> map)
     {
         return map.Select(x => x.MapVisualizar()).ToList();
     }

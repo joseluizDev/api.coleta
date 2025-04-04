@@ -15,7 +15,24 @@ namespace api.coleta.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "Coletas",
+                name: "Geojson",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Pontos = table.Column<string>(type: "JSON", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Grid = table.Column<string>(type: "JSON", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Geojson", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "MColetas",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -33,50 +50,7 @@ namespace api.coleta.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Coletas", x => x.Id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "Funcionarios",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nome = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CPF = table.Column<string>(type: "varchar(11)", maxLength: 11, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Email = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Telefone = table.Column<string>(type: "varchar(11)", maxLength: 11, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Senha = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Observacao = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Ativo = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Funcionarios", x => x.Id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "Geojson",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Pontos = table.Column<string>(type: "JSON", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Grid = table.Column<string>(type: "JSON", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Geojson", x => x.Id);
+                    table.PrimaryKey("PK_MColetas", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -95,11 +69,17 @@ namespace api.coleta.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Senha = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    adminId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     DataInclusao = table.Column<DateTime>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Usuarios", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Usuarios_Usuarios_adminId",
+                        column: x => x.adminId,
+                        principalTable: "Usuarios",
+                        principalColumn: "Id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -301,14 +281,13 @@ namespace api.coleta.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "VisualizarMapas",
+                name: "Coletas",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     TalhaoID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     GeojsonID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Funcionario = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    UsuarioRespID = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Observacao = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     TipoColeta = table.Column<int>(type: "int", nullable: false),
@@ -319,22 +298,28 @@ namespace api.coleta.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_VisualizarMapas", x => x.Id);
+                    table.PrimaryKey("PK_Coletas", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_VisualizarMapas_Geojson_GeojsonID",
+                        name: "FK_Coletas_Geojson_GeojsonID",
                         column: x => x.GeojsonID,
                         principalTable: "Geojson",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_VisualizarMapas_TalhaoJson_TalhaoID",
+                        name: "FK_Coletas_TalhaoJson_TalhaoID",
                         column: x => x.TalhaoID,
                         principalTable: "TalhaoJson",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_VisualizarMapas_Usuarios_UsuarioID",
+                        name: "FK_Coletas_Usuarios_UsuarioID",
                         column: x => x.UsuarioID,
+                        principalTable: "Usuarios",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Coletas_Usuarios_UsuarioRespID",
+                        column: x => x.UsuarioRespID,
                         principalTable: "Usuarios",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -345,6 +330,26 @@ namespace api.coleta.Migrations
                 name: "IX_Clientes_UsuarioID",
                 table: "Clientes",
                 column: "UsuarioID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Coletas_GeojsonID",
+                table: "Coletas",
+                column: "GeojsonID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Coletas_TalhaoID",
+                table: "Coletas",
+                column: "TalhaoID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Coletas_UsuarioID",
+                table: "Coletas",
+                column: "UsuarioID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Coletas_UsuarioRespID",
+                table: "Coletas",
+                column: "UsuarioRespID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Fazendas_ClienteID",
@@ -392,6 +397,11 @@ namespace api.coleta.Migrations
                 column: "UsuarioID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_adminId",
+                table: "Usuarios",
+                column: "adminId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VinculoClienteFazendas_ClienteId",
                 table: "VinculoClienteFazendas",
                 column: "ClienteId");
@@ -400,21 +410,6 @@ namespace api.coleta.Migrations
                 name: "IX_VinculoClienteFazendas_FazendaId",
                 table: "VinculoClienteFazendas",
                 column: "FazendaId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VisualizarMapas_GeojsonID",
-                table: "VisualizarMapas",
-                column: "GeojsonID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VisualizarMapas_TalhaoID",
-                table: "VisualizarMapas",
-                column: "TalhaoID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VisualizarMapas_UsuarioID",
-                table: "VisualizarMapas",
-                column: "UsuarioID");
         }
 
         /// <inheritdoc />
@@ -424,16 +419,13 @@ namespace api.coleta.Migrations
                 name: "Coletas");
 
             migrationBuilder.DropTable(
-                name: "Funcionarios");
+                name: "MColetas");
 
             migrationBuilder.DropTable(
                 name: "Safras");
 
             migrationBuilder.DropTable(
                 name: "VinculoClienteFazendas");
-
-            migrationBuilder.DropTable(
-                name: "VisualizarMapas");
 
             migrationBuilder.DropTable(
                 name: "Geojson");

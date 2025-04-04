@@ -29,14 +29,14 @@ namespace api.coleta.repositories
 
         public void SalvarColetas(ColetaRequestDTO coletas)
         {
-            var coletaEntidade = _mapper.Map<Coleta>(coletas);
+            var coletaEntidade = _mapper.Map<MColeta>(coletas);
             _coletaRepository.Adicionar(coletaEntidade);
             UnitOfWork.Commit();
         }
 
         public void AtualizarColeta(ColetaRequestDTO coleta)
         {
-            var coletaEntidade = _mapper.Map<Coleta>(coleta);
+            var coletaEntidade = _mapper.Map<MColeta>(coleta);
             _coletaRepository.Atualizar(coletaEntidade);
             UnitOfWork.Commit();
         }

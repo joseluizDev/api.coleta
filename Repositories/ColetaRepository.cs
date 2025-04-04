@@ -13,12 +13,12 @@ using Microsoft.Extensions.Options;
 
 namespace api.coleta.Repositories
 {
-    public class ColetaRepository : GenericRepository<Coleta>
+    public class ColetaRepository : GenericRepository<MColeta>
     {
         public ColetaRepository(ApplicationDbContext context) : base(context)
         { }
 
-        public void SalvarColetas(List<Coleta> coletas)
+        public void SalvarColetas(List<MColeta> coletas)
         {
             foreach (var coleta in coletas)
             {

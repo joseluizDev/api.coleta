@@ -56,5 +56,24 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
+        [HttpDelete]
+        [Route("{id}")]
+        public IActionResult Excluir([FromRoute] Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var safras = _visualizarMapaService.ExcluirColeta(userId, id);
+                if(safras != true)
+                {
+                    return BadRequest("Erro ao excluir visualização de mapa.");
+                }
+                return Ok("Visualização de mapa excluída com sucesso.");
+
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
     }
 }

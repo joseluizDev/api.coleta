@@ -13,8 +13,6 @@ using api.talhao.Services;
 using api.vinculoClienteFazenda.Services;
 using api.safra.Repositories;
 using api.safra.Services;
-using api.funcionario.Services;
-using api.funcionario.Repositories;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using api.cliente.Interfaces;
@@ -103,8 +101,8 @@ builder.Services.AddScoped<ColetaService>();
 builder.Services.AddScoped<ClienteRepository>();
 builder.Services.AddScoped<ClienteService>();
 
-builder.Services.AddScoped<FuncionarioRepository>();
-builder.Services.AddScoped<FuncionarioService>();
+builder.Services.AddScoped<ConfiguracaoPadraoRepository>();
+builder.Services.AddScoped<ConfiguracaoPadraoService>();
 
 builder.Services.AddScoped<FazendaRepository>();
 builder.Services.AddScoped<FazendaService>();

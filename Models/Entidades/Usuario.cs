@@ -20,6 +20,9 @@ namespace api.coleta.Models.Entidades
 
         [MaxLength(100)]
         public string Senha { get; set; }
+
+        public Guid? adminId { get; set; }
+        public virtual Usuario Admin { get; set; }
         public Usuario()
         {
         }

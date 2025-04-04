@@ -60,9 +60,9 @@ namespace api.fazenda.repositories
             };
         }
 
-        public List<Fazenda> ListarTodasFazendas(Guid userId)
+        public List<Fazenda>   ListarTodasFazendas(Guid userId)
         {
             return Context.Fazendas.Where(x => x.UsuarioID == userId ).ToList();
         }
     }
-}
+}                                              
