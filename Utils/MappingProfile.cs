@@ -49,17 +49,24 @@ public class MappingProfile : Profile
         CreateMap<Coordenada, Coordenada>();
 
         CreateMap<VisualizarMapOutputDto, object>()
-    .ConvertUsing(dto => new
-    {
-        dto.Id,
-        dto.TalhaoID,
-        Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
-        dto.FuncionarioID,
-        dto.Observacao,
-        dto.TipoColeta,
-        dto.TipoAnalise,
-        dto.Profundidade
-    });
+            .ConvertUsing(dto => new
+            {
+                dto.Id,
+                dto.Talhao,
+                Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
+                dto.TalhaoID,
+                dto.FuncionarioID,
+                dto.Funcionario,
+                dto.Observacao,
+                dto.TipoColeta,
+                dto.TipoAnalise,
+                dto.Profundidade
+            });
+
+        CreateMap<VisualizarMapa, VisualizarMapOutputDto>()
+            .ForMember(dest => dest.FuncionarioID, opt => opt.MapFrom(src => src.FuncionarioID.ToString()));
+
+
 
         CreateMap<VinculoClienteFazenda, VinculoResponseDTO>();
         CreateMap<VinculoRequestDTO, VinculoClienteFazenda>();

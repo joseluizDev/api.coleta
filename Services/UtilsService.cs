@@ -6,6 +6,7 @@ using ProjNet.CoordinateSystems;
 using ProjNet.CoordinateSystems.Transformations;
 using System.Text.Json;
 using api.utils.DTOs;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace api.vinculoClienteFazenda.Services
 {
@@ -133,44 +134,89 @@ namespace api.vinculoClienteFazenda.Services
       }
 
 
-      public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
-      {
-         try
-         {
-            var inputPolygonWgs84 = ParsePolygon(dados.GeoJsonAreas);
-            var transformToUtm = GetWgs84ToUtm();
-            var inputPolygonUtm = TransformPolygon(inputPolygonWgs84, transformToUtm);
-            var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(inputPolygonUtm);
-            var bounds = inputPolygonUtm.EnvelopeInternal;
-            var points = new List<Coordinate>();
-
-            // Calculate spacing based on the area and number of points
-            double area = inputPolygonUtm.Area;
-            double spacing = Math.Sqrt(area / dados.QtdPontosNaArea);
-
-            for (double x = bounds.MinX; x <= bounds.MaxX; x += spacing)
+        public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados, double distanciaMinima = 8.0)
+        {
+            try
             {
-               for (double y = bounds.MinY; y <= bounds.MaxY; y += spacing)
-               {
-                  var point = new Point(x, y) { SRID = inputPolygonUtm.SRID };
+                var features = ParseFeatureCollection(dados.GeoJsonAreas);
+                var transformToUtm = GetWgs84ToUtm();
+                var allPoints = new List<Coordinate>();
 
-                  if (preparedPolygon.Contains(point))
-                  {
-                     points.Add(new Coordinate(x, y));
-                  }
-               }
+                int totalHexes = features.Count;
+                int pontosPorHex = dados.QtdPontosNaArea / totalHexes;
+
+                foreach (var polygonWgs84 in features)
+                {
+                    var polygonUtm = TransformPolygon(polygonWgs84, transformToUtm);
+                    var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygonUtm);
+                    var bounds = polygonUtm.EnvelopeInternal;
+
+                    double area = polygonUtm.Area;
+                    double spacingIdeal = Math.Sqrt(area / pontosPorHex);
+                    double spacing = Math.Max(spacingIdeal, distanciaMinima); // respeita a distância mínima
+
+                    var pontosDentro = new List<Coordinate>();
+
+                    for (double x = bounds.MinX; x <= bounds.MaxX; x += spacing)
+                    {
+                        for (double y = bounds.MinY; y <= bounds.MaxY; y += spacing)
+                        {
+                            var point = new Point(x, y) { SRID = polygonUtm.SRID };
+
+                            if (preparedPolygon.Contains(point))
+                            {
+                                pontosDentro.Add(new Coordinate(x, y));
+                            }
+                        }
+                    }
+
+                    if (pontosDentro.Count < pontosPorHex)
+                    {
+                        Console.WriteLine($"⚠️ Hexágono não comporta {pontosPorHex} pontos com distância mínima de {distanciaMinima}m. Serão gerados {pontosDentro.Count}.");
+                    }
+                    else
+                    {
+                        pontosDentro = pontosDentro.Take(pontosPorHex).ToList(); // corta o excesso, se houver
+                    }
+
+                    allPoints.AddRange(pontosDentro);
+                }
+
+                return ConvertPointsToGeoJson(allPoints);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Erro ao gerar pontos dentro da área: " + ex.Message);
+            }
+        }
+
+
+
+        private List<Polygon> ParseFeatureCollection(JsonElement geoJsonAreas)
+        {
+            var reader = new NetTopologySuite.IO.GeoJsonReader();
+            var featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(geoJsonAreas.ToString());
+
+            var polygons = new List<Polygon>();
+            foreach (var feature in featureCollection)
+            {
+                if (feature.Geometry is Polygon poly)
+                {
+                    polygons.Add(poly);
+                }
+                else if (feature.Geometry is MultiPolygon multi)
+                {
+                    polygons.AddRange(multi.Geometries.Cast<Polygon>());
+                }
             }
 
-            return ConvertPointsToGeoJson(points);
-         }
-         catch (Exception ex)
-         {
-            throw new Exception("Erro ao gerar pontos dentro da área: " + ex.Message);
-         }
-      }
+            return polygons;
+        }
 
 
-      private JsonElement ConvertPointsToGeoJson(List<Coordinate> points)
+
+
+        private JsonElement ConvertPointsToGeoJson(List<Coordinate> points)
       {
          var transform = GetUtmToWgs84();
 

@@ -29,9 +29,19 @@ namespace api.coleta.Repositories
             Deletar(visualizarMapa);
         }
 
+        public VisualizarMapa DeletarVisualizarMapaPorId(Guid id)
+        {
+            return Context.VisualizarMapas.FirstOrDefault(c => c.Id == id);
+        }
+
         public VisualizarMapa BuscarVisualizarMapaId(Guid idUser, Guid id)
         {
             return Context.VisualizarMapas.FirstOrDefault(c => c.Id == id && c.UsuarioID == idUser);
+        }
+
+        public VisualizarMapa BuscarVisualizarMapaPorIdTalhao(Guid idUser, Guid id)
+        {
+            return Context.VisualizarMapas.FirstOrDefault(c => c.TalhaoID == id && c.UsuarioID == idUser);
         }
 
         public PagedResult<VisualizarMapa> ListarVisualizarMapa(Guid userId, int page)

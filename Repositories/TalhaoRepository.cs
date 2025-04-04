@@ -1,6 +1,7 @@
 using api.coleta.Data.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Utils;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.talhao.Repositories
 {
@@ -73,6 +74,11 @@ namespace api.talhao.Repositories
             return Context.TalhaoJson
                 .Where(f => f.TalhaoID == id)
                 .ToList();
+        }
+
+        public TalhaoJson BuscarTalhaoJsonPorId(Guid id)
+        {
+            return Context.TalhaoJson.FirstOrDefault(c => c.Id == id);
         }
 
         public TalhaoJson DeletarTalhaoPorId(Guid id)
