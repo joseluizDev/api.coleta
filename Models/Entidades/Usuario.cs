@@ -38,6 +38,27 @@ namespace api.coleta.Models.Entidades
             ValidadorDeEntidade.ValidarSeVazioOuNulo(NomeCompleto, "O campo NomeCompleto não pode estar vazio");
             ValidadorDeEntidade.ValidarSeVazioOuNulo(CPF, "O campo Cpf do usuário não pode estar vazio");
             ValidadorDeEntidade.ValidarCpf(CPF, "O campo CPF do usuário é inválido");
+            ValidadorDeEntidade.ValidarSeVazioOuNulo(Email, "O campo Email do usuário não pode estar vazio");
+            ValidadorDeEntidade.ValidarSeVazioOuNulo(Telefone, "O campo Telefone do usuário não pode estar vazio");
+            ValidadorDeEntidade.ValidarSeVazioOuNulo(Senha, "O campo Senha do usuário não pode estar vazio");
+            ValidadorDeEntidade.ValidarMinimoMaximo(Senha, 6, 12, "O campo Senha do usuário deve ter entre 6 e 12 caracteres");
+            ValidadorDeEntidade.ValidarMinimoMaximo(NomeCompleto, 3, 100, "O campo NomeCompleto do usuário deve ter entre 3 e 100 caracteres");
+            ValidadorDeEntidade.ValidarMinimoMaximo(Email, 3, 100, "O campo Email do usuário deve ter entre 3 e 100 caracteres");
+            ValidadorDeEntidade.ValidarMinimoMaximo(Telefone, 3, 100, "O campo Telefone do usuário deve ter entre 3 e 100 caracteres");
+            ValidadorDeEntidade.ValidarMinimoMaximo(CPF, 3, 100, "O campo CPF do usuário deve ter entre 3 e 100 caracteres");
+            ValidadorDeEntidade.ValidarMinimoMaximo(CPF, 11, 11, "O campo CPF do usuário deve ter 11 caracteres");
+        }
+
+        // atualizar usuario
+        public Usuario Atualizar(UsuarioResquestDTO usuario)
+        {
+            NomeCompleto = usuario.NomeCompleto;
+            CPF = usuario.CPF;
+            Email = usuario.Email;
+            Telefone = usuario.Telefone;
+            Senha = usuario.Senha;
+            Validador();
+            return this;
         }
     }
 }

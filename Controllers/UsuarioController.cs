@@ -1,9 +1,7 @@
 ﻿using api.coleta.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using api.coleta.Controllers;
 using api.cliente.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace api.coleta.Controllers
 {
@@ -45,11 +43,11 @@ namespace api.coleta.Controllers
         {
             try
             {
-                var usuarioCadastrado = _usuarioService.Cadastrar(usuario);
-                if (usuarioCadastrado == null)
+                bool cadastrado = _usuarioService.Cadastrar(usuario);
+                if (!cadastrado)
                     return BadRequest("Erro ao cadastrar usuário.");
 
-                return Ok(usuarioCadastrado);
+                return Ok(new { message = "Usuário cadastrado com sucesso." });
             }
             catch (Exception ex)
             {
@@ -64,10 +62,19 @@ namespace api.coleta.Controllers
             try
             {
                 var token = ObterIDDoToken();
-                Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
 
-                if (userId == null)
+                if (string.IsNullOrEmpty(token))
+                {
+                    return BadRequest("Token não fornecido.");
+                }
+
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null)
+                {
                     return BadRequest("Token inválido ou ID do usuário não encontrado.");
+                }
+
+                Guid userId = userIdNullable.Value;
 
                 var usuario = _usuarioService.BuscarUsuarioPorId(userId);
                 if (usuario == null)
@@ -78,6 +85,40 @@ namespace api.coleta.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, "Ocorreu um erro ao buscar o usuário: " + ex.Message);
+            }
+        }
+
+        [HttpPut("atualizar")]
+        [Authorize]
+        public IActionResult AtualizarUsuario([FromBody] UsuarioResquestDTO usuario)
+        {
+            try
+            {
+                var token = ObterIDDoToken();
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    return BadRequest("Token não fornecido.");
+                }
+
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null)
+                {
+                    return BadRequest("Token inválido ou ID do usuário não encontrado.");
+                }
+
+                Guid userId = userIdNullable.Value;
+
+                var usuarioAtualizado = _usuarioService.AtualizarUsuario(userId, usuario);
+
+                if (usuarioAtualizado == null)
+                    return NotFound("Usuário não encontrado.");
+
+                return Ok(usuarioAtualizado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao atualizar o usuário: " + ex.Message);
             }
         }
     }
