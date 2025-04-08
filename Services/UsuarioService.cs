@@ -58,8 +58,17 @@ public class UsuarioService : ServiceBase
         return true;
     }
 
-    internal object BuscarUsuarioPorId(string userId)
+    public UsuarioResquestDTO? AtualizarUsuario(Guid id, UsuarioResquestDTO usuarioDto)
     {
-        throw new NotImplementedException();
+        var usuario = _usuarioRepository.ObterPorId(id);
+        if (usuario == null)
+        {
+            return null;
+        }
+        usuario.Atualizar(usuarioDto);
+        _usuarioRepository.Atualizar(usuario);
+        UnitOfWork.Commit();
+        return _mapper.Map<UsuarioResquestDTO>(usuario);
+
     }
 }
