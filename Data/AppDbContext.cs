@@ -35,4 +35,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<TalhaoJson> TalhaoJson { get; set; }
     public DbSet<Coleta> Coletas { get; set; }
     public DbSet<Geojson> Geojson { get; set; }
+    public DbSet<Minerais> Minerais { get; set; }
+    public DbSet<Relatorio> Relatorios { get; set; }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250409125439_newTable")]
+    partial class newTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -264,38 +267,6 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Minerais");
-                });
-
-            modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("ColetaId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("DataInclusao")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("JsonRelatorio")
-                        .IsRequired()
-                        .HasColumnType("JSON");
-
-                    b.Property<string>("LinkBackup")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("UsuarioId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ColetaId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Relatorios");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Safra", b =>
@@ -567,25 +538,6 @@ namespace api.coleta.Migrations
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
-                {
-                    b.HasOne("api.coleta.Models.Entidades.Coleta", "Coleta")
-                        .WithMany()
-                        .HasForeignKey("ColetaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Coleta");
 
                     b.Navigation("Usuario");
                 });

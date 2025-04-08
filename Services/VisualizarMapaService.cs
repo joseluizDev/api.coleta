@@ -17,7 +17,7 @@ namespace api.coleta.Services
         private readonly TalhaoRepository _talhaoService;
         private readonly GeoJsonRepository _geoJsonRepository;
         private readonly UsuarioService _usuarioService;
-        public VisualizarMapaService(UsuarioService  usuarioService, VisualizarMapaRepository visualizarMapaRepository, IUnitOfWork unitOfWork, IMapper mapper, GeoJsonRepository geoJsonRepository, TalhaoRepository talhaoService)
+        public VisualizarMapaService(UsuarioService usuarioService, VisualizarMapaRepository visualizarMapaRepository, IUnitOfWork unitOfWork, IMapper mapper, GeoJsonRepository geoJsonRepository, TalhaoRepository talhaoService)
             : base(unitOfWork, mapper)
         {
             _visualizarMapaRepository = visualizarMapaRepository;
@@ -45,18 +45,18 @@ namespace api.coleta.Services
                     return _mapper.Map<VisualizarMapOutputDto>(map);
                 }
             }
-          
+
             return null;
         }
 
         public PagedResult<VisualizarMapOutputDto?> listar(Guid userID, int page)
         {
             var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapa(userID, page);
-             if (visualizarMapa != null)
+            if (visualizarMapa != null)
             {
                 var mappedItems = _mapper.Map<List<VisualizarMapOutputDto?>>(visualizarMapa.Items);
-                
-                foreach(var coleta in mappedItems)
+
+                foreach (var coleta in mappedItems)
                 {
                     var talhao = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
                     if (talhao != null)
@@ -64,10 +64,10 @@ namespace api.coleta.Services
                         coleta.Talhao = _mapper.Map<Talhoes>(talhao);
                     }
 
-                    var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.FuncionarioID);
+                    var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
                     if (funcionario != null)
                     {
-                        coleta.Funcionario = _mapper.Map<FuncionarioResponseDTO>(funcionario);
+                        coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
                     }
                 }
 

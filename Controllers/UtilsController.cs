@@ -2,6 +2,7 @@
 using api.vinculoClienteFazenda.Services;
 using System.Text.Json;
 using api.utils.DTOs;
+using api.coleta.Models.DTOs;
 
 namespace api.utils.Controllers
 {

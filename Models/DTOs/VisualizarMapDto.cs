@@ -24,8 +24,8 @@ namespace api.coleta.Models.DTOs
         public Talhoes Talhao { get; set; }
         public Guid TalhaoID { get; set; }
         public string Geojson { get; set; }
-        public FuncionarioResponseDTO Funcionario { get; set; }
-        public Guid FuncionarioID { get; set; }
+        public UsuarioResponseDTO UsuarioResp { get; set; }
+        public Guid UsuarioRespID { get; set; }
         public string Observacao { get; set; }
         public string TipoColeta { get; set; }
         public string TipoAnalise { get; set; }

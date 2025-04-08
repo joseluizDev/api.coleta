@@ -52,15 +52,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
-builder.Services.AddSingleton<IMinioStorage>(provider =>
-    new MinioStorage(
-        endpoint: builder.Configuration["Minio:Endpoint"],
-        accessKey: builder.Configuration["Minio:AccessKey"],
-        secretKey: builder.Configuration["Minio:SecretKey"]
-    )
-);
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -107,6 +98,9 @@ builder.Services.AddScoped<ConfiguracaoPadraoService>();
 builder.Services.AddScoped<FazendaRepository>();
 builder.Services.AddScoped<FazendaService>();
 
+builder.Services.AddScoped<MineralRepository>();
+builder.Services.AddScoped<MineralService>();
+
 builder.Services.AddScoped<TalhaoRepository>();
 builder.Services.AddScoped<TalhaoService>();
 
@@ -124,6 +118,9 @@ builder.Services.AddScoped<VisualizarMapaService>();
 builder.Services.AddScoped<GeoJsonRepository>();
 builder.Services.AddScoped<GeoJsonService>();
 
+builder.Services.AddScoped<RelatorioRepository>();
+builder.Services.AddScoped<RelatorioService>();
+
 
 
 
@@ -139,6 +136,14 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
+
+builder.Services.AddSingleton<MinioStorage>(provider =>
+    new MinioStorage(
+        endpoint: builder.Configuration["Minio:Endpoint"],
+        accessKey: builder.Configuration["Minio:AccessKey"],
+        secretKey: builder.Configuration["Minio:SecretKey"]
+    )
+);
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>

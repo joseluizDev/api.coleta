@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250414141315_UpdateTableRelatorio2")]
+    partial class UpdateTableRelatorio2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -272,9 +275,6 @@ namespace api.coleta.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("ColetaId")
-                        .HasColumnType("char(36)");
-
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
 
@@ -290,8 +290,6 @@ namespace api.coleta.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ColetaId");
 
                     b.HasIndex("UsuarioId");
 
@@ -573,19 +571,11 @@ namespace api.coleta.Migrations
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
                 {
-                    b.HasOne("api.coleta.Models.Entidades.Coleta", "Coleta")
-                        .WithMany()
-                        .HasForeignKey("ColetaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Coleta");
 
                     b.Navigation("Usuario");
                 });

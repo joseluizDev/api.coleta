@@ -19,5 +19,13 @@ namespace api.coleta.Data.Repository
         {
             return Context.Usuarios.FirstOrDefault(x => x.CPF == cpf);
         }
+
+        public List<Usuario> ListarUsuariosPorFuncionario(Guid id)
+        {
+            return Context.Usuarios
+                .Where(x => x.adminId != null && x.adminId == id)
+                .ToList();
+        }
+
     }
 }
