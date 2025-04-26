@@ -14,9 +14,9 @@ namespace api.coleta.Repositories
             Adicionar(visualizarMapa);
         }
 
-        public Coleta BuscarVisualizarMapaPorId(Guid id)
+        public Coleta BuscarVisualizarMapaPorId(Guid userId, Guid id)
         {
-            return ObterPorId(id);
+            return Context.Coletas.FirstOrDefault(c => c.Id == id && c.UsuarioID == userId);
         }
 
         public void AtualizarVisualizarMapa(Coleta visualizarMapa)

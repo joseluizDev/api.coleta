@@ -26,6 +26,10 @@ namespace api.coleta.Data.Repository
                 .Where(x => x.adminId != null && x.adminId == id)
                 .ToList();
         }
+        public Usuario? LoginMobile(string email, string senha)
+        {
+            return Context.Usuarios.Where(x => x.Email == email && x.Senha == senha && x.adminId != null).FirstOrDefault();
+        }
 
     }
 }

@@ -8,6 +8,7 @@ using api.talhao.Models.DTOs;
 using api.talhao.Repositories;
 using api.talhao.Services;
 using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
 
 namespace api.coleta.Services
 {
@@ -91,6 +92,34 @@ namespace api.coleta.Services
                 return true;
             }
             return false;
+        }
+
+        public VisualizarMapOutputDto? BuscarVisualizarMapaPorId(Guid userId, Guid id)
+        {
+            var visualizarMapa = _visualizarMapaRepository.BuscarVisualizarMapaPorId(userId, id);
+            if (visualizarMapa != null)
+            {
+                var mappedItem = _mapper.Map<VisualizarMapOutputDto>(visualizarMapa);
+                var talhao = _talhaoService.BuscarTalhaoJsonPorId(mappedItem.TalhaoID);
+                if (talhao != null)
+                {
+                    mappedItem.Talhao = _mapper.Map<Talhoes>(talhao);
+                }
+
+                var geojson = _geoJsonRepository.ObterPorId(mappedItem.GeoJsonID);
+                if(geojson != null)
+                {
+                    mappedItem.Geojson = geojson;
+                }
+
+                var funcionario = _usuarioService.BuscarUsuarioPorId(mappedItem.UsuarioRespID);
+                if (funcionario != null)
+                {
+                    mappedItem.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
+                }
+                return mappedItem;
+            }
+            return null;
         }
     }
 }

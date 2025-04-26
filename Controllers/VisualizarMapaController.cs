@@ -75,5 +75,23 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
+        [HttpGet]
+        [Route("{id}")]
+        public IActionResult BuscarPorId([FromRoute] Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var visualizarMapa = _visualizarMapaService.BuscarVisualizarMapaPorId(userId, id);
+                if (visualizarMapa != null)
+                {
+                    return Ok(visualizarMapa);
+                }
+                return NotFound(new { message = "Visualização de mapa não encontrada." });
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
     }
 }

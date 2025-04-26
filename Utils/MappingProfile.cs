@@ -70,7 +70,8 @@ public class MappingProfile : Profile
                 }))
             .ForMember(dest => dest.Talhao, opt => opt.MapFrom(src => src.Talhao)) // Supondo que seja direto
             .ForMember(dest => dest.TalhaoID, opt => opt.MapFrom(src => src.TalhaoID))
-            .ForMember(dest => dest.Geojson, opt => opt.MapFrom(src => JsonSerializer.Serialize(src.Geojson, (JsonSerializerOptions)null)))
+            .ForMember(dest => dest.Geojson, opt => opt.MapFrom(src => src.Geojson))
+            .ForMember(dest => dest.GeoJsonID, opt => opt.MapFrom(src => src.GeojsonID))
             .ForMember(dest => dest.UsuarioRespID, opt => opt.MapFrom(src => src.UsuarioRespID)) // ou outro campo correto
             .ForMember(dest => dest.Observacao, opt => opt.MapFrom(src => src.Observacao))
             .ForMember(dest => dest.TipoColeta, opt => opt.MapFrom(src => src.TipoColeta))

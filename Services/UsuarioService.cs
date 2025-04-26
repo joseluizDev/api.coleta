@@ -81,4 +81,15 @@ public class UsuarioService : ServiceBase
         }
         return _mapper.Map<List<UsuarioResponseDTO?>>(usuario);
     }
+
+    public String? LoginMobile(UsuarioLoginDTO usuario)
+    {
+        var u = _usuarioRepository.LoginMobile(usuario.Email, usuario.Senha);
+        if (u == null)
+        {
+            return null;
+        }
+
+        return _jwtToken.GerarToken(u);
+    }
 }

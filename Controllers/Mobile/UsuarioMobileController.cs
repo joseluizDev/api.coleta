@@ -12,8 +12,7 @@ namespace api.coleta.Controllers.Mobile
         private readonly UsuarioService _usuarioService;
         private readonly IJwtToken _jwtToken;
 
-        public UsuarioMobileController(UsuarioService usuarioService, INotificador notificador, IJwtToken jwtToken)
-            : base(notificador)
+        public UsuarioMobileController(UsuarioService usuarioService, INotificador notificador, IJwtToken jwtToken): base(notificador)
         {
             _usuarioService = usuarioService;
             _jwtToken = jwtToken;
@@ -60,6 +59,24 @@ namespace api.coleta.Controllers.Mobile
             catch (Exception ex)
             {
                 return StatusCode(500, "Ocorreu um erro ao buscar o usuário: " + ex.Message);
+            }
+        }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] UsuarioLoginDTO usuario)
+        {
+            try
+            {
+                var token = _usuarioService.LoginMobile(usuario);
+                if (string.IsNullOrEmpty(token))
+                {
+                    return NotFound("Usuário ou senha inválidos.");
+                }
+                return Ok(new { Token = token });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao realizar o login: " + ex.Message);
             }
         }
 
