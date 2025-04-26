@@ -67,5 +67,13 @@ namespace api.coleta.Repositories
                 };
             }
         }
+
+        public List<Coleta> ListarVisualizarMapaMobile(Guid userId)
+        {
+            return Context.Coletas
+                .Where(x => x.UsuarioRespID == userId)
+                .Where(x => !Context.Relatorios.Any(r => r.ColetaId == x.Id))
+                .ToList();
+        }
     }
 }

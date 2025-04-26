@@ -139,7 +139,9 @@ namespace api.talhao.Services
 
             return new PagedResult<TalhaoResponseDTO>
             {
-                Items = talhaoDtos, TotalPages = talhao.TotalPages, CurrentPage = talhao.CurrentPage
+                Items = talhaoDtos,
+                TotalPages = talhao.TotalPages,
+                CurrentPage = talhao.CurrentPage
             };
         }
 
@@ -208,10 +210,26 @@ namespace api.talhao.Services
                 {
                     map.Talhoes = _mapper.Map<List<Talhoes>>(json);
                 }
-                
+
                 return map;
             }
 
+            return null;
+        }
+
+        public TalhaoJson? BuscarTalhaoJsonPorId(Guid id)
+        {
+            return _talhaoRepository.BuscarTalhaoJsonPorId(id);
+        }
+
+        public Talhao? BuscarTalhaoPorTalhaoJson(Guid talhaoJsonId)
+        {
+            var talhaoJson = _talhaoRepository.BuscarTalhaoJsonPorId(talhaoJsonId);
+            if (talhaoJson != null)
+            {
+                var talhao = _talhaoRepository.BuscarTalhaoComRelacionamentos(talhaoJson.TalhaoID);
+                return talhao;
+            }
             return null;
         }
     }

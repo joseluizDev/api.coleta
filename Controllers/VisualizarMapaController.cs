@@ -49,7 +49,7 @@ namespace api.coleta.Controllers
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var safras = _visualizarMapaService.listar(userId, page);
+                var safras = _visualizarMapaService.Listar(userId, page);
                 return Ok(safras);
 
             }
@@ -65,7 +65,7 @@ namespace api.coleta.Controllers
             if (userId != null)
             {
                 var safras = _visualizarMapaService.ExcluirColeta(userId, id);
-                if(safras != true)
+                if (safras != true)
                 {
                     return BadRequest("Erro ao excluir visualização de mapa.");
                 }

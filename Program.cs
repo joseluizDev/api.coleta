@@ -19,6 +19,7 @@ using api.cliente.Interfaces;
 using BackAppPromo.Infrastructure.Authentication;
 using api.minionStorage.Services;
 using api.coleta.Services;
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,12 +109,23 @@ builder.Services.AddScoped<VinculoClienteFazendaRepository>();
 builder.Services.AddScoped<VinculoClienteFazendaService>();
 
 builder.Services.AddScoped<SafraRepository>();
-builder.Services.AddScoped<SafraService>(); 
+builder.Services.AddScoped<SafraService>();
 
 builder.Services.AddScoped<UtilsService>();
 
 builder.Services.AddScoped<VisualizarMapaRepository>();
-builder.Services.AddScoped<VisualizarMapaService>();
+builder.Services.AddScoped<VisualizarMapaService>(provider =>
+    new VisualizarMapaService(
+        provider.GetRequiredService<UsuarioService>(),
+        provider.GetRequiredService<VisualizarMapaRepository>(),
+        provider.GetRequiredService<IUnitOfWork>(),
+        provider.GetRequiredService<IMapper>(),
+        provider.GetRequiredService<GeoJsonRepository>(),
+        provider.GetRequiredService<TalhaoRepository>(),
+        provider.GetRequiredService<TalhaoService>(),
+        provider.GetRequiredService<FazendaRepository>()
+    )
+);
 
 builder.Services.AddScoped<GeoJsonRepository>();
 builder.Services.AddScoped<GeoJsonService>();
