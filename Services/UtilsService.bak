@@ -178,57 +178,17 @@ namespace api.vinculoClienteFazenda.Services
         {
             try
             {
-                // Extrair os polígonos do GeoJSON
-                var polygons = ParseFeatureCollection(dados.GeoJsonAreas);
+                var features = ParseFeatureCollection(dados.GeoJsonAreas);
                 var transformToUtm = GetWgs84ToUtm();
-
-                // Lista para armazenar pontos com seus respectivos IDs de hexágono
-                var pointsWithHexagonId = new List<(Coordinate Point, int HexagonId)>();
+                var allPoints = new List<Coordinate>();
 
                 int pontosPorHex = dados.QtdPontosNaArea;
 
-                // Obter a coleção de features original para acessar os IDs dos hexágonos
-                var reader = new NetTopologySuite.IO.GeoJsonReader();
-                var featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(dados.GeoJsonAreas.ToString());
-
-                // Processar cada polígono
-                for (int i = 0; i < polygons.Count; i++)
+                foreach (var polygonWgs84 in features)
                 {
-                    var polygonWgs84 = polygons[i];
                     var polygonUtm = TransformPolygon(polygonWgs84, transformToUtm);
                     var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygonUtm);
                     var bounds = polygonUtm.EnvelopeInternal;
-
-                    // Obter o ID do hexágono das propriedades do GeoJSON
-                    int hexagonId = 0;
-                    if (i < featureCollection.Count)
-                    {
-                        var feature = featureCollection[i];
-                        // Verificar se existe o atributo "id" nas propriedades
-                        if (feature.Attributes.Exists("id"))
-                        {
-                            // Obter o valor do atributo "id"
-                            object idObj = feature.Attributes["id"];
-                            if (idObj != null)
-                            {
-                                hexagonId = Convert.ToInt32(idObj);
-                            }
-                            else
-                            {
-                                // Usar o índice + 1 como ID se o valor for nulo
-                                hexagonId = i + 1;
-                            }
-                        }
-                        else
-                        {
-                            // Usar o índice + 1 como ID se não encontrar nas propriedades
-                            hexagonId = i + 1;
-                        }
-                    }
-                    else
-                    {
-                        hexagonId = i + 1;
-                    }
 
                     double area = polygonUtm.Area;
 
@@ -252,22 +212,17 @@ namespace api.vinculoClienteFazenda.Services
 
                     if (pontosCandidatos.Count < pontosPorHex)
                     {
-                        Console.WriteLine($"⚠️ Apenas {pontosCandidatos.Count} pontos gerados no polígono. Solicitado: {pontosPorHex}. Espaçamento: {spacing:F2} m².");
+                        Console.WriteLine($"⚠️ Apenas {pontosCandidatos.Count} pontos gerados no polígono. Solicitado: {pontosPorHex}. Espaçamento: {spacing:F2} m².");
                     }
 
                     var pontosSelecionados = pontosCandidatos
                         .Take(Math.Min(pontosPorHex, pontosCandidatos.Count))
                         .ToList();
 
-                    // Adicionar os pontos com o ID do hexágono
-                    foreach (var ponto in pontosSelecionados)
-                    {
-                        pointsWithHexagonId.Add((ponto, hexagonId));
-                    }
+                    allPoints.AddRange(pontosSelecionados);
                 }
 
-                // Usar a versão do método que aceita pontos com IDs de hexágono
-                return ConvertPointsToGeoJson(pointsWithHexagonId);
+                return ConvertPointsToGeoJson(allPoints);
             }
             catch (Exception ex)
             {
