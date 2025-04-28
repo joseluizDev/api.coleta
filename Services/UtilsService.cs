@@ -316,7 +316,8 @@ namespace api.vinculoClienteFazenda.Services
                     {
                         type = "point",
                         id = pointId,
-                        hexagonId = hexagonId
+                        hexagonId = hexagonId,
+                        coletado = false
                     },
                     geometry = new
                     {

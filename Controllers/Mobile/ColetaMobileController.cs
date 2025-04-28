@@ -1,4 +1,5 @@
 ﻿using api.cliente.Interfaces;
+using api.coleta.Models.DTOs;
 using api.coleta.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -50,7 +51,24 @@ namespace api.coleta.Controllers.Mobile
             return Ok(coletasPorFazenda);
         }
 
-        //[HttpGet]
-        //[Route("busca")]
+        [HttpPost]
+        [Route("salva")]
+        [Authorize]
+        public IActionResult SalvarColeta([FromBody] ColetaMobileDTO coleta)
+        {
+            var token = ObterIDDoToken();
+            if (token != null)
+            {
+                Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+
+                var resultado = _visualizarMapaService.SalvarColeta(userId,coleta);
+                return Ok(resultado);
+            }
+            else
+            {
+                return BadRequest(new { message = "Token inválido." });
+
+            }
+        }
     }
 }

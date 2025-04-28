@@ -257,5 +257,16 @@ namespace api.coleta.Services
 
             return [.. coletasPorFazenda.Values];
         }
+
+        public bool? SalvarColeta(Guid id, ColetaMobileDTO coleta)
+        {
+            Coleta? co = _visualizarMapaRepository.ObterVisualizarMapaPorId(id, coleta.ColetaID);
+            if(co != null)
+            {
+                coleta.FuncionarioID = id;
+            }
+
+            return false;
+        }
     }
 }

@@ -75,5 +75,11 @@ namespace api.coleta.Repositories
                 .Where(x => !Context.Relatorios.Any(r => r.ColetaId == x.Id))
                 .ToList();
         }
+
+        public Coleta? ObterVisualizarMapaPorId(Guid id, Guid userId)
+        {
+            return Context.Coletas
+                .Where(x => x.Id == id && x.UsuarioRespID == userId).FirstOrDefault();
+        }
     }
 }
