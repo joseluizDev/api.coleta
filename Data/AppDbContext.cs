@@ -37,4 +37,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<Geojson> Geojson { get; set; }
     public DbSet<Minerais> Minerais { get; set; }
     public DbSet<Relatorio> Relatorios { get; set; }
+    public DbSet<PontoColetado> PontoColetados { get; set; }
 }

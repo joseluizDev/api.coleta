@@ -61,8 +61,12 @@ namespace api.coleta.Controllers.Mobile
             {
                 Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
 
-                var resultado = _visualizarMapaService.SalvarColeta(userId,coleta);
-                return Ok(resultado);
+                bool? resultado = _visualizarMapaService.SalvarColeta(userId,coleta);
+                if(resultado != false)
+                {
+                    return Ok(resultado);
+                }
+                return BadRequest(resultado);
             }
             else
             {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250428201457_novaTabela")]
+    partial class novaTabela
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -264,41 +267,6 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Minerais");
-                });
-
-            modelBuilder.Entity("api.coleta.Models.Entidades.PontoColetado", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("ColetaID")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("DataColeta")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("DataInclusao")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("FuncionarioID")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("HexagonID")
-                        .HasColumnType("char(36)");
-
-                    b.Property<double>("Latitude")
-                        .HasColumnType("double");
-
-                    b.Property<double>("Longitude")
-                        .HasColumnType("double");
-
-                    b.Property<Guid>("PontoID")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PontoColetados");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>

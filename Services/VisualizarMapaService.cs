@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.SignalR;
 using api.cliente.Models.DTOs;
 using api.fazenda.models;
 using api.fazenda.repositories;
+using System.Text.Json;
 
 namespace api.coleta.Services
 {
@@ -260,13 +261,48 @@ namespace api.coleta.Services
 
         public bool? SalvarColeta(Guid id, ColetaMobileDTO coleta)
         {
-            Coleta? co = _visualizarMapaRepository.ObterVisualizarMapaPorId(id, coleta.ColetaID);
-            if(co != null)
+            Coleta? co = _visualizarMapaRepository.ObterVisualizarMapaPorId(coleta.ColetaID, id);
+            if (co != null)
             {
                 coleta.FuncionarioID = id;
-            }
+                Geojson geo = _geoJsonRepository.ObterPorId(co.GeojsonID);
+                if (geo != null)
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var geoJson = JsonSerializer.Deserialize<JsonElement>(geo.Pontos, options);
 
+                    // Copia a propriedade features
+                    var featuresElement = geoJson.GetProperty("features");
+
+                    // Copia os pontos, atualizando o coletado quando encontrar o ponto do DTO
+                    var points = geoJson.GetProperty("points").EnumerateArray()
+                        .Select(p =>
+                        {
+                            var ponto = JsonSerializer.Deserialize<PontoDto>(p.GetRawText(), options);
+                            if (ponto.Properties.Id == coleta.Ponto.Properties.Id)
+                            {
+                                ponto.Properties.Coletado = true;
+                            }
+                            return ponto;
+                        })
+                        .ToArray();
+
+                    // Reconstroi o objeto GeoJSON com features + points atualizados
+                    var novoGeoJson = new
+                    {
+                        type = geoJson.GetProperty("type").GetString(),
+                        features = JsonSerializer.Deserialize<object>(featuresElement.GetRawText(), options),
+                        points = points
+                    };
+
+                    geo.Pontos = JsonSerializer.Serialize(novoGeoJson, options);
+                    _geoJsonRepository.Atualizar(geo);
+                    UnitOfWork.Commit();
+                    return true;
+                }
+            }
             return false;
         }
+
     }
 }
