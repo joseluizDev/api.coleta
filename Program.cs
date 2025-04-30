@@ -121,9 +121,7 @@ builder.Services.AddScoped<VisualizarMapaService>(provider =>
         provider.GetRequiredService<IUnitOfWork>(),
         provider.GetRequiredService<IMapper>(),
         provider.GetRequiredService<GeoJsonRepository>(),
-        provider.GetRequiredService<TalhaoRepository>(),
-        provider.GetRequiredService<TalhaoService>(),
-        provider.GetRequiredService<FazendaRepository>()
+        provider.GetRequiredService<TalhaoService>()
     )
 );
 
