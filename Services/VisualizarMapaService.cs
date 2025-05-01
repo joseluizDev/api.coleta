@@ -9,6 +9,7 @@ using api.talhao.Services;
 using AutoMapper;
 using api.cliente.Models.DTOs;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace api.coleta.Services
 {
@@ -172,7 +173,7 @@ namespace api.coleta.Services
             return mappedItems;
         }
 
-        public List<VisualizarMapOutputDto> ListarMobilePorFazenda(Guid userID)
+        public List<object> ListarMobilePorFazenda(Guid userID)
         {
             var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapaMobile(userID);
             if (visualizarMapa == null || visualizarMapa.Count == 0)
@@ -181,6 +182,7 @@ namespace api.coleta.Services
             }
 
             var mappedItems = _mapper.Map<List<VisualizarMapOutputDto>>(visualizarMapa);
+            var result = new List<object>();
 
             foreach (var coleta in mappedItems)
             {
@@ -188,27 +190,327 @@ namespace api.coleta.Services
 
                 // Carregar dados do talhão
                 var talhaoJson = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
-                if (talhaoJson != null)
-                {
-                    coleta.Talhao = _mapper.Map<Talhoes>(talhaoJson);
-                }
+                if (talhaoJson == null) continue;
+
+                coleta.Talhao = _mapper.Map<Talhoes>(talhaoJson);
 
                 // Carregar dados do usuário responsável
                 var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
-                if (funcionario != null)
-                {
-                    coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
-                }
+                if (funcionario == null) continue;
+
+                coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
 
                 // Carregar dados do geojson
                 var geojson = _geoJsonRepository.ObterPorId(coleta.GeoJsonID);
-                if (geojson != null)
+                if (geojson == null) continue;
+
+                coleta.Geojson = _mapper.Map<Geojson>(geojson);
+
+                // Criar estrutura personalizada para o retorno
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+                // Processar o GeoJson para o formato desejado
+                var geoJsonData = new
                 {
-                    coleta.Geojson = _mapper.Map<Geojson>(geojson);
+                    grid = new List<object>(),
+                    points = new List<object>()
+                };
+
+                // Tentar processar o GeoJson se existir
+                if (!string.IsNullOrEmpty(coleta.Geojson.Pontos))
+                {
+                    try
+                    {
+                        var pontos = JsonSerializer.Deserialize<JsonElement>(coleta.Geojson.Pontos, options);
+
+                        // Processar pontos se existirem
+                        if (pontos.TryGetProperty("points", out JsonElement pointsElement))
+                        {
+                            var pointsList = new List<object>();
+                            foreach (var point in pointsElement.EnumerateArray())
+                            {
+                                // Extrair as coordenadas e dados do ponto
+                                if (point.TryGetProperty("geometry", out JsonElement geometry) &&
+                                    geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
+                                    point.TryGetProperty("properties", out JsonElement properties))
+                                {
+                                    var pointData = new
+                                    {
+                                        dados = new
+                                        {
+                                            id = properties.TryGetProperty("id", out JsonElement id) ? id.GetInt32() : 1,
+                                            hexagonId = properties.TryGetProperty("hexagonId", out JsonElement hexId) ? hexId.GetInt32() : 1,
+                                            coletado = properties.TryGetProperty("coletado", out JsonElement coletado) ? coletado.GetBoolean() : false
+                                        },
+                                        cordenadas = new double[]
+                                        {
+                                            coordinates[0].GetDouble(),
+                                            coordinates[1].GetDouble()
+                                        }
+                                    };
+                                    pointsList.Add(pointData);
+                                }
+                            }
+                            geoJsonData.points.AddRange(pointsList);
+                        }
+
+                        // Processar grid a partir dos features do GeoJSON
+                        if (pontos.TryGetProperty("features", out JsonElement featuresElement))
+                        {
+                            try
+                            {
+                                var features = featuresElement.EnumerateArray();
+                                var polygons = new List<JsonElement>();
+
+                                // Extrair todos os polígonos dos features
+                                foreach (var feature in features)
+                                {
+                                    if (feature.TryGetProperty("geometry", out JsonElement geometry) &&
+                                        geometry.TryGetProperty("type", out JsonElement geoType) &&
+                                        geoType.GetString() == "Polygon" &&
+                                        geometry.TryGetProperty("coordinates", out JsonElement coordinates))
+                                    {
+                                        polygons.Add(coordinates);
+                                    }
+                                }
+
+                                if (polygons.Count > 0)
+                                {
+                                    // Usar os polígonos encontrados para o grid
+                                    foreach (var polygon in polygons)
+                                    {
+                                        try
+                                        {
+                                            // Extrair as coordenadas do polígono (primeiro nível)
+                                            var coordinates = JsonSerializer.Deserialize<List<List<double[]>>>(polygon.GetRawText(), options);
+                                            if (coordinates != null && coordinates.Count > 0 && coordinates[0].Count > 0)
+                                            {
+                                                var gridData = new
+                                                {
+                                                    cordenadas = coordinates[0]
+                                                };
+                                                geoJsonData.grid.Add(gridData);
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            // Se falhar ao processar o polígono, ignora e continua
+                                        }
+                                    }
+                                }
+                                else if (!string.IsNullOrEmpty(coleta.Geojson.Grid) && coleta.Geojson.Grid != "1")
+                                {
+                                    // Se não encontrou polígonos nos features, tenta usar o Grid
+                                    var gridJson = JsonSerializer.Deserialize<JsonElement>(coleta.Geojson.Grid, options);
+                                    if (gridJson.ValueKind == JsonValueKind.Array)
+                                    {
+                                        foreach (var gridItem in gridJson.EnumerateArray())
+                                        {
+                                            if (gridItem.TryGetProperty("coordinates", out JsonElement coords))
+                                            {
+                                                try
+                                                {
+                                                    // Tentar extrair as coordenadas diretamente
+                                                    var coordinates = JsonSerializer.Deserialize<List<List<double[]>>>(coords.GetRawText(), options);
+                                                    if (coordinates != null && coordinates.Count > 0 && coordinates[0].Count > 0)
+                                                    {
+                                                        var gridData = new
+                                                        {
+                                                            cordenadas = coordinates[0]
+                                                        };
+                                                        geoJsonData.grid.Add(gridData);
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    // Se falhar, tenta outro formato
+                                                    try
+                                                    {
+                                                        var coordinates = JsonSerializer.Deserialize<List<double[]>>(coords.GetRawText(), options);
+                                                        if (coordinates != null && coordinates.Count > 0)
+                                                        {
+                                                            var gridData = new
+                                                            {
+                                                                cordenadas = coordinates
+                                                            };
+                                                            geoJsonData.grid.Add(gridData);
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        // Se falhar novamente, ignora e continua
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                else if (coleta.Talhao?.Coordenadas != null)
+                                {
+                                    // Se não encontrou grid, tenta usar as coordenadas do talhão
+                                    try
+                                    {
+                                        var coordsList = new List<double[]>();
+                                        var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(coleta.Talhao.Coordenadas), options);
+
+                                        if (talhaoCoords.ValueKind == JsonValueKind.Array)
+                                        {
+                                            foreach (var coord in talhaoCoords.EnumerateArray())
+                                            {
+                                                if (coord.TryGetProperty("lat", out JsonElement lat) &&
+                                                    coord.TryGetProperty("lng", out JsonElement lng))
+                                                {
+                                                    coordsList.Add(new[] { lng.GetDouble(), lat.GetDouble() });
+                                                }
+                                            }
+
+                                            if (coordsList.Count > 0)
+                                            {
+                                                // Adicionar o primeiro ponto novamente para fechar o polígono
+                                                coordsList.Add(coordsList[0]);
+
+                                                var gridData = new
+                                                {
+                                                    cordenadas = coordsList
+                                                };
+                                                geoJsonData.grid.Add(gridData);
+                                            }
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        // Falha ao processar coordenadas do talhão
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // Falha ao processar features
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Se falhar ao processar o GeoJson, tenta usar as coordenadas do talhão
+                        if (coleta.Talhao?.Coordenadas != null)
+                        {
+                            try
+                            {
+                                // Tenta extrair as coordenadas do talhão
+                                var coordsList = new List<double[]>();
+
+                                try
+                                {
+                                    // Tenta deserializar as coordenadas do talhão
+                                    var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(coleta.Talhao.Coordenadas), options);
+                                    if (talhaoCoords.ValueKind == JsonValueKind.Array)
+                                    {
+                                        foreach (var coord in talhaoCoords.EnumerateArray())
+                                        {
+                                            if (coord.TryGetProperty("lat", out JsonElement lat) &&
+                                                coord.TryGetProperty("lng", out JsonElement lng))
+                                            {
+                                                coordsList.Add(new[] { lng.GetDouble(), lat.GetDouble() });
+                                            }
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    // Falha ao deserializar as coordenadas
+                                }
+
+                                if (coordsList.Count > 0)
+                                {
+                                    // Criar um ponto central para o points
+                                    double sumLat = 0, sumLng = 0;
+                                    foreach (var coord in coordsList)
+                                    {
+                                        sumLng += coord[0];
+                                        sumLat += coord[1];
+                                    }
+
+                                    double avgLng = sumLng / coordsList.Count;
+                                    double avgLat = sumLat / coordsList.Count;
+
+                                    // Adicionar um ponto no centro
+                                    var pointData = new
+                                    {
+                                        dados = new
+                                        {
+                                            id = 1,
+                                            hexagonId = 1,
+                                            coletado = false
+                                        },
+                                        cordenadas = new[] { avgLng, avgLat }
+                                    };
+                                    geoJsonData.points.Add(pointData);
+
+                                    // Adicionar o primeiro ponto novamente para fechar o polígono
+                                    coordsList.Add(coordsList[0]);
+
+                                    // Criar o grid com as coordenadas do talhão
+                                    var gridData = new
+                                    {
+                                        cordenadas = coordsList
+                                    };
+                                    geoJsonData.grid.Add(gridData);
+                                }
+                                else
+                                {
+                                    // Se não conseguiu extrair coordenadas, não adiciona pontos ou grid
+                                    // Deixa os arrays vazios para o cliente mobile lidar
+                                }
+                            }
+                            catch
+                            {
+                                // Se falhar, não adiciona pontos ou grid
+                                // Deixa os arrays vazios para o cliente mobile lidar
+                            }
+                        }
+                        else
+                        {
+                            // Se não tiver coordenadas do talhão, não adiciona pontos ou grid
+                            // Deixa os arrays vazios para o cliente mobile lidar
+                        }
+                    }
                 }
+
+
+                // Criar o objeto final no formato desejado
+                var item = new
+                {
+                    id = coleta.Id,
+                    talhao = coleta.Talhao != null ? new
+                    {
+                        id = coleta.Talhao.Id,
+                        area = coleta.Talhao.Area,
+                        nome = coleta.Talhao.Nome,
+                        observacao = coleta.Talhao.observacao,
+                        talhaoID = coleta.Talhao.TalhaoID,
+                        coordenadas = coleta.Talhao.Coordenadas
+                    } : null,
+                    geojson = geoJsonData,
+                    geoJsonID = coleta.GeoJsonID,
+                    usuarioResp = coleta.UsuarioResp != null ? new
+                    {
+                        id = coleta.UsuarioResp.Id,
+                        nomeCompleto = coleta.UsuarioResp.NomeCompleto,
+                        cpf = coleta.UsuarioResp.CPF,
+                        email = coleta.UsuarioResp.Email,
+                        telefone = coleta.UsuarioResp.Telefone
+                    } : null,
+                    usuarioRespID = coleta.UsuarioRespID,
+                    observacao = coleta.Observacao ?? "",
+                    tipoColeta = coleta.TipoColeta,
+                    tipoAnalise = coleta.TipoAnalise,
+                    profundidade = coleta.Profundidade
+                };
+
+                result.Add(item);
             }
 
-            return mappedItems;
+            return result;
         }
 
         public bool? SalvarColeta(Guid id, ColetaMobileDTO coleta)
@@ -217,7 +519,7 @@ namespace api.coleta.Services
             if (co != null)
             {
                 coleta.FuncionarioID = id;
-                Geojson geo = _geoJsonRepository.ObterPorId(co.GeojsonID);
+                Geojson? geo = _geoJsonRepository.ObterPorId(co.GeojsonID);
                 if (geo != null)
                 {
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -231,7 +533,8 @@ namespace api.coleta.Services
                         .Select(p =>
                         {
                             var ponto = JsonSerializer.Deserialize<PontoDto>(p.GetRawText(), options);
-                            if (ponto.Properties.Id == coleta.Ponto.Properties.Id)
+                            if (ponto?.Properties != null && coleta.Ponto?.Properties != null &&
+                                ponto.Properties.Id == coleta.Ponto.Properties.Id)
                             {
                                 ponto.Properties.Coletado = true;
                             }
