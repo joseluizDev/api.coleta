@@ -188,48 +188,48 @@ namespace api.coleta.Services
             {
                 if (coleta == null) continue;
 
-                // Carregar dados do talhão
+
                 var talhaoJson = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
                 if (talhaoJson == null) continue;
 
                 coleta.Talhao = _mapper.Map<Talhoes>(talhaoJson);
 
-                // Carregar dados do usuário responsável
+
                 var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
                 if (funcionario == null) continue;
 
                 coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
 
-                // Carregar dados do geojson
+
                 var geojson = _geoJsonRepository.ObterPorId(coleta.GeoJsonID);
                 if (geojson == null) continue;
 
                 coleta.Geojson = _mapper.Map<Geojson>(geojson);
 
-                // Criar estrutura personalizada para o retorno
+
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-                // Processar o GeoJson para o formato desejado
+
                 var geoJsonData = new
                 {
                     grid = new List<object>(),
                     points = new List<object>()
                 };
 
-                // Tentar processar o GeoJson se existir
+
                 if (!string.IsNullOrEmpty(coleta.Geojson.Pontos))
                 {
                     try
                     {
                         var pontos = JsonSerializer.Deserialize<JsonElement>(coleta.Geojson.Pontos, options);
 
-                        // Processar pontos se existirem
+
                         if (pontos.TryGetProperty("points", out JsonElement pointsElement))
                         {
                             var pointsList = new List<object>();
                             foreach (var point in pointsElement.EnumerateArray())
                             {
-                                // Extrair as coordenadas e dados do ponto
+
                                 if (point.TryGetProperty("geometry", out JsonElement geometry) &&
                                     geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
                                     point.TryGetProperty("properties", out JsonElement properties))
@@ -254,7 +254,7 @@ namespace api.coleta.Services
                             geoJsonData.points.AddRange(pointsList);
                         }
 
-                        // Processar grid a partir dos features do GeoJSON
+
                         if (pontos.TryGetProperty("features", out JsonElement featuresElement))
                         {
                             try
@@ -262,7 +262,7 @@ namespace api.coleta.Services
                                 var features = featuresElement.EnumerateArray();
                                 var polygons = new List<JsonElement>();
 
-                                // Extrair todos os polígonos dos features
+
                                 foreach (var feature in features)
                                 {
                                     if (feature.TryGetProperty("geometry", out JsonElement geometry) &&
@@ -276,12 +276,12 @@ namespace api.coleta.Services
 
                                 if (polygons.Count > 0)
                                 {
-                                    // Usar os polígonos encontrados para o grid
+
                                     foreach (var polygon in polygons)
                                     {
                                         try
                                         {
-                                            // Extrair as coordenadas do polígono (primeiro nível)
+
                                             var coordinates = JsonSerializer.Deserialize<List<List<double[]>>>(polygon.GetRawText(), options);
                                             if (coordinates != null && coordinates.Count > 0 && coordinates[0].Count > 0)
                                             {
@@ -294,13 +294,13 @@ namespace api.coleta.Services
                                         }
                                         catch
                                         {
-                                            // Se falhar ao processar o polígono, ignora e continua
+
                                         }
                                     }
                                 }
                                 else if (!string.IsNullOrEmpty(coleta.Geojson.Grid) && coleta.Geojson.Grid != "1")
                                 {
-                                    // Se não encontrou polígonos nos features, tenta usar o Grid
+
                                     var gridJson = JsonSerializer.Deserialize<JsonElement>(coleta.Geojson.Grid, options);
                                     if (gridJson.ValueKind == JsonValueKind.Array)
                                     {
@@ -310,7 +310,7 @@ namespace api.coleta.Services
                                             {
                                                 try
                                                 {
-                                                    // Tentar extrair as coordenadas diretamente
+
                                                     var coordinates = JsonSerializer.Deserialize<List<List<double[]>>>(coords.GetRawText(), options);
                                                     if (coordinates != null && coordinates.Count > 0 && coordinates[0].Count > 0)
                                                     {
@@ -323,7 +323,7 @@ namespace api.coleta.Services
                                                 }
                                                 catch
                                                 {
-                                                    // Se falhar, tenta outro formato
+
                                                     try
                                                     {
                                                         var coordinates = JsonSerializer.Deserialize<List<double[]>>(coords.GetRawText(), options);
@@ -338,7 +338,7 @@ namespace api.coleta.Services
                                                     }
                                                     catch
                                                     {
-                                                        // Se falhar novamente, ignora e continua
+
                                                     }
                                                 }
                                             }
@@ -347,7 +347,7 @@ namespace api.coleta.Services
                                 }
                                 else if (coleta.Talhao?.Coordenadas != null)
                                 {
-                                    // Se não encontrou grid, tenta usar as coordenadas do talhão
+
                                     try
                                     {
                                         var coordsList = new List<double[]>();
@@ -366,7 +366,7 @@ namespace api.coleta.Services
 
                                             if (coordsList.Count > 0)
                                             {
-                                                // Adicionar o primeiro ponto novamente para fechar o polígono
+
                                                 coordsList.Add(coordsList[0]);
 
                                                 var gridData = new
@@ -379,29 +379,29 @@ namespace api.coleta.Services
                                     }
                                     catch
                                     {
-                                        // Falha ao processar coordenadas do talhão
+
                                     }
                                 }
                             }
                             catch
                             {
-                                // Falha ao processar features
+
                             }
                         }
                     }
                     catch
                     {
-                        // Se falhar ao processar o GeoJson, tenta usar as coordenadas do talhão
+
                         if (coleta.Talhao?.Coordenadas != null)
                         {
                             try
                             {
-                                // Tenta extrair as coordenadas do talhão
+
                                 var coordsList = new List<double[]>();
 
                                 try
                                 {
-                                    // Tenta deserializar as coordenadas do talhão
+
                                     var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(coleta.Talhao.Coordenadas), options);
                                     if (talhaoCoords.ValueKind == JsonValueKind.Array)
                                     {
@@ -417,12 +417,12 @@ namespace api.coleta.Services
                                 }
                                 catch
                                 {
-                                    // Falha ao deserializar as coordenadas
+
                                 }
 
                                 if (coordsList.Count > 0)
                                 {
-                                    // Criar um ponto central para o points
+
                                     double sumLat = 0, sumLng = 0;
                                     foreach (var coord in coordsList)
                                     {
@@ -433,7 +433,7 @@ namespace api.coleta.Services
                                     double avgLng = sumLng / coordsList.Count;
                                     double avgLat = sumLat / coordsList.Count;
 
-                                    // Adicionar um ponto no centro
+
                                     var pointData = new
                                     {
                                         dados = new
@@ -446,10 +446,10 @@ namespace api.coleta.Services
                                     };
                                     geoJsonData.points.Add(pointData);
 
-                                    // Adicionar o primeiro ponto novamente para fechar o polígono
+
                                     coordsList.Add(coordsList[0]);
 
-                                    // Criar o grid com as coordenadas do talhão
+
                                     var gridData = new
                                     {
                                         cordenadas = coordsList
@@ -458,26 +458,26 @@ namespace api.coleta.Services
                                 }
                                 else
                                 {
-                                    // Se não conseguiu extrair coordenadas, não adiciona pontos ou grid
-                                    // Deixa os arrays vazios para o cliente mobile lidar
+
+
                                 }
                             }
                             catch
                             {
-                                // Se falhar, não adiciona pontos ou grid
-                                // Deixa os arrays vazios para o cliente mobile lidar
+
+
                             }
                         }
                         else
                         {
-                            // Se não tiver coordenadas do talhão, não adiciona pontos ou grid
-                            // Deixa os arrays vazios para o cliente mobile lidar
+
+
                         }
                     }
                 }
 
 
-                // Criar o objeto final no formato desejado
+
                 var item = new
                 {
                     id = coleta.Id,
@@ -525,24 +525,51 @@ namespace api.coleta.Services
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                     var geoJson = JsonSerializer.Deserialize<JsonElement>(geo.Pontos, options);
 
-                    // Copia a propriedade features
+
                     var featuresElement = geoJson.GetProperty("features");
 
-                    // Copia os pontos, atualizando o coletado quando encontrar o ponto do DTO
+
                     var points = geoJson.GetProperty("points").EnumerateArray()
                         .Select(p =>
                         {
-                            var ponto = JsonSerializer.Deserialize<PontoDto>(p.GetRawText(), options);
-                            if (ponto?.Properties != null && coleta.Ponto?.Properties != null &&
-                                ponto.Properties.Id == coleta.Ponto.Properties.Id)
+                            try
                             {
-                                ponto.Properties.Coletado = true;
+
+                                if (p.TryGetProperty("dados", out JsonElement dadosElement))
+                                {
+
+                                    var id = dadosElement.TryGetProperty("id", out JsonElement idElement) ? idElement.GetInt32() : 0;
+
+
+                                    if (coleta.Ponto != null && id == coleta.Ponto.Id)
+                                    {
+
+                                        return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(new
+                                        {
+                                            dados = new
+                                            {
+                                                id = id,
+                                                hexagonId = dadosElement.TryGetProperty("hexagonId", out JsonElement hexIdElement) ? hexIdElement.GetInt32() : 1,
+                                                coletado = true
+                                            },
+                                            cordenadas = p.TryGetProperty("cordenadas", out JsonElement coordsElement) ?
+                                                JsonSerializer.Deserialize<double[]>(coordsElement.GetRawText()) :
+                                                new double[] { 0, 0 }
+                                        }));
+                                    }
+                                }
+
+                                return p;
                             }
-                            return ponto;
+                            catch
+                            {
+
+                                return p;
+                            }
                         })
                         .ToArray();
 
-                    // Reconstroi o objeto GeoJSON com features + points atualizados
+
                     var novoGeoJson = new
                     {
                         type = geoJson.GetProperty("type").GetString(),

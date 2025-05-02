@@ -14,9 +14,11 @@ namespace api.coleta.Models.DTOs
 
     public class PontoDto
     {
-        public string Type { get; set; }
-        public PropertiesDto Properties { get; set; }
-        public GeometryDto Geometry { get; set; }
+        public int Id { get; set; }
+        public int HexagonId { get; set; }
+        public bool Coletado { get; set; }
+        public double latitude { get; set; }
+        public double longitude { get; set; }
     }
 
     public class PropertiesDto
