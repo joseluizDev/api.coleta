@@ -8,6 +8,7 @@ using api.talhao.Models.DTOs;
 using api.talhao.Services;
 using AutoMapper;
 using api.cliente.Models.DTOs;
+using System.Text;
 using System.Text.Json;
 using System.Collections.Generic;
 
@@ -15,6 +16,12 @@ namespace api.coleta.Services
 {
     public class VisualizarMapaService : ServiceBase
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
+
         private readonly VisualizarMapaRepository _visualizarMapaRepository;
         private readonly GeoJsonRepository _geoJsonRepository;
         private readonly UsuarioService _usuarioService;
@@ -515,76 +522,121 @@ namespace api.coleta.Services
 
         public bool? SalvarColeta(Guid id, ColetaMobileDTO coleta)
         {
-            Coleta? co = _visualizarMapaRepository.ObterVisualizarMapaPorId(coleta.ColetaID, id);
-            if (co != null)
+            try
             {
-                coleta.FuncionarioID = id;
-                Geojson? geo = _geoJsonRepository.ObterPorId(co.GeojsonID);
-                if (geo != null)
+                // Busca a coleta pelo ID
+                Coleta? co = _visualizarMapaRepository.ObterVisualizarMapaPorId(coleta.ColetaID, id);
+                if (co == null)
                 {
-                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var geoJson = JsonSerializer.Deserialize<JsonElement>(geo.Pontos, options);
+                    return false;
+                }
 
+                coleta.FuncionarioID = id;
 
-                    var featuresElement = geoJson.GetProperty("features");
+                // Busca o GeoJSON associado à coleta
+                Geojson? geo = _geoJsonRepository.ObterPorId(co.GeojsonID);
+                if (geo == null || string.IsNullOrEmpty(geo.Pontos))
+                {
+                    return false;
+                }
 
+                // Deserializa o GeoJSON usando as opções estáticas
+                var geoJson = JsonSerializer.Deserialize<JsonElement>(geo.Pontos, _jsonOptions);
 
-                    var points = geoJson.GetProperty("points").EnumerateArray()
-                        .Select(p =>
+                // Verifica se o GeoJSON tem a estrutura esperada (type, features, points)
+                if (!geoJson.TryGetProperty("type", out var typeElement) ||
+                    !geoJson.TryGetProperty("features", out var featuresElement) ||
+                    !geoJson.TryGetProperty("points", out var pointsElement))
+                {
+                    return false;
+                }
+
+                // Cria um documento JSON para manipulação
+                using var jsonDoc = JsonDocument.Parse(geo.Pontos);
+                using var outputMs = new MemoryStream();
+                using var writer = new Utf8JsonWriter(outputMs, new JsonWriterOptions { Indented = true });
+
+                writer.WriteStartObject();
+
+                // Escreve o tipo (FeatureCollection)
+                writer.WriteString("type", typeElement.GetString());
+
+                // Copia as features sem alteração
+                writer.WritePropertyName("features");
+                featuresElement.WriteTo(writer);
+
+                // Processa os pontos, alterando apenas o status 'coletado' do ponto específico
+                writer.WritePropertyName("points");
+                writer.WriteStartArray();
+
+                foreach (var point in pointsElement.EnumerateArray())
+                {
+                    // Verifica se é o ponto que queremos atualizar
+                    if (point.TryGetProperty("properties", out var props) &&
+                        props.TryGetProperty("id", out var idElement) &&
+                        idElement.GetInt32() == coleta.Ponto.Id)
+                    {
+                        // Este é o ponto que queremos atualizar - cria uma cópia com 'coletado' = true
+                        writer.WriteStartObject();
+
+                        // Copia todas as propriedades do ponto
+                        foreach (var property in point.EnumerateObject())
                         {
-                            try
+                            if (property.Name == "properties")
                             {
+                                writer.WritePropertyName("properties");
+                                writer.WriteStartObject();
 
-                                if (p.TryGetProperty("dados", out JsonElement dadosElement))
+                                // Copia todas as propriedades, alterando apenas 'coletado' para true
+                                foreach (var prop in property.Value.EnumerateObject())
                                 {
-
-                                    var id = dadosElement.TryGetProperty("id", out JsonElement idElement) ? idElement.GetInt32() : 0;
-
-
-                                    if (coleta.Ponto != null && id == coleta.Ponto.Id)
+                                    if (prop.Name == "coletado")
                                     {
-
-                                        return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(new
-                                        {
-                                            dados = new
-                                            {
-                                                id = id,
-                                                hexagonId = dadosElement.TryGetProperty("hexagonId", out JsonElement hexIdElement) ? hexIdElement.GetInt32() : 1,
-                                                coletado = true
-                                            },
-                                            cordenadas = p.TryGetProperty("cordenadas", out JsonElement coordsElement) ?
-                                                JsonSerializer.Deserialize<double[]>(coordsElement.GetRawText()) :
-                                                new double[] { 0, 0 }
-                                        }));
+                                        writer.WriteBoolean("coletado", true);
+                                    }
+                                    else
+                                    {
+                                        prop.WriteTo(writer);
                                     }
                                 }
 
-                                return p;
+                                writer.WriteEndObject(); // Fecha properties
                             }
-                            catch
+                            else
                             {
-
-                                return p;
+                                // Copia outras propriedades do ponto (type, geometry, etc.)
+                                property.WriteTo(writer);
                             }
-                        })
-                        .ToArray();
+                        }
 
-
-                    var novoGeoJson = new
+                        writer.WriteEndObject(); // Fecha o ponto
+                    }
+                    else
                     {
-                        type = geoJson.GetProperty("type").GetString(),
-                        features = JsonSerializer.Deserialize<object>(featuresElement.GetRawText(), options),
-                        points = points
-                    };
-
-                    geo.Pontos = JsonSerializer.Serialize(novoGeoJson, options);
-                    _geoJsonRepository.Atualizar(geo);
-                    UnitOfWork.Commit();
-                    return true;
+                        // Não é o ponto que queremos atualizar, copia sem alteração
+                        point.WriteTo(writer);
+                    }
                 }
-            }
-            return false;
-        }
 
+                writer.WriteEndArray(); // Fecha o array de pontos
+                writer.WriteEndObject(); // Fecha o objeto GeoJSON
+                writer.Flush();
+
+                // Converte o resultado para string e atualiza o GeoJSON
+                outputMs.Position = 0;
+                geo.Pontos = Encoding.UTF8.GetString(outputMs.ToArray());
+
+                // Salva as alterações
+                _geoJsonRepository.Atualizar(geo);
+                UnitOfWork.Commit();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log do erro
+                Console.WriteLine($"Erro ao atualizar o status de coleta: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

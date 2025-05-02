@@ -17,8 +17,8 @@ namespace api.coleta.Models.DTOs
         public int Id { get; set; }
         public int HexagonId { get; set; }
         public bool Coletado { get; set; }
-        public double latitude { get; set; }
-        public double longitude { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 
     public class PropertiesDto
