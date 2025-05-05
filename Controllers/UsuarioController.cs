@@ -39,20 +39,26 @@ namespace api.coleta.Controllers
             }
         }
 
-        [HttpPost("cadastrar")]
+        [HttpPost("cadastrar/funcionario")]
         public IActionResult Cadastrar([FromBody] UsuarioResquestDTO usuario)
         {
             try
             {
-                bool cadastrado = _usuarioService.Cadastrar(usuario);
-                if (!cadastrado)
-                    return BadRequest("Erro ao cadastrar usuário.");
+                var token = ObterIDDoToken();
+                Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+                if (userId != null)
+                {
+                    bool cadastrado = _usuarioService.Cadastrar(userId, usuario);
+                    if (!cadastrado)
+                        return BadRequest("Erro ao cadastrar usuário.");
 
-                return Ok(new { message = "Usuário cadastrado com sucesso." });
+                    return Ok(new { message = "Usuário cadastrado com sucesso." });
+                }
+                return BadRequest("Token inválido ou ID do usuário não encontrado.");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "Ocorreu um erro ao cadastrar o usuário: " + ex.Message);
+                return StatusCode(409, new { message = ex.Message });
             }
         }
 
@@ -137,5 +143,36 @@ namespace api.coleta.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+        [HttpGet]
+        [Route("funcionario")]
+        public IActionResult Funcionarios([FromQuery] int page)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var safras = _usuarioService.Funcionarios(page, userId);
+                return Ok(safras);
+
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
+        [HttpDelete]
+        [Route("funcionario/deletar/{id}")]
+        public IActionResult ListarFuncionario([FromRoute] Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var safras = _usuarioService.DeletarFuncionario(id, userId);
+                return Ok(safras);
+
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
     }
 }

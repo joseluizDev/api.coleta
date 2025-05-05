@@ -82,6 +82,12 @@ namespace api.coleta.Data.Repositories
                 CurrentPage = page
             };
         }
+
+        public Usuario ObterFuncionario(Guid id, Guid userId)
+        {
+            var usuario = Context.Usuarios.FirstOrDefault(x => x.Id == id && x.adminId == userId);
+            return usuario; 
+        }
     }
 }
 

@@ -5,6 +5,9 @@ using api.coleta.Services;
 using api.coleta.Data.Repository;
 using AutoMapper;
 using api.cliente.Interfaces;
+using api.coleta.Utils;
+using api.fazenda.Models.Entidades;
+using api.fazenda.models;
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
@@ -38,24 +41,42 @@ public class UsuarioService : ServiceBase
         return _jwtToken.GerarToken(usuario);
     }
 
-    public bool Cadastrar(UsuarioResquestDTO usuario)
+    public bool Cadastrar(Guid userId, UsuarioResquestDTO usuario)
     {
-        var usuarioExistente = _usuarioRepository.ObterPorEmail(usuario.Email);
-        if (usuarioExistente != null)
+        var usuarioAdmin = _usuarioRepository.ObterPorId(userId);
+        if(usuarioAdmin != null)
         {
-            throw new Exception("Email já cadastrado");
-        }
+            usuario.adminId = usuarioAdmin.Id;
+            var usuarioExistente = _usuarioRepository.ObterPorEmail(usuario.Email);
+            if (usuarioExistente != null)
+            {
+                throw new Exception("Email já cadastrado");
+            }
 
-        var cpfExistente = _usuarioRepository.ObterPorCpf(usuario.CPF);
-        if (cpfExistente != null)
+            var cpfExistente = _usuarioRepository.ObterPorCpf(usuario.CPF);
+            if (cpfExistente != null)
+            {
+                throw new Exception("CPF já cadastrado");
+            }
+
+            var usuarioEntidade = _mapper.Map<Usuario>(usuario);
+            _usuarioRepository.Adicionar(usuarioEntidade);
+            UnitOfWork.Commit();
+            return true;
+        }
+        return false;
+    }
+
+    public PagedResult<UsuarioResponseDTO> Funcionarios(int page, Guid userId)
+    {
+        var usuarios = _usuarioRepository.ListarFuncionarios(page, userId);
+        var usuariosDto = _mapper.Map<List<UsuarioResponseDTO>>(usuarios.Items);
+        return new PagedResult<UsuarioResponseDTO>
         {
-            throw new Exception("CPF já cadastrado");
-        }
-
-        var usuarioEntidade = _mapper.Map<Usuario>(usuario);
-        _usuarioRepository.Adicionar(usuarioEntidade);
-        UnitOfWork.Commit();
-        return true;
+            Items = usuariosDto,
+            TotalPages = usuarios.TotalPages,
+            CurrentPage = usuarios.CurrentPage
+        };
     }
 
     public UsuarioResquestDTO? AtualizarUsuario(Guid id, UsuarioResquestDTO usuarioDto)
@@ -70,6 +91,18 @@ public class UsuarioService : ServiceBase
         UnitOfWork.Commit();
         return _mapper.Map<UsuarioResquestDTO>(usuario);
 
+    }
+
+    public bool DeletarFuncionario(Guid id, Guid userId)
+    {
+        var usuario = _usuarioRepository.ObterFuncionario(id, userId);
+        if (usuario == null)
+        {
+            return false;
+        }
+        _usuarioRepository.Deletar(usuario);
+        UnitOfWork.Commit();
+        return true;
     }
 
     public List<UsuarioResponseDTO?> ListarUsuarioFuncionario(Guid userId)

@@ -7,6 +7,7 @@
         public string Email { get; set; }
         public string Telefone { get; set; }
         public string Senha { get; set; }
+        public Guid adminId { get; set; }
     }
 
     public class UsuarioResponseDTO
