@@ -8,6 +8,7 @@ using api.cliente.Interfaces;
 using api.coleta.Utils;
 using api.fazenda.Models.Entidades;
 using api.fazenda.models;
+using api.funcionario.Models.DTOs;
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
@@ -67,9 +68,9 @@ public class UsuarioService : ServiceBase
         return false;
     }
 
-    public PagedResult<UsuarioResponseDTO> Funcionarios(int page, Guid userId)
+    public PagedResult<UsuarioResponseDTO> Funcionarios(QueryFuncionario query, Guid userId)
     {
-        var usuarios = _usuarioRepository.ListarFuncionarios(page, userId);
+        var usuarios = _usuarioRepository.ListarFuncionarios(query, userId);
         var usuariosDto = _mapper.Map<List<UsuarioResponseDTO>>(usuarios.Items);
         return new PagedResult<UsuarioResponseDTO>
         {

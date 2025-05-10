@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using api.cliente.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using api.safra.Services;
+using api.funcionario.Models.DTOs;
 
 namespace api.coleta.Controllers
 {
@@ -146,13 +147,13 @@ namespace api.coleta.Controllers
 
         [HttpGet]
         [Route("funcionario")]
-        public IActionResult Funcionarios([FromQuery] int page)
+        public IActionResult Funcionarios([FromQuery] QueryFuncionario query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var safras = _usuarioService.Funcionarios(page, userId);
+                var safras = _usuarioService.Funcionarios(query, userId);
                 return Ok(safras);
 
             }

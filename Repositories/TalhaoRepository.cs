@@ -1,6 +1,8 @@
 using api.coleta.Data.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Utils;
+using api.fazenda.Models.Entidades;
+using api.talhao.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.talhao.Repositories
@@ -51,18 +53,28 @@ namespace api.talhao.Repositories
                 .FirstOrDefault(c => c.Id == id);
         }
 
-        public PagedResult<Talhao> ListarTalhao(Guid userId, int page)
+        public PagedResult<Talhao> ListarTalhao(Guid userId, QueryTalhao query)
         {
-            if (page < 1) page = 1;
-            int totalItems = Context.Talhoes.Count();
+            if (query.Page is null || query.Page < 1)
+                query.Page = 1;
+
             int pageSize = 10;
+            int page = query.Page.Value;
+
+            var clientesQuery = Context.Talhoes
+                .Where(c => c.UsuarioID == userId);
+
+            if (query.FazendaID.HasValue)
+                clientesQuery = clientesQuery.Where(c => c.FazendaID == query.FazendaID);
+
+
+            int totalItems = clientesQuery.Count();
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
-            List<Talhao> talhoes = Context.Talhoes
-                .OrderBy(f => f.Id)
-                .Skip(pageSize * (page - 1))
+            List<Talhao> talhoes = clientesQuery
+                .OrderBy(c => c.Id)
+                .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Where(f => f.UsuarioID == userId)
                 .ToList();
 
             return new PagedResult<Talhao>

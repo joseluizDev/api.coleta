@@ -27,13 +27,13 @@ namespace api.cliente.Controllers
 
         [HttpGet("listar")]
         [Authorize]
-        public IActionResult ListarClientes([FromQuery] int page)
+        public IActionResult ListarClientes([FromQuery] QueryClienteDTO query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var response = _clienteService.TotalClientes(userId, page);
+                var response = _clienteService.TotalClientes(userId, query);
                 return Ok(response);
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });

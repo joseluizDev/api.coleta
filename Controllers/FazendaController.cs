@@ -30,13 +30,13 @@ namespace api.fazenda.Controllers
         [HttpGet]
         [Route("listar")]
         [Authorize]
-        public IActionResult ListarFazendas([FromQuery] int page)
+        public IActionResult ListarFazendas([FromQuery] QueryFazenda query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var fazendas = _fazendaService.ListarFazendas(userId, page);
+                var fazendas = _fazendaService.ListarFazendas(userId, query);
                 return Ok(fazendas);
 
             }

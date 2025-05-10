@@ -112,9 +112,9 @@ namespace api.talhao.Services
             }
         }
 
-        public PagedResult<TalhaoResponseDTO> ListarTalhao(Guid userId, int page)
+        public PagedResult<TalhaoResponseDTO> ListarTalhao(Guid userId, QueryTalhao query)
         {
-            var talhao = _talhaoRepository.ListarTalhao(userId, page);
+            var talhao = _talhaoRepository.ListarTalhao(userId, query);
             var talhaoDtos = _mapper.Map<List<TalhaoResponseDTO>>(talhao.Items);
             foreach (var dto in talhaoDtos)
             {

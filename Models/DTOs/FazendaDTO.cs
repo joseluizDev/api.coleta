@@ -3,6 +3,11 @@ using api.cliente.Models.DTOs;
 
 namespace api.fazenda.models
 {
+    public class QueryFazenda
+    {
+        public int? Page { get; set; }
+        public string? Nome { get; set; }
+    }
     public class FazendaRequestDTO
     {
         public Guid? Id { get; set; }

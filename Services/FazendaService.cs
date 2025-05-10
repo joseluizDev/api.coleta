@@ -30,9 +30,9 @@ namespace api.fazenda.repositories
 
         }
 
-        public PagedResult<FazendaResponseDTO> ListarFazendas(Guid userId, int page)
+        public PagedResult<FazendaResponseDTO> ListarFazendas(Guid userId, QueryFazenda query)
         {
-            var fazendas = _fazendaRepository.ListarFazendas(userId, page);
+            var fazendas = _fazendaRepository.ListarFazendas(userId, query);
             var fazendaDtos = _mapper.Map<List<FazendaResponseDTO>>(fazendas.Items);
             return new PagedResult<FazendaResponseDTO>
             {

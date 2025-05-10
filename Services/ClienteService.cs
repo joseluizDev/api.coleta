@@ -31,10 +31,10 @@ namespace api.cliente.Services
 
       }
 
-      public PagedResult<ClienteResponseDTO> TotalClientes(Guid id, int page)
+      public PagedResult<ClienteResponseDTO> TotalClientes(Guid id, QueryClienteDTO query)
       {
 
-         var clientes = _clienteRepository.listarClientes(id, page);
+         var clientes = _clienteRepository.ListarClientes(id, query);
          var clienteDtos = _mapper.Map<List<ClienteResponseDTO>>(clientes.Items);
          return new PagedResult<ClienteResponseDTO>
          {

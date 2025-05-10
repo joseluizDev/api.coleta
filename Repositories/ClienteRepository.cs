@@ -1,3 +1,4 @@
+using api.cliente.Models.DTOs;
 using api.coleta.Data.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Utils;
@@ -51,17 +52,34 @@ namespace api.cliente.Repositories
             return clientes;
         }
 
-        public PagedResult<Cliente> listarClientes(Guid id, int page)
+        public PagedResult<Cliente> ListarClientes(Guid id, QueryClienteDTO query)
         {
-            if (page < 1) page = 1;
+            if (query.Page is null || query.Page < 1)
+                query.Page = 1;
 
-            int totalItems = Context.Clientes.Count();
             int pageSize = 10;
+            int page = query.Page.Value;
+
+            var clientesQuery = Context.Clientes
+                .Where(c => c.UsuarioID == id);
+
+            if (!string.IsNullOrWhiteSpace(query.Nome))
+                clientesQuery = clientesQuery.Where(c => c.Nome.Contains(query.Nome));
+
+            if (!string.IsNullOrWhiteSpace(query.CPF))
+                clientesQuery = clientesQuery.Where(c => c.CPF.Contains(query.CPF));
+
+            if (!string.IsNullOrWhiteSpace(query.Email))
+                clientesQuery = clientesQuery.Where(c => c.Email.Contains(query.Email));
+
+            if (!string.IsNullOrWhiteSpace(query.Telefone))
+                clientesQuery = clientesQuery.Where(c => c.Telefone.Contains(query.Telefone));
+
+            int totalItems = clientesQuery.Count();
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
-            List<Cliente> clientes = Context.Clientes
-                .Where(c => c.UsuarioID == id)
-                .OrderBy(f => f.Id)
+            List<Cliente> clientes = clientesQuery
+                .OrderBy(c => c.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
@@ -73,6 +91,7 @@ namespace api.cliente.Repositories
                 CurrentPage = page
             };
         }
+
 
 
 

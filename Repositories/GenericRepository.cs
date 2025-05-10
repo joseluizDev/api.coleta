@@ -1,6 +1,7 @@
 ﻿using api.coleta.Models.Entidades;
 using api.coleta.Utils;
 using api.fazenda.Models.Entidades;
+using api.safra.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 using System.Linq;
@@ -61,18 +62,37 @@ namespace api.coleta.Data.Repositories
             return [.. query.Take(page).Skip(skip)];
         }
 
-        public PagedResult<Safra> ListaSafra(Guid userId, int page)
+        public PagedResult<Safra> ListaSafra(Guid userId, QuerySafra query)
         {
+            int page = query.Page ?? 1;
             if (page < 1) page = 1;
-            int totalItems = Context.Safras.Count();
             int pageSize = 10;
+
+            var safrasQuery = Context.Safras
+                .Where(f => f.UsuarioID == userId);
+
+            if (!string.IsNullOrWhiteSpace(query.Observacao))
+                safrasQuery = safrasQuery.Where(f => f.Observacao.Contains(query.Observacao));
+
+            if (query.DataInicio.HasValue)
+                safrasQuery = safrasQuery.Where(f => f.DataInicio.Date >= query.DataInicio.Value.Date);
+
+            if (query.DataFim.HasValue)
+                safrasQuery = safrasQuery.Where(f => f.DataFim.HasValue && f.DataFim.Value.Date <= query.DataFim.Value.Date);
+
+            if (query.FazendaID.HasValue)
+                safrasQuery = safrasQuery.Where(f => f.FazendaID == query.FazendaID.Value);
+
+            if (query.ClienteID.HasValue)
+                safrasQuery = safrasQuery.Where(f => f.ClienteID == query.ClienteID.Value);
+
+            int totalItems = safrasQuery.Count();
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
-            List<Safra> safras = Context.Safras
+            var safras = safrasQuery
                 .OrderBy(f => f.Id)
-                .Skip(pageSize * (page - 1))
+                .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Where(f => f.UsuarioID == userId)
                 .ToList();
 
             return new PagedResult<Safra>
@@ -82,6 +102,7 @@ namespace api.coleta.Data.Repositories
                 CurrentPage = page
             };
         }
+
 
         public Usuario ObterFuncionario(Guid id, Guid userId)
         {

@@ -78,9 +78,9 @@ namespace api.safra.Services
             return null;
         }
 
-        public PagedResult<SafraResponseDTO> ListarSafra(Guid userId, int page)
+        public PagedResult<SafraResponseDTO> ListarSafra(Guid userId, QuerySafra query)
         {
-            var safra = _safraRepository.ListaSafra(userId, page);
+            var safra = _safraRepository.ListaSafra(userId, query);
             var safraDtos = _mapper.Map<List<SafraResponseDTO>>(safra.Items);
 
             foreach (var dto in safraDtos)

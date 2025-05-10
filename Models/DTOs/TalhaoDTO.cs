@@ -4,6 +4,11 @@ using System.Collections.Generic;
 
 namespace api.talhao.Models.DTOs
 {
+    public class QueryTalhao
+    {
+        public int? Page { get; set; }
+        public Guid? FazendaID { get; set; }
+    }
     public class TalhaoRequestDTO
     {
         public Guid? Id { get; set; }

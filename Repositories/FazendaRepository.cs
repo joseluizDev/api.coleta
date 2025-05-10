@@ -1,6 +1,8 @@
 using api.fazenda.Models.Entidades;
 using api.coleta.Data.Repositories;
 using api.coleta.Utils;
+using api.fazenda.models;
+using api.coleta.Models.Entidades;
 
 namespace api.fazenda.repositories
 {
@@ -37,19 +39,28 @@ namespace api.fazenda.repositories
             return Context.Fazendas.FirstOrDefault(f => f.Id == id && f.UsuarioID == userId);
         }
 
-        public PagedResult<Fazenda> ListarFazendas(Guid userId, int page)
+        public PagedResult<Fazenda> ListarFazendas(Guid userId, QueryFazenda query)
         {
-            if (page < 1) page = 1;
+            if (query.Page is null || query.Page < 1)
+                query.Page = 1;
 
-            int totalItems = Context.Fazendas.Count();
             int pageSize = 10;
+            int page = query.Page.Value;
+
+            var clientesQuery = Context.Fazendas
+                .Where(c => c.UsuarioID == userId);
+
+            if (!string.IsNullOrWhiteSpace(query.Nome))
+                clientesQuery = clientesQuery.Where(c => c.Nome.Contains(query.Nome));
+
+
+            int totalItems = clientesQuery.Count();
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
-            List<Fazenda> fazendas = Context.Fazendas
-                .OrderBy(f => f.Id)
+            List<Fazenda> fazendas = clientesQuery
+                .OrderBy(c => c.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Where(f => f.UsuarioID == userId)
                 .ToList();
 
             return new PagedResult<Fazenda>

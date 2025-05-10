@@ -3,6 +3,16 @@ using api.fazenda.models;
 
 namespace api.safra.Models.DTOs
 {
+    public class QuerySafra
+    {
+        public int? Page { get; set; }
+        public string? Observacao { get; set; }
+        public DateTime? DataInicio { get; set; }
+        public DateTime? DataFim { get; set; }
+        public Guid? FazendaID { get; set; }
+        public Guid? ClienteID { get; set; }
+    }
+
     public class SafraRequestDTO
     {
         public Guid? Id { get; set; }

@@ -112,13 +112,13 @@ namespace api.talhao.Controllers
 
         [HttpGet]
         [Route("listar")]
-        public IActionResult ListarTalhao([FromQuery] int page)
+        public IActionResult ListarTalhao([FromQuery] QueryTalhao query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var talhao = _talhaoService.ListarTalhao(userId, page);
+                var talhao = _talhaoService.ListarTalhao(userId, query);
                 return Ok(talhao);
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });

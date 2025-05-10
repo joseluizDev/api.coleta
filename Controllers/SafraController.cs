@@ -91,13 +91,13 @@ namespace api.safra.Controllers
         [HttpGet]
         [Route("listar")]
         [Authorize]
-        public IActionResult ListarSafras([FromQuery] int page)
+        public IActionResult ListarSafras([FromQuery] QuerySafra query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var safras = _safraService.ListarSafra(userId, page);
+                var safras = _safraService.ListarSafra(userId, query);
                 return Ok(safras);
 
             }
