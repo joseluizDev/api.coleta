@@ -1,4 +1,5 @@
 ﻿using api.coleta.Data.Repositories;
+using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Utils;
 
@@ -44,29 +45,55 @@ namespace api.coleta.Repositories
             return Context.Coletas.FirstOrDefault(c => c.TalhaoID == id && c.UsuarioID == idUser);
         }
 
-        public PagedResult<Coleta> ListarVisualizarMapa(Guid userId, int page)
+        public PagedResult<Coleta> ListarVisualizarMapa(Guid userId, QueryVisualizarMap query)
         {
+            if (query.Page is null or < 1) query.Page = 1;
+            int page = query.Page.Value;
+            int pageSize = 10;
+
+            // Começa a construir a query base
+            var queryable = Context.Coletas.AsQueryable();
+
+            // Filtro fixo: usuário
+            queryable = queryable.Where(f => f.UsuarioID == userId);
+
+            // Filtros dinâmicos
+            if (query.FuncionarioID.HasValue)
             {
-                if (page < 1) page = 1;
-                int totalItems = Context.Coletas.Count();
-                int pageSize = 10;
-                int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-                List<Coleta> visualizarMapas = Context.Coletas
-                    .OrderBy(f => f.Id)
-                    .Skip(pageSize * (page - 1))
-                    .Take(pageSize)
-                    .Where(f => f.UsuarioID == userId)
-                    .ToList();
-
-                return new PagedResult<Coleta>
-                {
-                    Items = visualizarMapas,
-                    TotalPages = totalPages,
-                    CurrentPage = page
-                };
+                queryable = queryable.Where(f => f.UsuarioRespID == query.FuncionarioID);
             }
+
+            if (!string.IsNullOrEmpty(query.TipoColeta))
+            {
+                queryable = queryable.Where(f => f.TipoColeta == Enum.Parse<TipoColeta>(query.TipoColeta));
+            }
+
+            if (!string.IsNullOrEmpty(query.TipoAnalise))
+            {
+                // Corrige o problema de Enum.Parse com List<TipoAnalise>
+                var tipoAnalise = Enum.Parse<TipoAnalise>(query.TipoAnalise);
+                queryable = queryable.Where(f => f.TipoAnalise.Contains(tipoAnalise));
+            }
+
+            // Total de itens após filtros
+            int totalItems = queryable.Count();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            // Aplica paginação
+            List<Coleta> visualizarMapas = queryable
+                .OrderBy(f => f.Id)
+                .Skip(pageSize * (page - 1))
+                .Take(pageSize)
+                .ToList();
+
+            return new PagedResult<Coleta>
+            {
+                Items = visualizarMapas,
+                TotalPages = totalPages,
+                CurrentPage = page
+            };
         }
+
 
         public List<Coleta> ListarVisualizarMapaMobile(Guid userId)
         {

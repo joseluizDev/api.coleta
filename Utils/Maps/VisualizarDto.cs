@@ -9,13 +9,16 @@ public static class VisualizarDto
     {
         return new Coleta
         {
-          UsuarioRespID =  map.FuncionarioID,
-          TipoAnalise = Enum.Parse<TipoAnalise>(map.TipoAnalise),
-          TipoColeta = Enum.Parse<TipoColeta>(map.TipoColeta),
-          TalhaoID = map.TalhaoID,
-          Profundidade = Enum.Parse<Profundidade>(map.Profundidade),
-          Observacao =  map.Observacao,
-          GeojsonID = (Guid)map.GeojsonId,
+            UsuarioRespID = map.FuncionarioID,
+            TipoAnalise = map.TipoAnalise
+                .Select(x => Enum.Parse<TipoAnalise>(x.Trim()))
+                .ToList(),
+
+            TipoColeta = Enum.Parse<TipoColeta>(map.TipoColeta),
+            TalhaoID = map.TalhaoID,
+            Profundidade = Enum.Parse<Profundidade>(map.Profundidade),
+            Observacao = map.Observacao,
+            GeojsonID = (Guid)map.GeojsonId,
         };
     }
 

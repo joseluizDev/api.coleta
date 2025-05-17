@@ -14,7 +14,7 @@ namespace api.coleta.Models.Entidades
         [MaxLength(255)]
         public string? Observacao { get; set; }
         public TipoColeta TipoColeta { get; set; }
-        public TipoAnalise TipoAnalise { get; set; }
+        public List<TipoAnalise> TipoAnalise { get; set; }
         public Profundidade Profundidade { get; set; }
         public Guid UsuarioID { get; set; }
         public virtual Usuario Usuario { get; set; }

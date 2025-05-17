@@ -13,9 +13,17 @@ namespace api.coleta.Models.DTOs
         public Guid FuncionarioID { get; set; }
         public string Observacao { get; set; }
         public string TipoColeta { get; set; }
-        public string TipoAnalise { get; set; }
+        public List<string> TipoAnalise { get; set; }
         public string Profundidade { get; set; }
         public Guid? GeojsonId { get; set; }
+    }
+
+    public class QueryVisualizarMap
+    {
+        public int? Page { get; set; }
+        public Guid? FuncionarioID { get; set; }
+        public string? TipoColeta { get; set; }
+        public string? TipoAnalise { get; set; }
     }
 
     public class VisualizarMapOutputDto
@@ -29,7 +37,7 @@ namespace api.coleta.Models.DTOs
         public Guid UsuarioRespID { get; set; }
         public string Observacao { get; set; }
         public string TipoColeta { get; set; }
-        public string TipoAnalise { get; set; }
+        public List<string> TipoAnalise { get; set; }
         public string Profundidade { get; set; }
     }
 }

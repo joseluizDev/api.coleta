@@ -64,19 +64,19 @@ namespace api.coleta.Services
             return null;
         }
 
-        public PagedResult<VisualizarMapOutputDto?> Listar(Guid userID, int page)
+        public PagedResult<VisualizarMapOutputDto?> Listar(Guid userID, QueryVisualizarMap query)
         {
-            var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapa(userID, page);
+            var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapa(userID, query);
             if (visualizarMapa == null)
             {
                 return new PagedResult<VisualizarMapOutputDto?>
                 {
                     Items = [],
                     TotalPages = 0,
-                    CurrentPage = page
+                    CurrentPage = query.Page ?? 1
                 };
             }
-
+                
             var mappedItems = _mapper.Map<List<VisualizarMapOutputDto?>>(visualizarMapa.Items);
 
             foreach (var coleta in mappedItems)

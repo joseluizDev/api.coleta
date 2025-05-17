@@ -43,13 +43,13 @@ namespace api.coleta.Controllers
         }
 
         [HttpGet]
-        public IActionResult Listar([FromQuery] int page)
+        public IActionResult Listar([FromQuery] QueryVisualizarMap query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var safras = _visualizarMapaService.Listar(userId, page);
+                var safras = _visualizarMapaService.Listar(userId, query);
                 return Ok(safras);
 
             }
