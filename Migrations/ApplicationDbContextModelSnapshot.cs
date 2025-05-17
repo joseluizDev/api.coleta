@@ -169,7 +169,10 @@ namespace api.coleta.Migrations
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<decimal>("Limite")
+                    b.Property<decimal>("LimiteInferior")
+                        .HasColumnType("decimal(12,4)");
+
+                    b.Property<decimal>("LimiteSuperior")
                         .HasColumnType("decimal(12,4)");
 
                     b.Property<string>("Nome")

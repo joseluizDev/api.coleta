@@ -34,6 +34,9 @@ public class MappingProfile : Profile
         CreateMap<ConfiguracaoPadrao, ConfiguracaoPadraoResponseDTO>();
         CreateMap<ConfiguracaoPadraoRequestDTO, ConfiguracaoPadrao>();
 
+        CreateMap<ConfiguracaoPersonalizada, ConfiguracaoPersonalizadaResponseDTO>();
+        CreateMap<ConfiguracaoPersonalizadaRequestDTO, ConfiguracaoPersonalizada>();
+
         CreateMap<Talhao, TalhaoResponseDTO>();
         CreateMap<TalhaoRequestDTO, Talhao>();
 

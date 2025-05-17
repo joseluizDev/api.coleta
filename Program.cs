@@ -96,6 +96,9 @@ builder.Services.AddScoped<ClienteService>();
 builder.Services.AddScoped<ConfiguracaoPadraoRepository>();
 builder.Services.AddScoped<ConfiguracaoPadraoService>();
 
+builder.Services.AddScoped<ConfiguracaoPersonalizadaRepository>();
+builder.Services.AddScoped<ConfiguracaoPersonalizadaService>();
+
 builder.Services.AddScoped<FazendaRepository>();
 builder.Services.AddScoped<FazendaService>();
 
