@@ -70,9 +70,11 @@ namespace api.coleta.Repositories
 
             if (!string.IsNullOrEmpty(query.TipoAnalise))
             {
-                // Corrige o problema de Enum.Parse com List<TipoAnalise>
+                // Convert to in-memory filtering since EF can't translate List<TipoAnalise> Contains
                 var tipoAnalise = Enum.Parse<TipoAnalise>(query.TipoAnalise);
-                queryable = queryable.Where(f => f.TipoAnalise.Contains(tipoAnalise));
+                queryable = queryable.ToList()
+                    .Where(f => f.TipoAnalise.Contains(tipoAnalise))
+                    .AsQueryable();
             }
 
             // Total de itens após filtros

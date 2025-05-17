@@ -65,9 +65,9 @@ public class MappingProfile : Profile
 
         CreateMap<Coleta, VisualizarMapOutputDto>()
             .ForMember(dest => dest.UsuarioRespID, opt => opt.MapFrom(src => new UsuarioResponseDTO
-                {
-                    Id = src.UsuarioRespID
-                }))
+            {
+                Id = src.UsuarioRespID
+            }))
             .ForMember(dest => dest.Talhao, opt => opt.MapFrom(src => src.Talhao)) // Supondo que seja direto
             .ForMember(dest => dest.TalhaoID, opt => opt.MapFrom(src => src.TalhaoID))
             .ForMember(dest => dest.Geojson, opt => opt.MapFrom(src => src.Geojson))
@@ -75,7 +75,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UsuarioRespID, opt => opt.MapFrom(src => src.UsuarioRespID)) // ou outro campo correto
             .ForMember(dest => dest.Observacao, opt => opt.MapFrom(src => src.Observacao))
             .ForMember(dest => dest.TipoColeta, opt => opt.MapFrom(src => src.TipoColeta))
-            .ForMember(dest => dest.TipoAnalise, opt => opt.MapFrom(src => src.TipoAnalise))
+            .ForMember(dest => dest.TipoAnalise, opt => opt.MapFrom(src => src.TipoAnalise.Select(t => t.ToString()).ToList()))
             .ForMember(dest => dest.Profundidade, opt => opt.MapFrom(src => src.Profundidade));
 
         CreateMap<UsuarioResquestDTO, UsuarioResponseDTO>();
