@@ -26,19 +26,22 @@ namespace api.coleta.Services
         private readonly GeoJsonRepository _geoJsonRepository;
         private readonly UsuarioService _usuarioService;
         private readonly TalhaoService _talhaoService;
+        private readonly PontoColetadoRepository _pontoColetadoRepository;
         public VisualizarMapaService(
             UsuarioService usuarioService,
             VisualizarMapaRepository visualizarMapaRepository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
             GeoJsonRepository geoJsonRepository,
-            TalhaoService talhaoService)
+            TalhaoService talhaoService,
+            PontoColetadoRepository pontoColetadoRepository)
             : base(unitOfWork, mapper)
         {
             _visualizarMapaRepository = visualizarMapaRepository;
             _geoJsonRepository = geoJsonRepository;
             _talhaoService = talhaoService;
             _usuarioService = usuarioService;
+            _pontoColetadoRepository = pontoColetadoRepository;
         }
 
         public VisualizarMapOutputDto? Salvar(Guid userID, VisualizarMapInputDto visualizarMapa)
@@ -76,7 +79,7 @@ namespace api.coleta.Services
                     CurrentPage = query.Page ?? 1
                 };
             }
-                
+
             var mappedItems = _mapper.Map<List<VisualizarMapOutputDto?>>(visualizarMapa.Items);
 
             foreach (var coleta in mappedItems)
@@ -520,6 +523,131 @@ namespace api.coleta.Services
             return result;
         }
 
+        public async Task<List<object>> ListarRelatorioColetasAsync(Guid userID)
+        {
+            var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapaMobile(userID);
+            if (visualizarMapa == null || visualizarMapa.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new List<object>();
+
+            foreach (var coleta in visualizarMapa)
+            {
+                if (coleta == null) continue;
+
+                // Buscar dados do talhão
+                var talhaoJson = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
+                if (talhaoJson == null) continue;
+
+                // Buscar dados do funcionário responsável
+                var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
+
+                // Buscar dados do GeoJSON para contar pontos planejados
+                var geojson = _geoJsonRepository.ObterPorId(coleta.GeojsonID);
+                int totalPontosPlanejados = ContarPontosPlanejados(geojson);
+
+                // Buscar estatísticas de pontos coletados
+                var pontosColetados = await _pontoColetadoRepository.BuscarPontosPorColetaAsync(coleta.Id);
+                var ultimoPontoColetado = await _pontoColetadoRepository.BuscarUltimoPontoColetadoAsync(coleta.Id);
+                var dataUltimaColeta = await _pontoColetadoRepository.ObterDataUltimaColetaAsync(coleta.Id);
+
+                // Calcular estatísticas
+                int totalPontosColetados = pontosColetados.Count;
+                int pontosRestantes = totalPontosPlanejados - totalPontosColetados;
+                decimal percentualConcluido = totalPontosPlanejados > 0
+                    ? Math.Round((decimal)totalPontosColetados / totalPontosPlanejados * 100, 2)
+                    : 0;
+
+                // Determinar status da coleta
+                string statusColeta = DeterminarStatusColeta(totalPontosColetados, totalPontosPlanejados);
+
+                // Montar objeto do relatório
+                var relatorioItem = new
+                {
+                    id = coleta.Id,
+                    nomeColeta = talhaoJson.Nome ?? "Coleta sem nome",
+                    talhao = new
+                    {
+                        id = talhaoJson.Id,
+                        nome = talhaoJson.Nome,
+                        area = talhaoJson.Area,
+                        observacao = talhaoJson.Observacao
+                    },
+                    funcionarioResponsavel = funcionario != null ? new
+                    {
+                        nomeCompleto = funcionario.NomeCompleto,
+                        cpf = funcionario.CPF,
+                        email = funcionario.Email,
+                        telefone = funcionario.Telefone
+                    } : null,
+                    estatisticas = new
+                    {
+                        totalPontosPlanejados = totalPontosPlanejados,
+                        totalPontosColetados = totalPontosColetados,
+                        pontosRestantes = pontosRestantes,
+                        percentualConcluido = percentualConcluido,
+                        statusColeta = statusColeta
+                    },
+                    ultimaColeta = ultimoPontoColetado != null ? new
+                    {
+                        dataColeta = ultimoPontoColetado.DataColeta,
+                        latitude = ultimoPontoColetado.Latitude,
+                        longitude = ultimoPontoColetado.Longitude,
+                        funcionario = _usuarioService.BuscarUsuarioPorId(ultimoPontoColetado.FuncionarioID)?.NomeCompleto ?? "Funcionário não encontrado"
+                    } : null,
+                    dataUltimaColeta = dataUltimaColeta,
+                    tipoColeta = coleta.TipoColeta.ToString(),
+                    profundidade = coleta.Profundidade.ToString(),
+                    observacao = coleta.Observacao ?? "",
+                    dataCriacao = coleta.DataInclusao,
+                    geojson = geojson != null ? new
+                    {
+                        id = geojson.Id,
+                        pontos = geojson.Pontos,
+                        grid = geojson.Grid
+                    } : null
+                };
+
+                result.Add(relatorioItem);
+            }
+
+            return result;
+        }
+
+        private int ContarPontosPlanejados(Geojson? geojson)
+        {
+            if (geojson == null || string.IsNullOrEmpty(geojson.Pontos))
+                return 0;
+
+            try
+            {
+                var pontosJson = JsonSerializer.Deserialize<JsonElement>(geojson.Pontos);
+
+                if (pontosJson.TryGetProperty("points", out JsonElement pointsElement))
+                {
+                    return pointsElement.GetArrayLength();
+                }
+
+                return 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private string DeterminarStatusColeta(int pontosColetados, int totalPontos)
+        {
+            if (pontosColetados == 0)
+                return "Pendente";
+            else if (pontosColetados < totalPontos)
+                return "Em Andamento";
+            else
+                return "Finalizada";
+        }
+
         public bool? SalvarColeta(Guid id, ColetaMobileDTO coleta)
         {
             try
@@ -626,8 +754,22 @@ namespace api.coleta.Services
                 outputMs.Position = 0;
                 geo.Pontos = Encoding.UTF8.GetString(outputMs.ToArray());
 
-                // Salva as alterações
+                // Salva as alterações no GeoJSON
                 _geoJsonRepository.Atualizar(geo);
+
+                // Salva o ponto coletado na nova tabela
+                var pontoColetado = new PontoColetado
+                {
+                    ColetaID = coleta.ColetaID,
+                    FuncionarioID = id,
+                    PontoID = Guid.NewGuid(),
+                    HexagonID = Guid.NewGuid(),
+                    Latitude = coleta.Latitude,
+                    Longitude = coleta.Longitude,
+                    DataColeta = coleta.DataColeta != default ? coleta.DataColeta : DateTime.Now
+                };
+
+                _pontoColetadoRepository.Adicionar(pontoColetado);
                 UnitOfWork.Commit();
                 return true;
             }

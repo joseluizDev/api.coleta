@@ -51,6 +51,22 @@ namespace api.coleta.Controllers.Mobile
             return Ok(coletasPorFazenda);
         }
 
+        [HttpGet]
+        [Route("relatorio")]
+        [Authorize]
+        public async Task<IActionResult> RelatorioColetas()
+        {
+            var token = ObterIDDoToken();
+            if (token == null)
+            {
+                return BadRequest(new { message = "Token inválido." });
+            }
+
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            var relatorio = await _visualizarMapaService.ListarRelatorioColetasAsync(userId);
+            return Ok(relatorio);
+        }
+
         [HttpPost]
         [Route("salva")]
         [Authorize]
