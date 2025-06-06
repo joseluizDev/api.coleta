@@ -19,6 +19,7 @@ using api.cliente.Interfaces;
 using BackAppPromo.Infrastructure.Authentication;
 using api.minionStorage.Services;
 using api.coleta.Services;
+using api.dashboard.Services;
 using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -135,6 +136,8 @@ builder.Services.AddScoped<GeoJsonService>();
 
 builder.Services.AddScoped<RelatorioRepository>();
 builder.Services.AddScoped<RelatorioService>();
+
+builder.Services.AddScoped<DashboardService>();
 
 
 
