@@ -57,7 +57,7 @@ public class MappingProfile : Profile
             {
                 dto.Id,
                 dto.Talhao,
-                Geojson = JsonSerializer.Serialize(dto.Geojson, (JsonSerializerOptions)null), // Serializa corretamente para JSON
+                Geojson = JsonSerializer.Serialize(dto.Geojson, new JsonSerializerOptions()), // Serializa corretamente para JSON
                 dto.TalhaoID,
                 dto.UsuarioRespID,
                 dto.Observacao,
@@ -87,5 +87,22 @@ public class MappingProfile : Profile
 
         CreateMap<VinculoClienteFazenda, VinculoResponseDTO>();
         CreateMap<VinculoRequestDTO, VinculoClienteFazenda>();
+
+        CreateMap<Usuario, FuncionarioResponseDTO>()
+            .ForMember(dest => dest.Nome, opt => opt.MapFrom(src => src.NomeCompleto))
+            .ForMember(dest => dest.Observacao, opt => opt.Ignore()) // Usuario não possui Observacao
+            .ForMember(dest => dest.Ativo, opt => opt.Ignore()) // Usuario não possui Ativo
+            .ForMember(dest => dest.CPF, opt => opt.MapFrom(src => src.CPF))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Telefone, opt => opt.MapFrom(src => src.Telefone))
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
+
+        CreateMap<FuncionarioRequestDTO, UsuarioResquestDTO>()
+            .ForMember(dest => dest.NomeCompleto, opt => opt.MapFrom(src => src.Nome))
+            .ForMember(dest => dest.CPF, opt => opt.MapFrom(src => src.CPF))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Telefone, opt => opt.MapFrom(src => src.Telefone))
+            .ForMember(dest => dest.Senha, opt => opt.MapFrom(src => src.Senha))
+            .ForMember(dest => dest.adminId, opt => opt.Ignore());
     }
 }
