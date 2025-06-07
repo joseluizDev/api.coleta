@@ -90,8 +90,8 @@ public class MappingProfile : Profile
 
         CreateMap<Usuario, FuncionarioResponseDTO>()
             .ForMember(dest => dest.Nome, opt => opt.MapFrom(src => src.NomeCompleto))
-            .ForMember(dest => dest.Observacao, opt => opt.Ignore()) // Usuario não possui Observacao
-            .ForMember(dest => dest.Ativo, opt => opt.Ignore()) // Usuario não possui Ativo
+            .ForMember(dest => dest.Observacao, opt => opt.MapFrom(src => src.Observacao))
+            .ForMember(dest => dest.Ativo, opt => opt.MapFrom(src => src.Ativo))
             .ForMember(dest => dest.CPF, opt => opt.MapFrom(src => src.CPF))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.Telefone, opt => opt.MapFrom(src => src.Telefone))

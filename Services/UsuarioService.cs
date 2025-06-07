@@ -144,7 +144,7 @@ public class UsuarioService : ServiceBase
             return null;
         }
         var usuarioDto = _mapper.Map<UsuarioResquestDTO>(funcionarioDto);
-        usuario.Atualizar(usuarioDto);
+        usuario.AtualizarFuncionario(usuarioDto, funcionarioDto.Observacao, funcionarioDto.Ativo);
         _usuarioRepository.Atualizar(usuario);
         UnitOfWork.Commit();
         return _mapper.Map<FuncionarioResponseDTO>(usuario);
