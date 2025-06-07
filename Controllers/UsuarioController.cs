@@ -175,5 +175,47 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
+        [HttpGet]
+        [Route("funcionario/buscar/{id}")]
+        public IActionResult BuscarFuncionarioPorId([FromRoute] Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var funcionario = _usuarioService.BuscarFuncionarioPorId(id, userId);
+                if (funcionario == null)
+                {
+                    return NotFound(new { message = "Funcionário não encontrado." });
+                }
+                return Ok(funcionario);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
+        [HttpPut]
+        [Route("funcionario/atualizar")]
+        public IActionResult AtualizarFuncionario([FromBody] FuncionarioRequestDTO funcionario)
+        {
+            var token = ObterIDDoToken();
+            var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (userIdNullable == null)
+            {
+                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+            }
+            Guid userId = userIdNullable.Value;
+            try
+            {
+                var funcionarioAtualizado = _usuarioService.AtualizarFuncionario(userId, funcionario);
+                if (funcionarioAtualizado == null)
+                    return NotFound(new { message = "Funcionário não encontrado." });
+                return Ok(funcionarioAtualizado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(409, new { message = ex.Message });
+            }
+        }
+
     }
 }

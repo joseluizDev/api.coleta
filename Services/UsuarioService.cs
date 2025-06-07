@@ -1,4 +1,3 @@
-
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
@@ -125,5 +124,29 @@ public class UsuarioService : ServiceBase
         }
 
         return _jwtToken.GerarToken(u);
+    }
+
+    public FuncionarioResponseDTO BuscarFuncionarioPorId(Guid id, Guid userId)
+    {
+        var usuario = _usuarioRepository.ObterFuncionario(id, userId);
+        if (usuario == null)
+        {
+            throw new Exception("Funcionário não encontrado.");
+        }
+        return _mapper.Map<FuncionarioResponseDTO>(usuario);
+    }
+
+    public FuncionarioResponseDTO? AtualizarFuncionario(Guid userId, FuncionarioRequestDTO funcionarioDto)
+    {
+        var usuario = _usuarioRepository.ObterFuncionario(funcionarioDto.Id, userId);
+        if (usuario == null)
+        {
+            return null;
+        }
+        var usuarioDto = _mapper.Map<UsuarioResquestDTO>(funcionarioDto);
+        usuario.Atualizar(usuarioDto);
+        _usuarioRepository.Atualizar(usuario);
+        UnitOfWork.Commit();
+        return _mapper.Map<FuncionarioResponseDTO>(usuario);
     }
 }
