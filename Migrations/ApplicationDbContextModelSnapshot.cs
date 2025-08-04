@@ -92,6 +92,10 @@ namespace api.coleta.Migrations
                     b.Property<Guid>("GeojsonID")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("NomeColeta")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<string>("Observacao")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");

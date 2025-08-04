@@ -13,6 +13,8 @@ namespace api.coleta.Models.Entidades
         public virtual Usuario UsuarioResp { get; set; }
         [MaxLength(255)]
         public string? Observacao { get; set; }
+        [MaxLength(255)]
+        public string? NomeColeta { get; set; }
         public TipoColeta TipoColeta { get; set; }
         public List<TipoAnalise> TipoAnalise { get; set; }
         public Profundidade Profundidade { get; set; }

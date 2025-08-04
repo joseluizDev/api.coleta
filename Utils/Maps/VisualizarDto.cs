@@ -18,6 +18,8 @@ public static class VisualizarDto
             TalhaoID = map.TalhaoID,
             Profundidade = Enum.Parse<Profundidade>(map.Profundidade),
             Observacao = map.Observacao,
+            NomeColeta = map.NomeColeta,
+            
             GeojsonID = (Guid)map.GeojsonId,
         };
     }

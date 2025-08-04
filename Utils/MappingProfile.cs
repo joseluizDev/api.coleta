@@ -63,7 +63,8 @@ public class MappingProfile : Profile
                 dto.Observacao,
                 dto.TipoColeta,
                 dto.TipoAnalise,
-                dto.Profundidade
+                dto.Profundidade,
+                dto.NomeColeta
             });
 
         CreateMap<Coleta, VisualizarMapOutputDto>()
@@ -79,7 +80,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Observacao, opt => opt.MapFrom(src => src.Observacao))
             .ForMember(dest => dest.TipoColeta, opt => opt.MapFrom(src => src.TipoColeta))
             .ForMember(dest => dest.TipoAnalise, opt => opt.MapFrom(src => src.TipoAnalise.Select(t => t.ToString()).ToList()))
-            .ForMember(dest => dest.Profundidade, opt => opt.MapFrom(src => src.Profundidade));
+            .ForMember(dest => dest.Profundidade, opt => opt.MapFrom(src => src.Profundidade))
+            .ForMember(dest => dest.NomeColeta, opt => opt.MapFrom(src => src.NomeColeta));
 
         CreateMap<UsuarioResquestDTO, UsuarioResponseDTO>();
         CreateMap<UsuarioResponseDTO, UsuarioResquestDTO>();

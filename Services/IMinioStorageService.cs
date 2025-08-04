@@ -75,7 +75,7 @@ namespace api.minionStorage.Services
 
         public Task<string> GetUrl(string bucketName, string objectName)
         {
-            string url = $"https://apis-minio.uwqcav.easypanel.host/{bucketName}/{objectName}";
+            string url = $"https://apis-minio.w4dxlp.easypanel.host/{bucketName}/{objectName}";
             return Task.FromResult(url);
         }
     }
