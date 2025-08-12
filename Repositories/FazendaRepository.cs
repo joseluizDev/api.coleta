@@ -53,6 +53,9 @@ namespace api.fazenda.repositories
             if (!string.IsNullOrWhiteSpace(query.Nome))
                 clientesQuery = clientesQuery.Where(c => c.Nome.Contains(query.Nome));
 
+            if (query.ClienteID.HasValue)
+                clientesQuery = clientesQuery.Where(c => c.ClienteID == query.ClienteID.Value);
+
 
             int totalItems = clientesQuery.Count();
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
