@@ -29,4 +29,3 @@ namespace api.fazenda.models
         public Guid ClienteID { get; set; }
     }
 }
-
