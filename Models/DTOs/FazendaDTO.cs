@@ -7,6 +7,7 @@ namespace api.fazenda.models
     {
         public int? Page { get; set; }
         public string? Nome { get; set; }
+        public Guid? ClienteID { get; set; }
     }
     public class FazendaRequestDTO
     {

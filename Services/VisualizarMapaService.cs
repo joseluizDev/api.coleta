@@ -46,25 +46,69 @@ namespace api.coleta.Services
 
         public VisualizarMapOutputDto? Salvar(Guid userID, VisualizarMapInputDto visualizarMapa)
         {
-            Geojson montarJson = new Geojson
+            try
             {
-                Pontos = visualizarMapa.Geojson.ToString(),
-                Grid = "1"
-            };
-            Geojson? retorno = _geoJsonRepository.Adicionar(montarJson);
-            if (retorno != null)
-            {
+                // Validação do GeoJSON
+                if (visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Undefined || 
+                    visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Null)
+                {
+                    throw new ArgumentException("GeoJSON é obrigatório e deve ser um objeto JSON válido.");
+                }
+
+                // Criar o objeto GeoJSON
+                Geojson montarJson = new Geojson
+                {
+                    Pontos = visualizarMapa.Geojson.ToString(),
+                    Grid = "1"
+                };
+
+                Console.WriteLine($"Tentando salvar GeoJSON com {montarJson.Pontos.Length} caracteres");
+
+                // Salvar GeoJSON
+                Geojson? retorno = _geoJsonRepository.Adicionar(montarJson);
+                if (retorno == null)
+                {
+                    throw new InvalidOperationException("Falha ao salvar o GeoJSON no banco de dados.");
+                }
+
+                Console.WriteLine($"GeoJSON salvo com ID: {retorno.Id}");
+
+                // Configurar o ID do GeoJSON no DTO
                 visualizarMapa.GeojsonId = retorno.Id;
+
+                // Mapear para entidade Coleta
                 var map = VisualizarDto.MapVisualizar(visualizarMapa);
                 map.UsuarioID = userID;
+
+                Console.WriteLine($"Mapeamento concluído. TalhaoID: {map.TalhaoID}, UsuarioRespID: {map.UsuarioRespID}, UsuarioID: {map.UsuarioID}");
+
+                // Salvar a coleta
                 _visualizarMapaRepository.SalvarVisualizarMapa(map);
+
+                Console.WriteLine("Coleta adicionada ao contexto, tentando commit...");
+
+                // Commit da transação
                 if (UnitOfWork.Commit())
                 {
+                    Console.WriteLine("Commit realizado com sucesso");
                     return _mapper.Map<VisualizarMapOutputDto>(map);
                 }
+                else
+                {
+                    throw new InvalidOperationException("Falha ao confirmar a transação no banco de dados.");
+                }
             }
-
-            return null;
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"Erro de validação no enum: {ex.Message}");
+                throw new ArgumentException($"Erro de validação: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro inesperado no serviço Salvar: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         public PagedResult<VisualizarMapOutputDto?> Listar(Guid userID, QueryVisualizarMap query)

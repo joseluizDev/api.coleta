@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using api.coleta.Models.Entidades;
 using api.funcionario.Models.DTOs;
 using api.talhao.Models.DTOs;
@@ -9,7 +10,10 @@ namespace api.coleta.Models.DTOs
     {
         public Guid? Id { get; set; }
         public Guid TalhaoID { get; set; }
+        
+        [JsonPropertyName("geoJson")]
         public JsonElement Geojson { get; set; }
+        
         public Guid FuncionarioID { get; set; }
         public string Observacao { get; set; }
         public string TipoColeta { get; set; }
