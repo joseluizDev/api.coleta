@@ -21,6 +21,10 @@ public class ApplicationDbContext : DbContext
             .ForEach(p => p.SetColumnType("decimal(12,4)"));
 
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Cliente>()
+        .Property(c => c.TipoDocumento)
+        .HasConversion<string>();
     }
 
     public DbSet<MColeta> MColetas { get; set; }
