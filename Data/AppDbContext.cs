@@ -23,6 +23,10 @@ public class ApplicationDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<Cliente>()
+        .Property(c => c.Documento)
+        .HasMaxLength(14);
+
+        modelBuilder.Entity<Cliente>()
         .Property(c => c.TipoDocumento)
         .HasConversion<string>();
     }
