@@ -26,9 +26,7 @@ public class ApplicationDbContext : DbContext
         .Property(c => c.Documento)
         .HasMaxLength(14);
 
-        modelBuilder.Entity<Cliente>()
-        .Property(c => c.TipoDocumento)
-        .HasConversion<string>();
+   
     }
 
     public DbSet<MColeta> MColetas { get; set; }

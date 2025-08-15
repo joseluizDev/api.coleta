@@ -3,11 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
-public enum TipoDocumento
-{
-    CPF,
-    CNPJ
-}
+
 
 
 namespace api.coleta.Models.Entidades
@@ -21,8 +17,7 @@ namespace api.coleta.Models.Entidades
         [MaxLength(100)]
         public string Email { get; set; }
         [MaxLength(11)]
-        public TipoDocumento? TipoDocumento { get; set; }
-        [MaxLength(14)]
+
         public string Documento { get; set; }
         [MaxLength(14)]
 
