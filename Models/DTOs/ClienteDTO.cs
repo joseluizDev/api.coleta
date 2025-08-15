@@ -1,3 +1,6 @@
+
+
+
 namespace api.cliente.Models.DTOs
 {
 
@@ -13,7 +16,10 @@ namespace api.cliente.Models.DTOs
     {
         public Guid? Id { get; set; }
         public string Nome { get; set; }
-        public string CPF { get; set; }
+        public string? CPF { get; set; }
+         // opcional, se quiser manter legado
+        public string Documento { get; set; } // novo campo
+        public string? TipoDocumento { get; set; } // enum: CPF ou CNPJ
         public string Email { get; set; }
         public string Telefone { get; set; }
         public string Cep { get; set; }
@@ -21,6 +27,7 @@ namespace api.cliente.Models.DTOs
         public string Cidade { get; set; }
         public string Estado { get; set; }
     }
+
 
     public class ClienteResponseDTO
     {
