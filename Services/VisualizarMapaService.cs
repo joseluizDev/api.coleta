@@ -8,6 +8,8 @@ using api.talhao.Models.DTOs;
 using api.talhao.Services;
 using AutoMapper;
 using api.cliente.Models.DTOs;
+using api.safra.Services;
+using api.safra.Models.DTOs;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Generic;
@@ -26,6 +28,7 @@ namespace api.coleta.Services
         private readonly GeoJsonRepository _geoJsonRepository;
         private readonly UsuarioService _usuarioService;
         private readonly TalhaoService _talhaoService;
+        private readonly SafraService _safraService;
         private readonly PontoColetadoRepository _pontoColetadoRepository;
         public VisualizarMapaService(
             UsuarioService usuarioService,
@@ -34,6 +37,7 @@ namespace api.coleta.Services
             IMapper mapper,
             GeoJsonRepository geoJsonRepository,
             TalhaoService talhaoService,
+            SafraService safraService,
             PontoColetadoRepository pontoColetadoRepository)
             : base(unitOfWork, mapper)
         {
@@ -41,6 +45,7 @@ namespace api.coleta.Services
             _geoJsonRepository = geoJsonRepository;
             _talhaoService = talhaoService;
             _usuarioService = usuarioService;
+            _safraService = safraService;
             _pontoColetadoRepository = pontoColetadoRepository;
         }
 
@@ -130,12 +135,24 @@ namespace api.coleta.Services
             {
                 if (coleta == null) continue;
 
+                // Carregar Talhão
                 var talhao = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
                 if (talhao != null)
                 {
                     coleta.Talhao = _mapper.Map<Talhoes>(talhao);
                 }
 
+                // Carregar Safra
+                if (coleta.SafraID.HasValue)
+                {
+                    var safra = _safraService.BuscarSafraPorId(null, coleta.SafraID.Value);
+                    if (safra != null)
+                    {
+                        coleta.Safra = _mapper.Map<Safra>(safra);
+                    }
+                }
+
+                // Carregar Funcionário
                 var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
                 if (funcionario != null)
                 {

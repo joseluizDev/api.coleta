@@ -136,6 +136,8 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
+
+
         [HttpPost("diagnostico")]
         [Authorize]
         public IActionResult Diagnostico([FromBody] VisualizarMapInputDto visualizarMapa)
@@ -204,6 +206,8 @@ namespace api.coleta.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+
 
     }
 }
