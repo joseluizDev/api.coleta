@@ -20,6 +20,8 @@ namespace api.coleta.Models.Entidades
         public Profundidade Profundidade { get; set; }
         public Guid UsuarioID { get; set; }
         public virtual Usuario Usuario { get; set; }
+        public Guid? SafraID { get; set; }
+        public virtual Safra? Safra { get; set; }
     }
 
     public enum TipoColeta

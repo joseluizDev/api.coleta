@@ -8,8 +8,6 @@ namespace api.coleta.Models.Entidades
     {
         [MaxLength(255)]
         public string Nome { get; set; }
-        [MaxLength(14)]
-        public string CPF { get; set; }
         [MaxLength(100)]
         public string Email { get; set; }
         [MaxLength(11)]

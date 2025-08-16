@@ -70,7 +70,6 @@ namespace api.cliente.Services
          if (cliente != null)
          {
             cliente.Nome = clienteEntidade.Nome;
-            cliente.CPF = clienteEntidade.CPF;
             cliente.Email = clienteEntidade.Email;
             cliente.Telefone = clienteEntidade.Telefone;
             cliente.Cep = clienteEntidade.Cep;
