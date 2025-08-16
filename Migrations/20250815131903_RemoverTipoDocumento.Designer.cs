@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250815131903_RemoverTipoDocumento")]
+    partial class RemoverTipoDocumento
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,6 +29,10 @@ namespace api.coleta.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("CPF")
+                        .HasMaxLength(14)
+                        .HasColumnType("varchar(14)");
 
                     b.Property<string>("Cep")
                         .IsRequired()
@@ -103,9 +110,6 @@ namespace api.coleta.Migrations
                     b.Property<int>("Profundidade")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("SafraID")
-                        .HasColumnType("char(36)");
-
                     b.Property<Guid>("TalhaoID")
                         .HasColumnType("char(36)");
 
@@ -125,8 +129,6 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GeojsonID");
-
-                    b.HasIndex("SafraID");
 
                     b.HasIndex("TalhaoID");
 
@@ -583,10 +585,6 @@ namespace api.coleta.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("api.coleta.Models.Entidades.Safra", "Safra")
-                        .WithMany()
-                        .HasForeignKey("SafraID");
-
                     b.HasOne("api.coleta.Models.Entidades.TalhaoJson", "Talhao")
                         .WithMany()
                         .HasForeignKey("TalhaoID")
@@ -606,8 +604,6 @@ namespace api.coleta.Migrations
                         .IsRequired();
 
                     b.Navigation("Geojson");
-
-                    b.Navigation("Safra");
 
                     b.Navigation("Talhao");
 
