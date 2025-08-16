@@ -59,6 +59,7 @@ public class MappingProfile : Profile
                 dto.Talhao,
                 Geojson = JsonSerializer.Serialize(dto.Geojson, new JsonSerializerOptions()), // Serializa corretamente para JSON
                 dto.TalhaoID,
+                dto.SafraID,
                 dto.UsuarioRespID,
                 dto.Observacao,
                 dto.TipoColeta,
@@ -74,6 +75,7 @@ public class MappingProfile : Profile
             }))
             .ForMember(dest => dest.Talhao, opt => opt.MapFrom(src => src.Talhao)) // Supondo que seja direto
             .ForMember(dest => dest.TalhaoID, opt => opt.MapFrom(src => src.TalhaoID))
+            .ForMember(dest => dest.SafraID, opt => opt.MapFrom(src => src.SafraID))
             .ForMember(dest => dest.Geojson, opt => opt.MapFrom(src => src.Geojson))
             .ForMember(dest => dest.GeoJsonID, opt => opt.MapFrom(src => src.GeojsonID))
             .ForMember(dest => dest.UsuarioRespID, opt => opt.MapFrom(src => src.UsuarioRespID)) // ou outro campo correto

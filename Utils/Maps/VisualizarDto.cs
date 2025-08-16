@@ -16,10 +16,11 @@ public static class VisualizarDto
 
             TipoColeta = Enum.Parse<TipoColeta>(map.TipoColeta),
             TalhaoID = map.TalhaoID,
+            SafraID = map.SafraID,
             Profundidade = Enum.Parse<Profundidade>(map.Profundidade),
             Observacao = map.Observacao,
             NomeColeta = map.NomeColeta,
-            
+
             GeojsonID = (Guid)map.GeojsonId,
         };
     }
