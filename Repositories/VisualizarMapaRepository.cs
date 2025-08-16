@@ -2,6 +2,7 @@
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Utils;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.coleta.Repositories
 {
@@ -51,8 +52,13 @@ namespace api.coleta.Repositories
             int page = query.Page.Value;
             int pageSize = 10;
 
-            // Começa a construir a query base
-            var queryable = Context.Coletas.AsQueryable();
+            // Começa a construir a query base com includes das entidades relacionadas
+            var queryable = Context.Coletas
+                .Include(c => c.Safra)
+                .Include(c => c.Talhao)
+                .Include(c => c.UsuarioResp)
+                .Include(c => c.Geojson)
+                .AsQueryable();
 
             // Filtro fixo: usuário
             queryable = queryable.Where(f => f.UsuarioID == userId);
@@ -75,6 +81,53 @@ namespace api.coleta.Repositories
                 queryable = queryable.ToList()
                     .Where(f => f.TipoAnalise.Contains(tipoAnalise))
                     .AsQueryable();
+            }
+
+            // Filtro por SafraID
+            if (query.SafraID.HasValue)
+            {
+                queryable = queryable.Where(f => f.SafraID == query.SafraID);
+            }
+
+            // Lógica otimizada para filtros hierárquicos (Cliente > Fazenda > Talhao)
+            // Se TalhaoID é especificado, use apenas ele (mais específico)
+            if (query.TalhaoID.HasValue)
+            {
+                queryable = queryable.Where(f => f.TalhaoID == query.TalhaoID);
+            }
+            // Se não há TalhaoID, mas há FazendaID, filtre por fazenda
+            else if (query.FazendaID.HasValue)
+            {
+                var talhaoJsonIds = Context.TalhaoJson
+                    .Join(Context.Talhoes, tj => tj.TalhaoID, t => t.Id, (tj, t) => new { tj.Id, t.FazendaID })
+                    .Where(x => x.FazendaID == query.FazendaID)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                if (talhaoJsonIds.Any())
+                {
+                    queryable = queryable.Where(f => talhaoJsonIds.Contains(f.TalhaoID));
+                }
+            }
+            // Se não há FazendaID nem TalhaoID, mas há ClienteID, filtre por cliente
+            else if (query.ClienteID.HasValue)
+            {
+                var talhaoJsonIds = Context.TalhaoJson
+                    .Join(Context.Talhoes, tj => tj.TalhaoID, t => t.Id, (tj, t) => new { tj.Id, t.ClienteID })
+                    .Where(x => x.ClienteID == query.ClienteID)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                if (talhaoJsonIds.Any())
+                {
+                    queryable = queryable.Where(f => talhaoJsonIds.Contains(f.TalhaoID));
+                }
+            }
+
+            // Filtro por NomeColeta
+            if (!string.IsNullOrEmpty(query.NomeColeta))
+            {
+                queryable = queryable.Where(f => f.NomeColeta.Contains(query.NomeColeta));
             }
 
             // Total de itens após filtros

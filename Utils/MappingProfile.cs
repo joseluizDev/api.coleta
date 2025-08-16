@@ -30,6 +30,7 @@ public class MappingProfile : Profile
 
         CreateMap<Safra, SafraResponseDTO>();
         CreateMap<SafraRequestDTO, Safra>();
+        CreateMap<SafraResponseDTO, Safra>();
 
         CreateMap<ConfiguracaoPadrao, ConfiguracaoPadraoResponseDTO>();
         CreateMap<ConfiguracaoPadraoRequestDTO, ConfiguracaoPadrao>();
