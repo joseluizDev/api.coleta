@@ -38,12 +38,13 @@ namespace api.utils.Controllers
             try
             {
                 var result = _utilsService.GetPointsInsideArea(request);
-                if (result.GetArrayLength() == 0)
+                if (result.Points.GetArrayLength() == 0)
                 {
                     return BadRequest(new { error = "Nenhum ponto foi gerado dentro da área especificada." });
                 }
 
-                return Ok(result);
+                // Mantém compatibilidade: retorna apenas o array de pontos
+                return Ok(result.Points);
             }
             catch (Exception ex)
             {
