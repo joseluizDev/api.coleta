@@ -8,6 +8,7 @@ using System.Text.Json;
 using api.utils.DTOs;
 using Microsoft.AspNetCore.Http.Features;
 using LibTessDotNet;
+using NetTopologySuite.Triangulate;
 
 namespace api.vinculoClienteFazenda.Services
 {
@@ -305,52 +306,24 @@ namespace api.vinculoClienteFazenda.Services
         /// </summary>
         private List<Coordinate> GenerateExactPointsForPolygon(Polygon polygon, int numPoints, Random random, out string metodoUsado)
         {
-            var points = new List<Coordinate>();
-            metodoUsado = "triangulacao";
+            // Gera pontos organizados (distribuição uniforme) usando candidatos via triangulação
+            var points = GenerateEvenlyDistributedPoints(polygon, numPoints, random);
 
-            // Tentar triangulação primeiro
-            var triangulationPoints = GeneratePointsByTriangulation(polygon, numPoints, random);
+            // Lloyd relaxation (centroidal Voronoi) for more regular spacing
+            points = LloydRelaxation(polygon, points, iterations: 3);
 
-            if (triangulationPoints.Count >= numPoints)
+            metodoUsado = "even_farthest+lloyd3+triangulation_candidates";
+
+            if (points.Count < numPoints)
             {
-                // Triangulação foi suficiente, pegar exatamente N pontos
-                points.AddRange(triangulationPoints.Take(numPoints));
-            }
-            else
-            {
-                // Triangulação parcial + fallback
-                points.AddRange(triangulationPoints);
-                int remainingPoints = numPoints - triangulationPoints.Count;
-
-                if (remainingPoints > 0)
-                {
-                    var fallbackPoints = GeneratePointsByRejectionSampling(polygon, remainingPoints, random);
-                    points.AddRange(fallbackPoints);
-                    metodoUsado = triangulationPoints.Count > 0 ? "triangulacao+rejection_sampling" : "rejection_sampling";
-                }
+                // Complementa (edge cases) com rejection sampling
+                var fallback = GeneratePointsByRejectionSampling(polygon, numPoints - points.Count, random);
+                points.AddRange(fallback);
+                metodoUsado += "+rejection_sampling";
             }
 
-            // Garantir que temos exatamente N pontos
-            if (points.Count > numPoints)
-            {
-                points = points.Take(numPoints).ToList();
-            }
-            else if (points.Count < numPoints)
-            {
-                // Último recurso: duplicar pontos existentes com pequeno jitter
-                var existingPoints = new List<Coordinate>(points);
-                while (points.Count < numPoints && existingPoints.Count > 0)
-                {
-                    var basePoint = existingPoints[random.Next(existingPoints.Count)];
-                    var jitteredPoint = new Coordinate(
-                        basePoint.X + (random.NextDouble() - 0.5) * 0.1, // Jitter muito pequeno
-                        basePoint.Y + (random.NextDouble() - 0.5) * 0.1
-                    );
-                    points.Add(jitteredPoint);
-                }
-                metodoUsado += "+jitter";
-            }
-
+            // Garantir exatamente N
+            if (points.Count > numPoints) points = points.Take(numPoints).ToList();
             return points;
         }
 
@@ -715,6 +688,190 @@ namespace api.vinculoClienteFazenda.Services
             }
 
             return points;
+        }
+
+        /// <summary>
+        /// Geração de pontos organizados: seleciona N pontos maximizando a distância mínima entre eles e das bordas
+        /// Usa candidatos gerados por triangulação (amostragem uniforme por área dos triângulos)
+        /// </summary>
+        private List<Coordinate> GenerateEvenlyDistributedPoints(Polygon polygon, int numPoints, Random random)
+        {
+            // 1) Gerar muitos candidatos dentro do polígono (triangulação + baricêntricas)
+            var triangles = TriangulatePolygon(polygon);
+            if (triangles.Count == 0)
+            {
+                return new List<Coordinate>();
+            }
+
+            // número de candidatos: p.ex. 20x N (limitado)
+            int candidateCount = Math.Clamp(numPoints * 20, numPoints, numPoints * 100);
+            var candidates = DistributePointsInTriangles(triangles, candidateCount, random);
+
+            if (candidates.Count == 0)
+                return candidates;
+
+            // 2) Farthest-Point Sampling (greedy): seleciona pontos maximizando espaçamento
+            var prepared = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+
+            // dist mínima ao contorno para penalizar bordas
+            double EdgePenalty(Coordinate c)
+            {
+                // distância euclidiana até o polígono (0 se dentro), usamos distância até o limite
+                var pnt = new Point(c.X, c.Y) { SRID = polygon.SRID };
+                // usa Distance para aproximar distância ao contorno
+                return polygon.Boundary.Distance(pnt);
+            }
+
+            // Inicialização: pega o candidato com maior distância à borda
+            var distToEdge = candidates.Select(EdgePenalty).ToArray();
+            int firstIdx = 0;
+            double best = double.NegativeInfinity;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (distToEdge[i] > best)
+                {
+                    best = distToEdge[i];
+                    firstIdx = i;
+                }
+            }
+
+            var selected = new List<Coordinate> { candidates[firstIdx] };
+
+            if (numPoints == 1)
+                return selected;
+
+            // Manter, para cada candidato, a distância mínima para o conjunto selecionado
+            var minDist = new double[candidates.Count];
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                minDist[i] = Distance(candidates[i], selected[0]);
+            }
+
+            // Greedy farthest: escolher sempre o candidato que maximiza minDist + pesoEdge
+            for (int k = 1; k < numPoints; k++)
+            {
+                int bestIdx = -1;
+                double bestScore = double.NegativeInfinity;
+
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    // penalizar pontos muito próximos da borda
+                    double score = minDist[i] + 0.25 * distToEdge[i];
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestIdx = i;
+                    }
+                }
+
+                if (bestIdx == -1)
+                    break;
+
+                var chosen = candidates[bestIdx];
+                if (!prepared.Contains(new Point(chosen) { SRID = polygon.SRID }))
+                {
+                    continue;
+                }
+
+                selected.Add(chosen);
+
+                // atualizar minDist
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    double d = Distance(candidates[i], chosen);
+                    if (d < minDist[i]) minDist[i] = d;
+                }
+            }
+
+            return selected;
+        }
+
+        private List<Coordinate> LloydRelaxation(Polygon polygon, List<Coordinate> sites, int iterations = 2)
+        {
+            if (sites == null || sites.Count == 0 || iterations <= 0)
+                return sites ?? new List<Coordinate>();
+
+            // Ensure all sites are inside polygon; if not, filter
+            var prepared = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+            var current = sites.Where(c => prepared.Contains(new Point(c) { SRID = polygon.SRID })).ToList();
+            if (current.Count == 0)
+                return sites; // fallback to original if all filtered out
+
+            for (int it = 0; it < iterations; it++)
+            {
+                var builder = new VoronoiDiagramBuilder();
+                builder.SetSites(current);
+                // Some NTS versions don't expose SetClipEnvelope; we'll intersect cells with polygon instead
+                var diagram = builder.GetDiagram(_geometryFactory);
+
+                var next = new List<Coordinate>(current.Count);
+
+                for (int i = 0; i < diagram.NumGeometries; i++)
+                {
+                    var cell = diagram.GetGeometryN(i);
+                    // Clip the cell to the target polygon to keep centroids inside
+                    var clipped = cell.Intersection(polygon);
+
+                    if (clipped == null || clipped.IsEmpty || clipped.Area <= 0)
+                    {
+                        // Keep original site if clipping failed
+                        if (i < current.Count)
+                            next.Add(current[i]);
+                        continue;
+                    }
+
+                    // Use centroid; if not inside (degenerate), fallback to interior point
+                    var centroid = clipped.Centroid;
+                    Coordinate newCoord;
+                    if (centroid == null || centroid.IsEmpty || !prepared.Contains(centroid))
+                    {
+                        var interior = clipped.PointOnSurface;
+                        newCoord = interior?.Coordinate ?? (i < current.Count ? current[i] : current.Last());
+                    }
+                    else
+                    {
+                        newCoord = centroid.Coordinate;
+                    }
+
+                    next.Add(newCoord);
+                }
+
+                // Maintain same count as original; if diagram produced more cells than sites, trim; if fewer, pad with existing
+                if (next.Count > sites.Count)
+                    next = next.Take(sites.Count).ToList();
+                else if (next.Count < sites.Count)
+                {
+                    // pad deterministically with nearest existing
+                    next.AddRange(current.Skip(next.Count).Take(sites.Count - next.Count));
+                }
+
+                current = next;
+            }
+
+            // Final pass: ensure all points are strictly inside polygon
+            var final = new List<Coordinate>(current.Count);
+            foreach (var c in current)
+            {
+                var p = new Point(c) { SRID = polygon.SRID };
+                if (prepared.Contains(p))
+                {
+                    final.Add(c);
+                }
+                else
+                {
+                    // snap to interior using point on surface
+                    final.Add(polygon.PointOnSurface.Coordinate);
+                }
+            }
+
+            return final;
+        }
+
+        private static double Distance(Coordinate a, Coordinate b)
+        {
+            double dx = a.X - b.X;
+            double dy = a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
 
         #endregion
