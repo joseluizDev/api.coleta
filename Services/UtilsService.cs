@@ -197,11 +197,66 @@ namespace api.vinculoClienteFazenda.Services
                 var reader = new NetTopologySuite.IO.GeoJsonReader();
                 var featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(dados.GeoJsonAreas.ToString());
 
-                // Processar cada feature (hexágono)
+                // 1) Pré-cálculo das áreas (em UTM) por hexágono e alocação proporcional de pontos
+                var areas = new double[featureCollection.Count];
+                int validCount = 0;
+                double totalArea = 0.0;
+                for (int fIdx = 0; fIdx < featureCollection.Count; fIdx++)
+                {
+                    var feature = featureCollection[fIdx];
+                    double area = 0.0;
+
+                    if (feature.Geometry is Polygon p)
+                    {
+                        var pUtm = TransformPolygon(p, transformToUtm);
+                        area = Math.Max(0, pUtm.Area);
+                    }
+                    else if (feature.Geometry is MultiPolygon mp)
+                    {
+                        var polysUtm = mp.Geometries.Cast<Polygon>().Select(q => TransformPolygon(q, transformToUtm));
+                        area = polysUtm.Sum(q => Math.Max(0, q.Area));
+                    }
+
+                    areas[fIdx] = area;
+                    if (area > 0)
+                    {
+                        totalArea += area;
+                        validCount++;
+                    }
+                }
+
+                // Interpretação: QtdPontosNaArea = pontos médios por hex; total = média * número de hex válidos
+                int totalPoints = Math.Max(0, pontosPorHex * Math.Max(1, validCount));
+                double avgArea = validCount > 0 ? totalArea / validCount : 0.0;
+
+                var allocationByIndex = new Dictionary<int, int>();
+                for (int i = 0; i < featureCollection.Count; i++)
+                {
+                    int alloc;
+                    if (avgArea <= 0 || areas[i] <= 0 || pontosPorHex <= 0)
+                    {
+                        alloc = 0;
+                    }
+                    else
+                    {
+                        // proporcional à área relativa vs área média, garantindo ao menos 1
+                        alloc = Math.Max(1, (int)Math.Round((areas[i] / avgArea) * pontosPorHex));
+                    }
+                    allocationByIndex[i] = alloc;
+                }
+
+                // 2) Processar cada feature (hexágono) com alocação proporcional
                 for (int fIdx = 0; fIdx < featureCollection.Count; fIdx++)
                 {
                     var feature = featureCollection[fIdx];
                     int hexagonId = GetHexagonId(featureCollection, fIdx);
+
+                    int pontosAlocados = allocationByIndex.GetValueOrDefault(fIdx, 0);
+                    if (pontosAlocados <= 0)
+                    {
+                        perHexCounts[hexagonId] = 0;
+                        continue;
+                    }
 
                     List<Coordinate> pontosGerados = new();
                     string metodoUsado = "triangulacao";
@@ -210,13 +265,13 @@ namespace api.vinculoClienteFazenda.Services
                     {
                         // Transformar para UTM
                         var polyUtm = TransformPolygon(poly, transformToUtm);
-                        pontosGerados = GenerateExactPointsForPolygon(polyUtm, pontosPorHex, random, out metodoUsado);
+                        pontosGerados = GenerateExactPointsForPolygon(polyUtm, pontosAlocados, random, out metodoUsado);
                     }
                     else if (feature.Geometry is MultiPolygon multi)
                     {
                         // Transformar cada componente para UTM e distribuir por área
                         var polysUtm = multi.Geometries.Cast<Polygon>().Select(p => TransformPolygon(p, transformToUtm)).ToList();
-                        pontosGerados = DistributePointsInMultiPolygon(polysUtm, pontosPorHex, random);
+                        pontosGerados = DistributePointsInMultiPolygon(polysUtm, pontosAlocados, random);
                         metodoUsado = "triangulacao"; // pode incluir fallback internamente
                     }
                     else
