@@ -11,6 +11,7 @@ using api.fazenda.models;
 using System.Text.Json;
 using Newtonsoft.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using api.coleta.models;
 
 public class MappingProfile : Profile
 {
@@ -24,13 +25,19 @@ public class MappingProfile : Profile
         CreateMap<Cliente, ClienteResponseDTO>();
         CreateMap<ClienteRequestDTO, Cliente>();
 
-
+        CreateMap<Coleta, ColetaPorUsuarioDto>()
+         .ForMember(dest => dest.TipoAnalise,
+               opt => opt.MapFrom(src => src.TipoAnalise
+                   .Select(t => t.ToString())
+                   .ToList()));
+         
         CreateMap<Fazenda, FazendaResponseDTO>();
         CreateMap<FazendaRequestDTO, Fazenda>();
 
         CreateMap<Safra, SafraResponseDTO>();
         CreateMap<SafraRequestDTO, Safra>();
         CreateMap<SafraResponseDTO, Safra>();
+
 
         CreateMap<ConfiguracaoPadrao, ConfiguracaoPadraoResponseDTO>();
         CreateMap<ConfiguracaoPadraoRequestDTO, ConfiguracaoPadrao>();
@@ -40,6 +47,8 @@ public class MappingProfile : Profile
 
         CreateMap<Talhao, TalhaoResponseDTO>();
         CreateMap<TalhaoRequestDTO, Talhao>();
+
+         CreateMap<TalhaoJson, TalhaoResponseDTO>();
 
         // Mapeamento de Talhoes para TalhaoJson
         CreateMap<Talhoes, TalhaoJson>()

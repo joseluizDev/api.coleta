@@ -1,8 +1,10 @@
 ﻿using api.coleta.models;
+using api.coleta.models.dtos;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Services;
 using api.coleta.Settings;
+using api.coleta.Utils;
 using AutoMapper;
 using Microsoft.Extensions.Options;
 
@@ -11,6 +13,7 @@ namespace api.coleta.repositories
     public class ColetaService : ServiceBase
     {
         private readonly ColetaRepository _coletaRepository;
+
         public ColetaService(ColetaRepository coletaRepository, IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
         {
             _coletaRepository = coletaRepository;
@@ -42,10 +45,28 @@ namespace api.coleta.repositories
         }
 
         public void DeletarColeta(Guid id)
+
         {
             var coleta = _coletaRepository.ObterPorId(id);
+
             _coletaRepository.Deletar(coleta);
             UnitOfWork.Commit();
         }
+
+        public async Task<PagedResult<ColetaPorUsuarioDto>> BucarColetasPorUsuarioAsync(Guid userID, QueryColeta query)
+        {
+            // Await no método assíncrono
+            var coletas = await _coletaRepository.BuscarColetasPorUsuario(userID, query);
+
+            var coletasDtos = _mapper.Map<List<ColetaPorUsuarioDto>>(coletas.Items);
+
+            return new PagedResult<ColetaPorUsuarioDto>
+            {
+                Items = coletasDtos,
+                TotalPages = coletas.TotalPages,
+                CurrentPage = coletas.CurrentPage
+            };
+        }
+
     }
 }
