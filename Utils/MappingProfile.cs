@@ -26,6 +26,7 @@ public class MappingProfile : Profile
         CreateMap<ClienteRequestDTO, Cliente>();
 
         CreateMap<Coleta, ColetaPorUsuarioDto>()
+         .ForMember(dest => dest.Nome, opt => opt.MapFrom(src => src.NomeColeta))
          .ForMember(dest => dest.TipoAnalise,
                opt => opt.MapFrom(src => src.TipoAnalise
                    .Select(t => t.ToString())
