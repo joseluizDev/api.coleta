@@ -49,7 +49,23 @@ public class MappingProfile : Profile
         CreateMap<Talhao, TalhaoResponseDTO>();
         CreateMap<TalhaoRequestDTO, Talhao>();
 
-         CreateMap<TalhaoJson, TalhaoResponseDTO>();
+         CreateMap<TalhaoJson, TalhaoResponseDTO>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Talhao.Id))
+            .ForMember(dest => dest.FazendaID, opt => opt.MapFrom(src => src.Talhao.FazendaID))
+            .ForMember(dest => dest.Fazenda, opt => opt.MapFrom(src => src.Talhao.Fazenda))
+            .ForMember(dest => dest.ClienteID, opt => opt.MapFrom(src => src.Talhao.ClienteID))
+            .ForMember(dest => dest.Cliente, opt => opt.MapFrom(src => src.Talhao.Cliente))
+            .ForMember(dest => dest.Talhoes, opt => opt.MapFrom(src => new List<Talhoes> { 
+                new Talhoes 
+                { 
+                    Id = src.Id,
+                    Area = double.Parse(src.Area ?? "0"),
+                    Nome = src.Nome,
+                    observacao = src.Observacao,
+                    TalhaoID = src.TalhaoID,
+                    Coordenadas = new List<Coordenada>()
+                }
+            }));
 
         // Mapeamento de Talhoes para TalhaoJson
         CreateMap<Talhoes, TalhaoJson>()

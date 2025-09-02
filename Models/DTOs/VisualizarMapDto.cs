@@ -42,6 +42,9 @@ namespace api.coleta.Models.DTOs
         public Guid? Id { get; set; }
         public Talhoes Talhao { get; set; }
         public Guid TalhaoID { get; set; }
+    // Adicionado: expor IDs de fazenda e cliente para facilitar edição no frontend
+    public Guid? FazendaID { get; set; }
+    public Guid? ClienteID { get; set; }
         public Safra? Safra { get; set; }
         public Guid? SafraID { get; set; }
         public Geojson Geojson { get; set; }

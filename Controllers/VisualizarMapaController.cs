@@ -62,12 +62,12 @@ namespace api.coleta.Controllers
                 }
 
                 var token = ObterIDDoToken();
-                Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
-
-                if (userId == Guid.Empty)
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null)
                 {
                     return BadRequest("Token inválido ou usuário não encontrado.");
                 }
+                Guid userId = userIdNullable.Value;
 
                 var visualizarMapaSalvo = _visualizarMapaService.Salvar(userId, visualizarMapa);
                 if (visualizarMapaSalvo == null)
@@ -103,14 +103,74 @@ namespace api.coleta.Controllers
             }
         }
 
+        [HttpPut("atualizar/{id}")]
+        [Authorize]
+        public IActionResult Atualizar([FromRoute] Guid id, [FromBody] VisualizarMapInputDto visualizarMapa)
+        {
+            try
+            {
+                // Validação básica do modelo
+                if (visualizarMapa == null)
+                {
+                    return BadRequest("Dados da visualização de mapa são obrigatórios.");
+                }
+
+                // Validação do ID
+                if (id == Guid.Empty)
+                {
+                    return BadRequest("ID da visualização de mapa é obrigatório.");
+                }
+
+                var token = ObterIDDoToken();
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null)
+                {
+                    return BadRequest("Token inválido ou usuário não encontrado.");
+                }
+                Guid userId = userIdNullable.Value;
+
+                var visualizarMapaAtualizado = _visualizarMapaService.Atualizar(userId, id, visualizarMapa);
+                if (visualizarMapaAtualizado == null)
+                    return BadRequest("Erro ao atualizar visualização de mapa. Verifique se existe e pertence ao usuário.");
+
+                return Ok(visualizarMapaAtualizado);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest($"Erro de validação: {ex.Message}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest($"Erro de operação: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                // Log detalhado do erro
+                Console.WriteLine($"Erro detalhado ao atualizar visualização de mapa:");
+                Console.WriteLine($"Message: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Ocorreu um erro interno ao atualizar a visualização de mapa.",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        }
+
         [HttpGet]
         public IActionResult Listar([FromQuery] QueryVisualizarMap query)
         {
             var token = ObterIDDoToken();
-            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
-            if (userId != null)
+            var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (userIdNullable.HasValue)
             {
-                var safras = _visualizarMapaService.Listar(userId, query);
+                var safras = _visualizarMapaService.Listar(userIdNullable.Value, query);
                 return Ok(safras);
 
             }

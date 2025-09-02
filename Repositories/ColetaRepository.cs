@@ -43,11 +43,16 @@ namespace api.coleta.Repositories
                 .Include(c => c.Safra)
                     .ThenInclude(s => s.Fazenda)
                 .Include(c => c.Talhao)
+                    .ThenInclude(t => t.Talhao)
+                        .ThenInclude(t => t.Fazenda)
+                .Include(c => c.Talhao)
+                    .ThenInclude(t => t.Talhao)
+                        .ThenInclude(t => t.Cliente)
                 .Where(c => c.UsuarioID == userID);
 
             // Filtro por Nome
             if (!string.IsNullOrWhiteSpace(query.Nome))
-                clientesQuery = clientesQuery.Where(c => c.NomeColeta.Contains(query.Nome));
+                clientesQuery = clientesQuery.Where(c => c.NomeColeta != null && c.NomeColeta.Contains(query.Nome));
 
             // Filtro por Safra
             if (query.SafraID.HasValue)
@@ -59,7 +64,7 @@ namespace api.coleta.Repositories
 
             // Filtro por Fazenda
             if (query.FazendaID.HasValue)
-                clientesQuery = clientesQuery.Where(c => c.Safra.FazendaID == query.FazendaID.Value);
+                clientesQuery = clientesQuery.Where(c => c.Safra != null && c.Safra.FazendaID == query.FazendaID.Value);
 
             // Filtro por Talhão
             if (query.TalhaoID.HasValue)

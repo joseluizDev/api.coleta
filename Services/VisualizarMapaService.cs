@@ -116,6 +116,98 @@ namespace api.coleta.Services
             }
         }
 
+        public VisualizarMapOutputDto? Atualizar(Guid userID, Guid id, VisualizarMapInputDto visualizarMapa)
+        {
+            try
+            {
+                // Buscar a coleta existente
+                var coletaExistente = _visualizarMapaRepository.BuscarVisualizarMapaPorId(userID, id);
+                if (coletaExistente == null)
+                {
+                    throw new ArgumentException("Visualização de mapa não encontrada ou não pertence ao usuário.");
+                }
+
+                // Validação do GeoJSON se foi informado
+                if (visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Undefined && 
+                    visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Null)
+                {
+                    // Buscar o GeoJSON existente
+                    var geoJsonExistente = _geoJsonRepository.ObterPorId(coletaExistente.GeojsonID);
+                    if (geoJsonExistente != null)
+                    {
+                        // Atualizar o GeoJSON
+                        geoJsonExistente.Pontos = visualizarMapa.Geojson.ToString();
+                        _geoJsonRepository.Atualizar(geoJsonExistente);
+                    }
+                }
+
+                // Atualizar os campos da coleta
+                if (!string.IsNullOrEmpty(visualizarMapa.NomeColeta))
+                    coletaExistente.NomeColeta = visualizarMapa.NomeColeta;
+                
+                if (visualizarMapa.TalhaoID != Guid.Empty)
+                    coletaExistente.TalhaoID = visualizarMapa.TalhaoID;
+                
+                if (visualizarMapa.FuncionarioID != Guid.Empty)
+                    coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID;
+                
+                if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
+                {
+                    if (Enum.TryParse<TipoColeta>(visualizarMapa.TipoColeta, out var tipoColeta))
+                        coletaExistente.TipoColeta = tipoColeta;
+                }
+                
+                if (visualizarMapa.TipoAnalise != null && visualizarMapa.TipoAnalise.Any())
+                {
+                    var tiposAnaliseValidos = new List<TipoAnalise>();
+                    foreach (var tipo in visualizarMapa.TipoAnalise)
+                    {
+                        if (Enum.TryParse<TipoAnalise>(tipo, out var tipoAnalise))
+                            tiposAnaliseValidos.Add(tipoAnalise);
+                    }
+                    coletaExistente.TipoAnalise = tiposAnaliseValidos;
+                }
+                
+                if (!string.IsNullOrEmpty(visualizarMapa.Profundidade))
+                {
+                    if (Enum.TryParse<Profundidade>(visualizarMapa.Profundidade, out var profundidade))
+                        coletaExistente.Profundidade = profundidade;
+                }
+                
+                if (!string.IsNullOrEmpty(visualizarMapa.Observacao))
+                    coletaExistente.Observacao = visualizarMapa.Observacao;
+
+                Console.WriteLine($"Atualizando coleta com ID: {coletaExistente.Id}");
+
+                // Atualizar a coleta no repositório
+                _visualizarMapaRepository.AtualizarVisualizarMapa(coletaExistente);
+
+                Console.WriteLine("Coleta atualizada no contexto, tentando commit...");
+
+                // Commit da transação
+                if (UnitOfWork.Commit())
+                {
+                    Console.WriteLine("Commit da atualização realizado com sucesso");
+                    return _mapper.Map<VisualizarMapOutputDto>(coletaExistente);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Falha ao confirmar a transação de atualização no banco de dados.");
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"Erro de validação na atualização: {ex.Message}");
+                throw new ArgumentException($"Erro de validação: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro inesperado no serviço Atualizar: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
+            }
+        }
+
         public PagedResult<VisualizarMapOutputDto?> Listar(Guid userID, QueryVisualizarMap query)
         {
             var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapa(userID, query);
@@ -190,6 +282,21 @@ namespace api.coleta.Services
                 if (talhao != null)
                 {
                     mappedItem.Talhao = _mapper.Map<Talhoes>(talhao);
+
+                    // Preencher FazendaID e ClienteID baseado no talhão relacionado (se existir)
+                    try
+                    {
+                        var talhaoRelacionado = _talhaoService.BuscarTalhaoPorTalhaoJson(mappedItem.TalhaoID);
+                        if (talhaoRelacionado != null)
+                        {
+                            mappedItem.FazendaID = talhaoRelacionado.FazendaID;
+                            mappedItem.ClienteID = talhaoRelacionado.ClienteID;
+                        }
+                    }
+                    catch
+                    {
+                        // ignore failures here - retornaremos sem os IDs quando não disponíveis
+                    }
                 }
 
                 var geojson = _geoJsonRepository.ObterPorId(mappedItem.GeoJsonID);
