@@ -44,4 +44,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<Minerais> Minerais { get; set; }
     public DbSet<Relatorio> Relatorios { get; set; }
     public DbSet<PontoColetado> PontoColetados { get; set; }
+    public DbSet<ImagemNdvi> ImagensNdvi { get; set; }
 }

@@ -11,13 +11,18 @@ namespace api.coleta.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "CPF",
-                table: "Clientes");
+            // Proteção: só tenta dropar se as colunas existirem
+            migrationBuilder.Sql(@"SET @existCPF = (
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Clientes' AND COLUMN_NAME = 'CPF');
+                SET @stmtCPF = IF(@existCPF > 0, 'ALTER TABLE `Clientes` DROP COLUMN `CPF`', 'SELECT 1');
+                PREPARE dropStmtCPF FROM @stmtCPF; EXECUTE dropStmtCPF; DEALLOCATE PREPARE dropStmtCPF;");
 
-            migrationBuilder.DropColumn(
-                name: "CNPJ",
-                table: "Clientes");
+            migrationBuilder.Sql(@"SET @existCNPJ = (
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Clientes' AND COLUMN_NAME = 'CNPJ');
+                SET @stmtCNPJ = IF(@existCNPJ > 0, 'ALTER TABLE `Clientes` DROP COLUMN `CNPJ`', 'SELECT 1');
+                PREPARE dropStmtCNPJ FROM @stmtCNPJ; EXECUTE dropStmtCNPJ; DEALLOCATE PREPARE dropStmtCNPJ;");
         }
 
         /// <inheritdoc />

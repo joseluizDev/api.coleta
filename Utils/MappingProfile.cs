@@ -135,5 +135,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Telefone, opt => opt.MapFrom(src => src.Telefone))
             .ForMember(dest => dest.Senha, opt => opt.MapFrom(src => src.Senha))
             .ForMember(dest => dest.adminId, opt => opt.Ignore());
+
+        CreateMap<ImagemNdvi, ImagemNdviOutputDTO>();
     }
 }

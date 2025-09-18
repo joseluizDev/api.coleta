@@ -138,6 +138,9 @@ builder.Services.AddScoped<GeoJsonService>();
 builder.Services.AddScoped<RelatorioRepository>();
 builder.Services.AddScoped<RelatorioService>();
 
+builder.Services.AddScoped<ImagemNdviRepository>();
+builder.Services.AddScoped<ImagemNdviService>();
+
 builder.Services.AddScoped<DashboardService>();
 
 
