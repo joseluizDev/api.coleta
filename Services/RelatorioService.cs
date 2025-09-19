@@ -56,5 +56,17 @@ namespace api.coleta.Services
             return null;
 
         }
+
+        public async Task<List<RelatorioOuputDTO>> ListarRelatoriosPorUploadAsync(Guid userId)
+        {
+
+            var relatorios = await _relatorioRepository.ListarRelatoriosPorUploadAsync(userId);
+            if (relatorios == null || relatorios.Count == 0)
+            {
+                return [];
+            }
+
+            return relatorios.MapRelatorio();
+        }
     }
 }

@@ -58,5 +58,19 @@ namespace api.coleta.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+        [HttpGet]
+        [Route("buscas")]
+        public async Task<IActionResult> ListarRelatoriosPorUpload()
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var relatorios = await _relatorioService.ListarRelatoriosPorUploadAsync(userId);
+                return Ok(relatorios);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
     }
 }
