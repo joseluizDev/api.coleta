@@ -60,7 +60,7 @@ namespace api.coleta.Controllers
         }
 
         [HttpGet]
-        [Route("buscas")]
+        [Route("buscar")]
         public async Task<IActionResult> ListarRelatoriosPorUpload()
         {
             var token = ObterIDDoToken();
