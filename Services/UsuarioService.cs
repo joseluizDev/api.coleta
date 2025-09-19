@@ -1,10 +1,12 @@
+using System;
+using System.Linq;
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
 using api.coleta.Data.Repository;
-using AutoMapper;
 using api.cliente.Interfaces;
 using api.coleta.Utils;
+using api.coleta.Utils.Maps;
 using api.fazenda.Models.Entidades;
 using api.fazenda.models;
 using api.funcionario.Models.DTOs;
@@ -13,8 +15,8 @@ public class UsuarioService : ServiceBase
     private readonly UsuarioRepository _usuarioRepository;
     private readonly IJwtToken _jwtToken;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IMapper mapper, IJwtToken jwtToken)
-        : base(unitOfWork, mapper)
+    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IJwtToken jwtToken)
+        : base(unitOfWork)
     {
         _usuarioRepository = usuarioRepository;
         _jwtToken = jwtToken;
@@ -27,7 +29,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return _mapper.Map<UsuarioResquestDTO>(usuario);
+        return usuario.ToRequestDto();
     }
 
     public String? Login(string email, string senha)
@@ -59,7 +61,11 @@ public class UsuarioService : ServiceBase
                 throw new Exception("CPF já cadastrado");
             }
 
-            var usuarioEntidade = _mapper.Map<Usuario>(usuario);
+            var usuarioEntidade = usuario.ToEntity();
+            if (usuarioEntidade == null)
+            {
+                throw new InvalidOperationException("Não foi possível converter o usuário informado.");
+            }
             _usuarioRepository.Adicionar(usuarioEntidade);
             UnitOfWork.Commit();
             return true;
@@ -70,7 +76,7 @@ public class UsuarioService : ServiceBase
     public PagedResult<UsuarioResponseDTO> Funcionarios(QueryFuncionario query, Guid userId)
     {
         var usuarios = _usuarioRepository.ListarFuncionarios(query, userId);
-        var usuariosDto = _mapper.Map<List<UsuarioResponseDTO>>(usuarios.Items);
+        var usuariosDto = usuarios.Items.ToResponseDtoList();
         return new PagedResult<UsuarioResponseDTO>
         {
             Items = usuariosDto,
@@ -89,7 +95,7 @@ public class UsuarioService : ServiceBase
         usuario.Atualizar(usuarioDto);
         _usuarioRepository.Atualizar(usuario);
         UnitOfWork.Commit();
-        return _mapper.Map<UsuarioResquestDTO>(usuario);
+        return usuario.ToRequestDto();
 
     }
 
@@ -112,7 +118,7 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        return _mapper.Map<List<UsuarioResponseDTO?>>(usuario);
+        return usuario.Select(u => u.ToResponseDto()).ToList();
     }
 
     public String? LoginMobile(UsuarioLoginDTO usuario)
@@ -133,7 +139,7 @@ public class UsuarioService : ServiceBase
         {
             throw new Exception("Funcionário não encontrado.");
         }
-        return _mapper.Map<FuncionarioResponseDTO>(usuario);
+        return usuario.ToFuncionarioResponseDto();
     }
 
     public FuncionarioResponseDTO? AtualizarFuncionario(Guid userId, FuncionarioRequestDTO funcionarioDto)
@@ -143,10 +149,14 @@ public class UsuarioService : ServiceBase
         {
             return null;
         }
-        var usuarioDto = _mapper.Map<UsuarioResquestDTO>(funcionarioDto);
+        var usuarioDto = funcionarioDto.ToRequestDto();
+        if (usuarioDto == null)
+        {
+            throw new InvalidOperationException("Não foi possível converter os dados do funcionário.");
+        }
         usuario.AtualizarFuncionario(usuarioDto, funcionarioDto.Observacao, funcionarioDto.Ativo);
         _usuarioRepository.Atualizar(usuario);
         UnitOfWork.Commit();
-        return _mapper.Map<FuncionarioResponseDTO>(usuario);
-    }
+        return usuario.ToFuncionarioResponseDto();
+}
 }

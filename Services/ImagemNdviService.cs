@@ -1,8 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
+using api.coleta.Utils.Maps;
 using api.minionStorage.Services;
-using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.coleta.Services
@@ -13,7 +15,7 @@ namespace api.coleta.Services
         private readonly MinioStorage _minioStorage;
         private readonly ApplicationDbContext _context;
 
-        public ImagemNdviService(ImagemNdviRepository imagemNdviRepository, MinioStorage minioStorage, IUnitOfWork unitOfWork, IMapper mapper, ApplicationDbContext context) : base(unitOfWork, mapper)
+        public ImagemNdviService(ImagemNdviRepository imagemNdviRepository, MinioStorage minioStorage, IUnitOfWork unitOfWork, ApplicationDbContext context) : base(unitOfWork)
         {
             _imagemNdviRepository = imagemNdviRepository;
             _minioStorage = minioStorage;
@@ -70,7 +72,7 @@ namespace api.coleta.Services
         public async Task<IEnumerable<ImagemNdviOutputDTO>> GetByTalhaoIdAsync(Guid talhaoId)
         {
             var imagens = await _context.ImagensNdvi.Where(i => i.TalhaoId == talhaoId).ToListAsync();
-            return _mapper.Map<IEnumerable<ImagemNdviOutputDTO>>(imagens);
+            return imagens.ToOutputDtoList();
         }
     }
 }

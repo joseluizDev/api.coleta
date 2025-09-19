@@ -3,7 +3,6 @@ using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Utils.Maps;
 using api.minionStorage.Services;
-using AutoMapper;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace api.coleta.Services
@@ -13,7 +12,7 @@ namespace api.coleta.Services
         private readonly RelatorioRepository _relatorioRepository;
         private readonly MinioStorage _minioStorage;
 
-        public RelatorioService(RelatorioRepository relatorioRepository, MinioStorage minioStorage, IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
+        public RelatorioService(RelatorioRepository relatorioRepository, MinioStorage minioStorage, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
             _minioStorage = minioStorage;

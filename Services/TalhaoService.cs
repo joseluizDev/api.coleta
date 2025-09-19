@@ -1,14 +1,15 @@
+using System;
 using api.cliente.Models.DTOs;
 using api.cliente.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
 using api.coleta.Utils;
+using api.coleta.Utils.Maps;
 using api.fazenda.models;
 using api.fazenda.repositories;
 using api.safra.Models.DTOs;
 using api.talhao.Models.DTOs;
 using api.talhao.Repositories;
-using AutoMapper;
 using System;
 
 namespace api.talhao.Services
@@ -19,8 +20,8 @@ namespace api.talhao.Services
         private readonly FazendaRepository _fazendaRepository;
         private readonly ClienteRepository _clienteRepository;
 
-        public TalhaoService(TalhaoRepository talhaoRepository, IUnitOfWork unitOfWork, IMapper mapper,
-            FazendaRepository fazendaRepository, ClienteRepository clienteRepository) : base(unitOfWork, mapper)
+        public TalhaoService(TalhaoRepository talhaoRepository, IUnitOfWork unitOfWork,
+            FazendaRepository fazendaRepository, ClienteRepository clienteRepository) : base(unitOfWork)
         {
             _talhaoRepository = talhaoRepository;
             _fazendaRepository = fazendaRepository;
@@ -33,23 +34,28 @@ namespace api.talhao.Services
             var talhao = _talhaoRepository.BuscarTalhaoId(userId, id);
             if (talhao != null)
             {
-                var response = _mapper.Map<TalhaoResponseDTO>(talhao);
+                var response = talhao.ToResponseDto();
+                if (response == null)
+                {
+                    return null;
+                }
+
                 var fazenda = _fazendaRepository.ObterPorId(talhao.FazendaID);
                 if (fazenda != null)
                 {
-                    response.Fazenda = _mapper.Map<FazendaResponseDTO>(fazenda);
+                    response.Fazenda = fazenda.ToResponseDto()!;
                 }
 
                 var cliente = _clienteRepository.ObterPorId(talhao.ClienteID);
                 if (cliente != null)
                 {
-                    response.Cliente = _mapper.Map<ClienteResponseDTO>(cliente);
+                    response.Cliente = cliente.ToResponseDto()!;
                 }
 
                 var json = _talhaoRepository.BuscarTalhaoJson(id);
                 if (json != null)
                 {
-                    response.Talhoes = _mapper.Map<List<Talhoes>>(json);
+                    response.Talhoes = json.ToTalhoesList();
                 }
 
                 return response;
@@ -61,10 +67,15 @@ namespace api.talhao.Services
         // Salvar novos talhões
         public TalhaoResponseDTO SalvarTalhoes(Guid userId, TalhaoRequestDTO talhaoRequestDTO)
         {
-            var talhao = _mapper.Map<Talhao>(talhaoRequestDTO);
+            var talhao = talhaoRequestDTO.ToEntity();
+            if (talhao == null)
+            {
+                throw new InvalidOperationException("Não foi possível converter os dados do talhão.");
+            }
+
             talhao.UsuarioID = userId;
             _talhaoRepository.Adicionar(talhao);
-            var talhaoCoordenadas = _mapper.Map<List<TalhaoJson>>(talhaoRequestDTO.Talhoes);
+            var talhaoCoordenadas = talhaoRequestDTO.Talhoes.ToTalhaoJsonList();
             foreach (var coordenada in talhaoCoordenadas)
             {
                 coordenada.TalhaoID = talhao.Id;
@@ -72,14 +83,23 @@ namespace api.talhao.Services
             }
 
             UnitOfWork.Commit();
-            var response = _mapper.Map<TalhaoResponseDTO>(talhao);
-            response.Talhoes = _mapper.Map<List<Talhoes>>(talhaoRequestDTO.Talhoes);
+            var response = talhao.ToResponseDto();
+            if (response == null)
+            {
+                throw new InvalidOperationException("Não foi possível montar a resposta do talhão.");
+            }
+
+            response.Talhoes = talhaoRequestDTO.Talhoes.CloneTalhoes();
             return response;
         }
 
         public TalhaoRequestDTO? AtualizarTalhao(Guid userId, TalhaoRequestDTO talhaoRequestDTO)
         {
-            var talhao = _mapper.Map<Talhao>(talhaoRequestDTO);
+            var talhao = talhaoRequestDTO.ToEntity();
+            if (talhao == null)
+            {
+                throw new InvalidOperationException("Não foi possível converter os dados do talhão.");
+            }
             var buscarTalhao = _talhaoRepository.BuscarTalhaoId(userId, talhao.Id);
             if (buscarTalhao != null)
             {
@@ -87,7 +107,7 @@ namespace api.talhao.Services
                 buscarTalhao.ClienteID = talhao.ClienteID;
                 buscarTalhao.UsuarioID = userId;
                 _talhaoRepository.Atualizar(buscarTalhao);
-                var talhaoCoordenadas = _mapper.Map<List<TalhaoJson>>(talhaoRequestDTO.Talhoes);
+                var talhaoCoordenadas = talhaoRequestDTO.Talhoes.ToTalhaoJsonList();
                 var deletarTalhao = _talhaoRepository.DeletarTalhaoPorId(buscarTalhao.Id);
                 _talhaoRepository.Deletar(deletarTalhao);
                 foreach (var coordenada in talhaoCoordenadas)
@@ -115,25 +135,25 @@ namespace api.talhao.Services
         public PagedResult<TalhaoResponseDTO> ListarTalhao(Guid userId, QueryTalhao query)
         {
             var talhao = _talhaoRepository.ListarTalhao(userId, query);
-            var talhaoDtos = _mapper.Map<List<TalhaoResponseDTO>>(talhao.Items);
+            var talhaoDtos = talhao.Items.ToResponseDtoList();
             foreach (var dto in talhaoDtos)
             {
                 var fazenda = _fazendaRepository.ObterPorId(dto.FazendaID);
                 if (fazenda != null)
                 {
-                    dto.Fazenda = _mapper.Map<FazendaResponseDTO>(fazenda);
+                    dto.Fazenda = fazenda.ToResponseDto()!;
                 }
 
                 var cliente = _clienteRepository.ObterPorId(dto.ClienteID);
                 if (cliente != null)
                 {
-                    dto.Cliente = _mapper.Map<ClienteResponseDTO>(cliente);
+                    dto.Cliente = cliente.ToResponseDto()!;
                 }
 
                 var json = _talhaoRepository.BuscarTalhaoJson((Guid)dto.Id);
                 if (json != null)
                 {
-                    dto.Talhoes = _mapper.Map<List<Talhoes>>(json);
+                    dto.Talhoes = json.ToTalhoesList();
                 }
             }
 
@@ -166,18 +186,26 @@ namespace api.talhao.Services
                 var b = _talhaoRepository.BuscarTalhaoId(userId, talhao.TalhaoID);
                 if (b != null)
                 {
-                    var map = _mapper.Map<TalhaoResponseDTO>(b);
-                    map.Talhoes = new List<Talhoes> { _mapper.Map<Talhoes>(talhao) };
+                    var map = b.ToResponseDto();
+                    if (map == null)
+                    {
+                        return null;
+                    }
+
+                    var talhaoMapped = talhao.ToTalhoes();
+                    map.Talhoes = talhaoMapped != null
+                        ? new List<Talhoes> { talhaoMapped }
+                        : new List<Talhoes>();
                     var cliente = _clienteRepository.ObterPorId(b.ClienteID);
                     if (cliente != null)
                     {
-                        map.Cliente = _mapper.Map<ClienteResponseDTO>(cliente);
+                        map.Cliente = cliente.ToResponseDto()!;
                     }
 
                     var fazenda = _fazendaRepository.ObterPorId(b.FazendaID);
                     if (fazenda != null)
                     {
-                        map.Fazenda = _mapper.Map<FazendaResponseDTO>(fazenda);
+                        map.Fazenda = fazenda.ToResponseDto()!;
                     }
 
                     return map;
@@ -192,23 +220,27 @@ namespace api.talhao.Services
             Talhao? talhao = _talhaoRepository.BuscarTalhaoPorFazendaID(userID, id);
             if (talhao != null)
             {
-                var map = _mapper.Map<TalhaoResponseDTO>(talhao);
+                var map = talhao.ToResponseDto();
+                if (map == null)
+                {
+                    return null;
+                }
                 var fazenda = _fazendaRepository.ObterPorId(talhao.FazendaID);
                 if (fazenda != null)
                 {
-                    map.Fazenda = _mapper.Map<FazendaResponseDTO>(fazenda);
+                    map.Fazenda = fazenda.ToResponseDto()!;
                 }
 
                 var cliente = _clienteRepository.ObterPorId(talhao.ClienteID);
                 if (cliente != null)
                 {
-                    map.Cliente = _mapper.Map<ClienteResponseDTO>(cliente);
+                    map.Cliente = cliente.ToResponseDto()!;
                 }
 
                 var json = _talhaoRepository.BuscarTalhaoJson((Guid)talhao.Id);
                 if (json != null)
                 {
-                    map.Talhoes = _mapper.Map<List<Talhoes>>(json);
+                    map.Talhoes = json.ToTalhoesList();
                 }
 
                 return map;
