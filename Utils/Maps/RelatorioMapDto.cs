@@ -28,7 +28,6 @@ namespace api.coleta.Utils.Maps
             return new RelatorioOuputDTO
             {
                 Id = relatorio.Id,
-                JsonRelatorio = relatorio.JsonRelatorio,
                 ColetaId = relatorio.ColetaId.ToString(),
                 LinkBackup = relatorio.LinkBackup,
                 DataInclusao = relatorio.DataInclusao,

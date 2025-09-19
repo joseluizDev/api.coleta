@@ -14,7 +14,6 @@ namespace api.coleta.Models.DTOs
     {
         public Guid Id { get; set; }
         public string ColetaId { get; set; }
-        public string JsonRelatorio { get; set; }
         public string LinkBackup { get; set; }
         public DateTime DataInclusao { get; set; }
         public string NomeColeta { get; set; }

@@ -67,7 +67,6 @@ namespace api.coleta.Tests
             // assert
             Assert.Equal(relatorio.Id, dto.Id);
             Assert.Equal(coletaId.ToString(), dto.ColetaId);
-            Assert.Equal(relatorio.JsonRelatorio, dto.JsonRelatorio);
             Assert.Equal(relatorio.LinkBackup, dto.LinkBackup);
             Assert.Equal(relatorio.DataInclusao, dto.DataInclusao);
             Assert.Equal("Talhao 1", dto.NomeColeta);
