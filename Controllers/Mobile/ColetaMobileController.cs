@@ -68,7 +68,7 @@ namespace api.coleta.Controllers.Mobile
         }
 
         [HttpPost]
-        [Route("salva")]
+        [Route("salvar")]
         [Authorize]
         public IActionResult SalvarColeta([FromBody] ColetaMobileDTO coleta)
         {
