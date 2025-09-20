@@ -3,7 +3,7 @@ using api.cliente.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
 using api.coleta.Utils;
-using AutoMapper;
+using api.coleta.Utils.Maps;
 
 namespace api.cliente.Services
 {
@@ -11,8 +11,8 @@ namespace api.cliente.Services
    {
       private readonly ClienteRepository _clienteRepository;
 
-      public ClienteService(ClienteRepository clienteRepository, IUnitOfWork unitOfWork, IMapper mapper)
-          : base(unitOfWork, mapper)
+      public ClienteService(ClienteRepository clienteRepository, IUnitOfWork unitOfWork)
+          : base(unitOfWork)
       {
          _clienteRepository = clienteRepository;
       }
@@ -27,7 +27,7 @@ namespace api.cliente.Services
 
          var clientesBd = _clienteRepository.BuscarClientes(id, page);
 
-         return _mapper.Map<List<ClienteResponseDTO>>(clientesBd);
+         return clientesBd.ToResponseDtoList();
 
       }
 
@@ -35,7 +35,7 @@ namespace api.cliente.Services
       {
 
          var clientes = _clienteRepository.ListarClientes(id, query);
-         var clienteDtos = _mapper.Map<List<ClienteResponseDTO>>(clientes.Items);
+         var clienteDtos = clientes.Items.ToResponseDtoList();
          return new PagedResult<ClienteResponseDTO>
          {
             Items = clienteDtos,
@@ -51,21 +51,30 @@ namespace api.cliente.Services
          {
             return null;
          }
-         return _mapper.Map<ClienteResponseDTO>(cliente);
+         return cliente.ToResponseDto();
       }
 
       public ClienteResponseDTO SalvarCliente(ClienteRequestDTO clienteDto, Guid idUser)
       {
-         var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
+         var clienteEntidade = clienteDto.ToEntity();
+         if (clienteEntidade == null)
+         {
+            throw new InvalidOperationException("Não foi possível converter os dados do cliente.");
+         }
+
          clienteEntidade.UsuarioID = idUser;
          _clienteRepository.Adicionar(clienteEntidade);
          UnitOfWork.Commit();
-         return _mapper.Map<ClienteResponseDTO>(clienteEntidade);
+         return clienteEntidade.ToResponseDto()!;
       }
 
       public ClienteResponseDTO? AtualizarCliente(Guid userId, ClienteRequestDTO clienteDto)
       {
-         var clienteEntidade = _mapper.Map<Cliente>(clienteDto);
+         var clienteEntidade = clienteDto.ToEntity();
+         if (clienteEntidade == null)
+         {
+            throw new InvalidOperationException("Não foi possível converter os dados do cliente.");
+         }
          var cliente = _clienteRepository.BuscarClienteId(userId, clienteEntidade.Id);
          if (cliente != null)
          {
@@ -79,7 +88,7 @@ namespace api.cliente.Services
             _clienteRepository.Atualizar(cliente);
             UnitOfWork.Commit();
 
-            return _mapper.Map<ClienteResponseDTO>(cliente);
+            return cliente.ToResponseDto();
          }
          return null;
       }
@@ -91,7 +100,7 @@ namespace api.cliente.Services
          {
             _clienteRepository.Deletar(cliente);
             UnitOfWork.Commit();
-            return _mapper.Map<ClienteResponseDTO>(cliente);
+            return cliente.ToResponseDto();
          }
          return null;
       }
@@ -99,7 +108,7 @@ namespace api.cliente.Services
       public List<ClienteResponseDTO> ListarTodosClientes(Guid userId)
       {
          var clientes = _clienteRepository.ListarTodosClientes(userId);
-         return _mapper.Map<List<ClienteResponseDTO>>(clientes);
+         return clientes.ToResponseDtoList();
       }
    }
 }

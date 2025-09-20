@@ -1,9 +1,9 @@
 using api.coleta.Services;
 using api.coleta.Settings;
 using api.coleta.Utils;
+using api.coleta.Utils.Maps;
 using api.fazenda.models;
 using api.fazenda.Models.Entidades;
-using AutoMapper;
 using Microsoft.Extensions.Options;
 
 
@@ -13,7 +13,7 @@ namespace api.fazenda.repositories
     {
         private readonly FazendaRepository _fazendaRepository;
 
-        public FazendaService(FazendaRepository fazendaRepository, IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
+        public FazendaService(FazendaRepository fazendaRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _fazendaRepository = fazendaRepository;
         }
@@ -24,7 +24,7 @@ namespace api.fazenda.repositories
 
             if (fazenda != null)
             {
-                return _mapper.Map<FazendaResponseDTO>(fazenda);
+                return fazenda.ToResponseDto();
             }
             return null;
 
@@ -33,7 +33,7 @@ namespace api.fazenda.repositories
         public PagedResult<FazendaResponseDTO> ListarFazendas(Guid userId, QueryFazenda query)
         {
             var fazendas = _fazendaRepository.ListarFazendas(userId, query);
-            var fazendaDtos = _mapper.Map<List<FazendaResponseDTO>>(fazendas.Items);
+            var fazendaDtos = fazendas.Items.ToResponseDtoList();
             return new PagedResult<FazendaResponseDTO>
             {
                 Items = fazendaDtos,
@@ -44,16 +44,25 @@ namespace api.fazenda.repositories
 
         public FazendaResponseDTO SalvarFazendas(Guid userId, FazendaRequestDTO fazendas)
         {
-            var fazendaEntidade = _mapper.Map<Fazenda>(fazendas);
+            var fazendaEntidade = fazendas.ToEntity();
+            if (fazendaEntidade == null)
+            {
+                throw new InvalidOperationException("Não foi possível converter os dados da fazenda.");
+            }
+
             fazendaEntidade.UsuarioID = userId;
             _fazendaRepository.Adicionar(fazendaEntidade);
             UnitOfWork.Commit();
-            return _mapper.Map<FazendaResponseDTO>(fazendaEntidade);
+            return fazendaEntidade.ToResponseDto()!;
         }
 
         public FazendaResponseDTO? AtualizarFazenda(Guid userId, FazendaRequestDTO fazenda)
         {
-            var fazendaEntidade = _mapper.Map<Fazenda>(fazenda);
+            var fazendaEntidade = fazenda.ToEntity();
+            if (fazendaEntidade == null)
+            {
+                throw new InvalidOperationException("Não foi possível converter os dados da fazenda.");
+            }
             var obterFazenda = _fazendaRepository.BuscarFazendaPorId(userId, fazendaEntidade.Id);
             if (obterFazenda != null)
             {
@@ -64,7 +73,7 @@ namespace api.fazenda.repositories
                 _fazendaRepository.Atualizar(obterFazenda);
                 UnitOfWork.Commit();
             }
-            return _mapper.Map<FazendaResponseDTO>(obterFazenda);
+            return obterFazenda.ToResponseDto();
         }
 
         public FazendaResponseDTO? DeletarFazenda(Guid userId, Guid id)
@@ -74,7 +83,7 @@ namespace api.fazenda.repositories
             {
                 _fazendaRepository.Deletar(fazenda);
                 UnitOfWork.Commit();
-                return _mapper.Map<FazendaResponseDTO>(fazenda);
+                return fazenda.ToResponseDto();
             }
             return null;
         }
@@ -82,7 +91,7 @@ namespace api.fazenda.repositories
         public List<FazendaResponseDTO> ListarTodasFazendas(Guid userId)
         {
             var fazendas = _fazendaRepository.ListarTodasFazendas(userId);
-            return _mapper.Map<List<FazendaResponseDTO>>(fazendas);
+            return fazendas.ToResponseDtoList();
         }
     }
 }

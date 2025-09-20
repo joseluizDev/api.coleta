@@ -1,15 +1,11 @@
-﻿using AutoMapper;
-
-namespace api.coleta.Services
+﻿namespace api.coleta.Services
 {
     public abstract class ServiceBase
     {
         protected IUnitOfWork UnitOfWork;
-        protected IMapper _mapper;
-        protected ServiceBase(IUnitOfWork unitOfWork, IMapper mapper)
+        protected ServiceBase(IUnitOfWork unitOfWork)
         {
             UnitOfWork = unitOfWork;
-            _mapper = mapper;
         }
     }
 }

@@ -1,6 +1,5 @@
 using api.coleta.Data.Repository;
 using api.coleta.Services;
-using AutoMapper;
 using NetTopologySuite.Geometries;
 using ProjNet.CoordinateSystems;
 using ProjNet.CoordinateSystems.Transformations;
@@ -19,8 +18,8 @@ namespace api.vinculoClienteFazenda.Services
         private readonly CoordinateSystemFactory _csFactory = new();
         private readonly VinculoClienteFazendaRepository _vinculoRepository;
 
-        public UtilsService(VinculoClienteFazendaRepository vinculoRepository, IUnitOfWork unitOfWork, IMapper mapper)
-            : base(unitOfWork, mapper)
+        public UtilsService(VinculoClienteFazendaRepository vinculoRepository, IUnitOfWork unitOfWork)
+            : base(unitOfWork)
         {
             _vinculoRepository = vinculoRepository;
         }

@@ -3,7 +3,6 @@ using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Utils.Maps;
 using api.minionStorage.Services;
-using AutoMapper;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace api.coleta.Services

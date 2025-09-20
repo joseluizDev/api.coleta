@@ -3,11 +3,11 @@ using api.cliente.Repositories;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
 using api.coleta.Utils;
+using api.coleta.Utils.Maps;
 using api.fazenda.models;
 using api.fazenda.repositories;
 using api.safra.Models.DTOs;
 using api.safra.Repositories;
-using AutoMapper;
 
 namespace api.safra.Services
 {
@@ -17,8 +17,8 @@ namespace api.safra.Services
         private readonly FazendaRepository _fazendaRepository;
         private readonly ClienteRepository _clienteRepository;
 
-        public SafraService(SafraRepository safraRepository, IUnitOfWork unitOfWork, IMapper mapper, FazendaRepository fazendaRepository, ClienteRepository clienteRepository)
-            : base(unitOfWork, mapper)
+        public SafraService(SafraRepository safraRepository, IUnitOfWork unitOfWork, FazendaRepository fazendaRepository, ClienteRepository clienteRepository)
+            : base(unitOfWork)
         {
             _safraRepository = safraRepository;
             _fazendaRepository = fazendaRepository;
@@ -32,16 +32,21 @@ namespace api.safra.Services
             {
                 return null;
             }
-            return _mapper.Map<SafraResponseDTO>(safra);
+            return safra.ToResponseDto();
         }
 
         public SafraResponseDTO SalvarSafra(Guid userId, SafraRequestDTO safraDto)
         {
-            var safraEntidade = _mapper.Map<Safra>(safraDto);
+            var safraEntidade = safraDto.ToEntity();
+            if (safraEntidade == null)
+            {
+                throw new InvalidOperationException("Não foi possível converter os dados da safra.");
+            }
+
             safraEntidade.UsuarioID = userId;
             _safraRepository.Adicionar(safraEntidade);
             UnitOfWork.Commit();
-            return _mapper.Map<SafraResponseDTO>(safraEntidade);
+            return safraEntidade.ToResponseDto()!;
         }
 
         public SafraResponseDTO? AtualizarSafra(Guid userId, SafraRequestDTO safraDto)
@@ -59,7 +64,7 @@ namespace api.safra.Services
                 _safraRepository.Atualizar(safra);
                 UnitOfWork.Commit();
 
-                return _mapper.Map<SafraResponseDTO>(safra);
+                return safra.ToResponseDto();
             }
 
             return null;
@@ -72,7 +77,7 @@ namespace api.safra.Services
             {
                 _safraRepository.Deletar(safra);
                 UnitOfWork.Commit();
-                return _mapper.Map<SafraResponseDTO>(safra);
+                return safra.ToResponseDto();
 
             }
             return null;
@@ -81,20 +86,20 @@ namespace api.safra.Services
         public PagedResult<SafraResponseDTO> ListarSafra(Guid userId, QuerySafra query)
         {
             var safra = _safraRepository.ListaSafra(userId, query);
-            var safraDtos = _mapper.Map<List<SafraResponseDTO>>(safra.Items);
+            var safraDtos = safra.Items.ToResponseDtoList();
 
             foreach (var dto in safraDtos)
             {
                 var fazenda = _fazendaRepository.ObterPorId(dto.FazendaID);
                 if (fazenda != null)
                 {
-                    dto.Fazenda = _mapper.Map<FazendaResponseDTO>(fazenda);
+                    dto.Fazenda = fazenda.ToResponseDto();
 
                 }
                 var cliente = _clienteRepository.ObterPorId(dto.ClienteID);
                 if (cliente != null)
                 {
-                    dto.Cliente = _mapper.Map<ClienteResponseDTO>(cliente);
+                    dto.Cliente = cliente.ToResponseDto();
                 }
             }
 

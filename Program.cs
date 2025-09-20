@@ -20,7 +20,6 @@ using BackAppPromo.Infrastructure.Authentication;
 using api.minionStorage.Services;
 using api.coleta.Services;
 using api.dashboard.Services;
-using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -124,7 +123,6 @@ builder.Services.AddScoped<VisualizarMapaService>(provider =>
         provider.GetRequiredService<UsuarioService>(),
         provider.GetRequiredService<VisualizarMapaRepository>(),
         provider.GetRequiredService<IUnitOfWork>(),
-        provider.GetRequiredService<IMapper>(),
         provider.GetRequiredService<GeoJsonRepository>(),
         provider.GetRequiredService<TalhaoService>(),
         provider.GetRequiredService<SafraService>(),
@@ -145,8 +143,6 @@ builder.Services.AddScoped<DashboardService>();
 
 
 
-
-builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 string corsPolicyName = "AllowAnyOrigin";
 builder.Services.AddCors(options =>
