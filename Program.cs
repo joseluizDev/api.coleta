@@ -159,7 +159,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddSingleton<MinioStorage>(provider =>
+builder.Services.AddSingleton<IMinioStorage>(provider =>
     new MinioStorage(
         endpoint: builder.Configuration["Minio:Endpoint"],
         accessKey: builder.Configuration["Minio:AccessKey"],
@@ -210,3 +210,7 @@ app.MapControllers();
 app.UseOutputCache();
 
 app.Run();
+
+public partial class Program
+{
+}

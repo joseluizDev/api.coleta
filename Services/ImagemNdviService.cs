@@ -10,10 +10,10 @@ namespace api.coleta.Services
     public class ImagemNdviService : ServiceBase
     {
         private readonly ImagemNdviRepository _imagemNdviRepository;
-        private readonly MinioStorage _minioStorage;
+        private readonly IMinioStorage _minioStorage;
         private readonly ApplicationDbContext _context;
 
-        public ImagemNdviService(ImagemNdviRepository imagemNdviRepository, MinioStorage minioStorage, IUnitOfWork unitOfWork, IMapper mapper, ApplicationDbContext context) : base(unitOfWork, mapper)
+        public ImagemNdviService(ImagemNdviRepository imagemNdviRepository, IMinioStorage minioStorage, IUnitOfWork unitOfWork, IMapper mapper, ApplicationDbContext context) : base(unitOfWork, mapper)
         {
             _imagemNdviRepository = imagemNdviRepository;
             _minioStorage = minioStorage;

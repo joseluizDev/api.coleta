@@ -1,19 +1,17 @@
-using System.Data.Common;
 using api.coleta.Data.Repositories;
 using api.coleta.Models.Entidades;
-using api.coleta.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.coleta.Repositories;
 
 public class GeoJsonRepository : GenericRepository<Geojson>
 {
-    public GeoJsonRepository(ApplicationDbContext context) : base(context) {}
-    
+    public GeoJsonRepository(ApplicationDbContext context) : base(context) { }
+
     public Geojson Adicionar(Geojson entity)
     {
-         Context.Add(entity);
-        return Context.SaveChanges()  > 0 ? entity : null;
+        Context.Add(entity);
+        return Context.SaveChanges() > 0 ? entity : null;
     }
 
     public void Atualizar(Entity entity)
@@ -30,7 +28,7 @@ public class GeoJsonRepository : GenericRepository<Geojson>
     {
         Context.Remove(entity);
     }
-    
+
     public Task<Geojson?> ListaGeojson(Guid userId, int page)
     {
 
