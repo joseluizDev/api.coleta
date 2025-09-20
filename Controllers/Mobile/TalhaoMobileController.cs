@@ -92,23 +92,8 @@ namespace api.coleta.Controllers.Mobile
                     return BadRequest("ID do usuário não encontrado no token.");
                 }
 
-                // Buscar todas as fazendas do usuário
-                var fazendas = _fazendaService.ListarTodasFazendas(userId.Value);
-
-                // Para cada fazenda, buscar seus talhões
-                var fazendasComTalhoes = new List<object>();
-
-                foreach (var fazenda in fazendas)
-                {
-                    var queryTalhao = new QueryTalhao { FazendaID = fazenda.Id };
-                    var talhoesDaFazenda = _talhaoService.ListarTalhao(userId.Value, queryTalhao);
-
-                    fazendasComTalhoes.Add(new
-                    {
-                        Fazenda = fazenda,
-                        Talhoes = talhoesDaFazenda.Items
-                    });
-                }
+                // Buscar fazendas com seus talhões em uma única consulta otimizada
+                var fazendasComTalhoes = _fazendaService.ListarFazendasComTalhoesPorUsuarioOuAdmin(userId.Value);
 
                 return Ok(fazendasComTalhoes);
             }

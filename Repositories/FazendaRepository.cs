@@ -78,5 +78,46 @@ namespace api.fazenda.repositories
         {
             return Context.Fazendas.Where(x => x.UsuarioID == userId ).ToList();
         }
+
+        public List<Fazenda> ListarFazendasPorUsuarioOuAdmin(Guid userId)
+        {
+            var usuario = Context.Usuarios.FirstOrDefault(u => u.Id == userId);
+
+            if (usuario == null)
+                return new List<Fazenda>();
+
+            // Se o usuário tem adminId, buscar fazendas do admin
+            if (usuario.adminId.HasValue)
+            {
+                return Context.Fazendas.Where(x => x.UsuarioID == usuario.adminId.Value).ToList();
+            }
+
+            // Caso contrário, buscar fazendas do próprio usuário
+            return Context.Fazendas.Where(x => x.UsuarioID == userId).ToList();
+        }
+
+        public List<object> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
+        {
+            var usuario = Context.Usuarios.FirstOrDefault(u => u.Id == userId);
+
+            if (usuario == null)
+                return new List<object>();
+
+            Guid targetUserId = usuario.adminId ?? userId;
+
+            // Buscar fazendas com seus talhões em uma única consulta
+            var fazendasComTalhoes = Context.Fazendas
+                .Where(f => f.UsuarioID == targetUserId)
+                .Select(f => new
+                {
+                    Fazenda = f,
+                    Talhoes = Context.Talhoes
+                        .Where(t => t.FazendaID == f.Id)
+                        .ToList()
+                })
+                .ToList();
+
+            return fazendasComTalhoes.Cast<object>().ToList();
+        }
     }
 }                                              

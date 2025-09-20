@@ -93,5 +93,16 @@ namespace api.fazenda.repositories
             var fazendas = _fazendaRepository.ListarTodasFazendas(userId);
             return fazendas.ToResponseDtoList();
         }
+
+        public List<FazendaResponseDTO> ListarFazendasPorUsuarioOuAdmin(Guid userId)
+        {
+            var fazendas = _fazendaRepository.ListarFazendasPorUsuarioOuAdmin(userId);
+            return fazendas.ToResponseDtoList();
+        }
+
+        public List<object> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
+        {
+            return _fazendaRepository.ListarFazendasComTalhoesPorUsuarioOuAdmin(userId);
+        }
     }
 }
