@@ -15,8 +15,7 @@ public class GeoJsonServiceTests
         using var context = TestHelper.CreateInMemoryContext();
         var repository = new GeoJsonRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
-        var mapper = TestHelper.CreateMapper();
-        var service = new GeoJsonService(repository, unitOfWork, mapper);
+        var service = new GeoJsonService(repository, unitOfWork);
 
         var geojson = new Geojson
         {

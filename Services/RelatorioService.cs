@@ -12,7 +12,7 @@ namespace api.coleta.Services
         private readonly RelatorioRepository _relatorioRepository;
         private readonly IMinioStorage _minioStorage;
 
-        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
+        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
             _minioStorage = minioStorage;

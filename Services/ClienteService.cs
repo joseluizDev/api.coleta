@@ -70,27 +70,34 @@ namespace api.cliente.Services
 
       public ClienteResponseDTO? AtualizarCliente(Guid userId, ClienteRequestDTO clienteDto)
       {
+         if (clienteDto.Id is null)
+         {
+            return null;
+         }
+
+         var cliente = _clienteRepository.BuscarClienteId(userId, clienteDto.Id.Value);
+         if (cliente == null)
+         {
+            return null;
+         }
+
          var clienteEntidade = clienteDto.ToEntity();
          if (clienteEntidade == null)
          {
             throw new InvalidOperationException("Não foi possível converter os dados do cliente.");
          }
-         var cliente = _clienteRepository.BuscarClienteId(userId, clienteEntidade.Id);
-         if (cliente != null)
-         {
-            cliente.Nome = clienteEntidade.Nome;
-            cliente.Email = clienteEntidade.Email;
-            cliente.Telefone = clienteEntidade.Telefone;
-            cliente.Cep = clienteEntidade.Cep;
-            cliente.Endereco = clienteEntidade.Endereco;
-            cliente.Cidade = clienteEntidade.Cidade;
-            cliente.Estado = clienteEntidade.Estado;
-            _clienteRepository.Atualizar(cliente);
-            UnitOfWork.Commit();
 
-            return cliente.ToResponseDto();
-         }
-         return null;
+         cliente.Nome = clienteEntidade.Nome;
+         cliente.Email = clienteEntidade.Email;
+         cliente.Telefone = clienteEntidade.Telefone;
+         cliente.Cep = clienteEntidade.Cep;
+         cliente.Endereco = clienteEntidade.Endereco;
+         cliente.Cidade = clienteEntidade.Cidade;
+         cliente.Estado = clienteEntidade.Estado;
+         _clienteRepository.Atualizar(cliente);
+         UnitOfWork.Commit();
+
+         return cliente.ToResponseDto();
       }
 
       public ClienteResponseDTO? DeletarCliente(Guid userId, Guid id)

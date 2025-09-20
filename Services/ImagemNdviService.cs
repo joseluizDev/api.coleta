@@ -15,7 +15,7 @@ namespace api.coleta.Services
         private readonly IMinioStorage _minioStorage;
         private readonly ApplicationDbContext _context;
 
-        public ImagemNdviService(ImagemNdviRepository imagemNdviRepository, IMinioStorage minioStorage, IUnitOfWork unitOfWork, IMapper mapper, ApplicationDbContext context) : base(unitOfWork, mapper)
+        public ImagemNdviService(ImagemNdviRepository imagemNdviRepository, IMinioStorage minioStorage, IUnitOfWork unitOfWork, ApplicationDbContext context) : base(unitOfWork)
         {
             _imagemNdviRepository = imagemNdviRepository;
             _minioStorage = minioStorage;

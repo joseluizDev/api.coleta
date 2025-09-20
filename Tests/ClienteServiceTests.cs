@@ -14,8 +14,7 @@ public class ClienteServiceTests
     {
         var repository = new ClienteRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
-        var mapper = TestHelper.CreateMapper();
-        return new ClienteService(repository, unitOfWork, mapper);
+        return new ClienteService(repository, unitOfWork);
     }
 
     [Fact]

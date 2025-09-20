@@ -18,8 +18,7 @@ public class RelatorioServiceTests
         var repository = new RelatorioRepository(context);
         var minioStorage = new FakeMinioStorage();
         var unitOfWork = new UnitOfWorkImplements(context);
-        var mapper = TestHelper.CreateMapper();
-        return new RelatorioService(repository, minioStorage, unitOfWork, mapper);
+        return new RelatorioService(repository, minioStorage, unitOfWork);
     }
 
     [Fact]
