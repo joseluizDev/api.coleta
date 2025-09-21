@@ -78,6 +78,8 @@ namespace api.coleta.Tests
             Assert.Equal("Observacao da coleta", dto.Observacao);
             Assert.Equal("ZeroADez", dto.Profundidade);
             Assert.Equal(new[] { "Macronutrientes", "Micronutrientes", "Textura" }, dto.TiposAnalise);
+            Assert.Equal(relatorio.JsonRelatorio, dto.JsonRelatorio);
+            Assert.True(dto.IsRelatorio);
         }
 
         [Fact]
@@ -106,6 +108,8 @@ namespace api.coleta.Tests
             Assert.Equal("N/A", dto.Observacao);
             Assert.Equal("N/A", dto.Profundidade);
             Assert.Empty(dto.TiposAnalise);
+            Assert.Equal(relatorio.JsonRelatorio, dto.JsonRelatorio);
+            Assert.True(dto.IsRelatorio);
         }
     }
 }

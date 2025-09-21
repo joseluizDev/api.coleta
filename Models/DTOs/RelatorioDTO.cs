@@ -25,5 +25,7 @@ namespace api.coleta.Models.DTOs
         public string Observacao { get; set; }
         public string Profundidade { get; set; }
         public List<string> TiposAnalise { get; set; } = [];
+        public string? JsonRelatorio { get; set; }
+        public bool IsRelatorio { get; set; }
     }
 }

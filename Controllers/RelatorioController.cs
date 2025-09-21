@@ -50,11 +50,10 @@ namespace api.coleta.Controllers
             if (userId != null)
             {
                 var relatorio = await _relatorioService.GetRelario(id, userId);
-                if (relatorio != null)
-                {
-                    return Ok(relatorio);
-                }
-                return BadRequest(new { message = "Erro ao buscar o relatório." });
+
+
+                return Ok(relatorio);
+
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }

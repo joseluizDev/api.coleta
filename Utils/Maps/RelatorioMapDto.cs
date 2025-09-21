@@ -44,6 +44,8 @@ namespace api.coleta.Utils.Maps
                 Observacao = !string.IsNullOrWhiteSpace(coleta?.Observacao) ? coleta.Observacao : "N/A",
                 Profundidade = coleta != null ? coleta.Profundidade.ToString() : "N/A",
                 TiposAnalise = tiposAnalise,
+                JsonRelatorio = relatorio.JsonRelatorio,
+                IsRelatorio = !string.IsNullOrWhiteSpace(relatorio.JsonRelatorio)
             };
         }
 

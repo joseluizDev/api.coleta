@@ -37,6 +37,8 @@ public class RelatorioServiceTests
         Assert.Equal(coleta.Profundidade.ToString(), resultado.Profundidade);
         Assert.Equal(relatorio.LinkBackup, resultado.LinkBackup);
         Assert.Contains("Macronutrientes", resultado.TiposAnalise);
+        Assert.Equal(relatorio.JsonRelatorio, resultado.JsonRelatorio);
+        Assert.True(resultado.IsRelatorio);
     }
 
     [Fact]

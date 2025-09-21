@@ -1,4 +1,3 @@
-using System.Net;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -63,17 +62,25 @@ public class RelatorioControllerIntegrationTests : IAsyncLifetime
         Assert.Equal(coleta.NomeColeta, dto.NomeColeta);
         Assert.Equal(relatorio.LinkBackup, dto.LinkBackup);
         Assert.Contains("Macronutrientes", dto.TiposAnalise);
+        Assert.Equal(relatorio.JsonRelatorio, dto.JsonRelatorio);
+        Assert.True(dto.IsRelatorio);
     }
 
     [Fact]
-    public async Task GetRelatorio_ComIdInvalido_DeveRetornarBadRequest()
+    public async Task GetRelatorio_ComIdInvalido_DeveRetornarRespostaSemRelatorio()
     {
         _factory.TestUserId = Guid.NewGuid();
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "fake-token");
 
         var response = await _client.GetAsync($"/api/relatorio/{Guid.NewGuid()}");
+        var body = await response.Content.ReadAsStringAsync();
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.True(response.IsSuccessStatusCode, body);
+        var dto = await response.Content.ReadFromJsonAsync<RelatorioOuputDTO>();
+
+        Assert.NotNull(dto);
+        Assert.False(dto!.IsRelatorio);
+        Assert.Null(dto.JsonRelatorio);
     }
 
     [Fact]
