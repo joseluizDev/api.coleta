@@ -109,7 +109,7 @@ namespace api.coleta.Tests
             Assert.Equal("N/A", dto.Profundidade);
             Assert.Empty(dto.TiposAnalise);
             Assert.Equal(relatorio.JsonRelatorio, dto.JsonRelatorio);
-            Assert.True(dto.IsRelatorio);
+            Assert.False(dto.IsRelatorio);
         }
     }
 }

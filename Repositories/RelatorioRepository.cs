@@ -54,5 +54,11 @@ namespace api.coleta.Repositories
                     .ThenInclude(c => c.UsuarioResp)
                 .FirstOrDefaultAsync(x => x.ColetaId == id && x.UsuarioId == userId);
         }
+
+        public Task<Relatorio?> ObterPorIdColetaRelatorio(Guid coletaId, Guid relatorioId, Guid userId)
+        {
+            return Context.Relatorios
+                .FirstOrDefaultAsync(x => x.ColetaId == coletaId && x.Id == relatorioId && x.UsuarioId == userId);
+        }
     }
 }

@@ -80,4 +80,31 @@ public class RelatorioServiceTests
         Assert.Equal(coleta.Safra!.Observacao, dto.Safra);
         Assert.Equal(coleta.UsuarioResp!.NomeCompleto, dto.Funcionario);
     }
+
+    [Fact]
+    public async Task AtualizarJsonRelatorioAsync_DeveSobrescreverConteudoQuandoExistir()
+    {
+        using var context = TestHelper.CreateInMemoryContext();
+        var service = CreateService(context);
+
+        var (usuarioId, coleta, relatorio) = RelatorioTestData.SeedRelatorios(context);
+        var novoJson = "{\"novo\":true}";
+
+        var atualizado = await service.AtualizarJsonRelatorioAsync(coleta.Id, usuarioId, novoJson);
+
+        Assert.True(atualizado);
+        var entidade = context.Relatorios.Single(r => r.Id == relatorio.Id);
+        Assert.Equal(novoJson, entidade.JsonRelatorio);
+    }
+
+    [Fact]
+    public async Task AtualizarJsonRelatorioAsync_DeveRetornarFalseQuandoNaoEncontrarRelatorio()
+    {
+        using var context = TestHelper.CreateInMemoryContext();
+        var service = CreateService(context);
+
+        var atualizado = await service.AtualizarJsonRelatorioAsync(Guid.NewGuid(), Guid.NewGuid(), "{}");
+
+        Assert.False(atualizado);
+    }
 }

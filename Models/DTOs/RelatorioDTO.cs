@@ -28,4 +28,11 @@ namespace api.coleta.Models.DTOs
         public string? JsonRelatorio { get; set; }
         public bool IsRelatorio { get; set; }
     }
+
+    public class AtualizarJsonRelatorioDTO
+    {
+        public Guid ColetaId { get; set; }
+        public Guid RelatorioId { get; set; }
+        public string JsonRelatorio { get; set; } = string.Empty;
+    }
 }

@@ -67,5 +67,21 @@ namespace api.coleta.Services
 
             return relatorios.MapRelatorio();
         }
+
+        public async Task<bool> AtualizarJsonRelatorioAsync(Guid coletaId, Guid relatorioId, Guid userId, string jsonRelatorio)
+        {
+            var relatorio = await _relatorioRepository.ObterPorIdColetaRelatorio(coletaId, relatorioId, userId);
+            if (relatorio == null)
+            {
+                return false;
+            }
+
+            relatorio.JsonRelatorio = jsonRelatorio;
+
+            _relatorioRepository.Atualizar(relatorio);
+            UnitOfWork.Commit();
+
+            return true;
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -75,12 +76,58 @@ public class RelatorioControllerIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/relatorio/{Guid.NewGuid()}");
         var body = await response.Content.ReadAsStringAsync();
 
-        Assert.True(response.IsSuccessStatusCode, body);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False(string.IsNullOrWhiteSpace(body), $"body: {body}");
         var dto = await response.Content.ReadFromJsonAsync<RelatorioOuputDTO>();
 
         Assert.NotNull(dto);
         Assert.False(dto!.IsRelatorio);
         Assert.Null(dto.JsonRelatorio);
+    }
+
+    [Fact]
+    public async Task AtualizarJsonRelatorio_DeveSobrescreverConteudo()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var (usuarioId, coleta, relatorio) = RelatorioTestData.SeedRelatorios(context);
+        _factory.TestUserId = usuarioId;
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "fake-token");
+
+        var payload = new AtualizarJsonRelatorioDTO
+        {
+            ColetaId = coleta.Id,
+            JsonRelatorio = "{\"value\":42}"
+        };
+
+        var response = await _client.PutAsJsonAsync("/api/relatorio/atualizar/JsonRelatorio", payload);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.True(response.IsSuccessStatusCode, body);
+
+        using var assertScope = _factory.Services.CreateScope();
+        var db = assertScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var atualizado = db.Relatorios.Single(r => r.Id == relatorio.Id);
+
+        Assert.Equal(payload.JsonRelatorio, atualizado.JsonRelatorio);
+    }
+
+    [Fact]
+    public async Task AtualizarJsonRelatorio_QuandoNaoEncontrar_DeveRetornarNotFound()
+    {
+        _factory.TestUserId = Guid.NewGuid();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "fake-token");
+
+        var payload = new AtualizarJsonRelatorioDTO
+        {
+            ColetaId = Guid.NewGuid(),
+            JsonRelatorio = "{}"
+        };
+
+        var response = await _client.PutAsJsonAsync("/api/relatorio/atualizar/JsonRelatorio", payload);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
