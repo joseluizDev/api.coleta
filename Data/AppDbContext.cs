@@ -45,4 +45,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<Relatorio> Relatorios { get; set; }
     public DbSet<PontoColetado> PontoColetados { get; set; }
     public DbSet<ImagemNdvi> ImagensNdvi { get; set; }
+    public DbSet<NutrientConfig> NutrientConfigs { get; set; }
 }

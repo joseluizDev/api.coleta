@@ -141,6 +141,9 @@ builder.Services.AddScoped<ImagemNdviService>();
 
 builder.Services.AddScoped<DashboardService>();
 
+builder.Services.AddScoped<NutrientConfigRepository>();
+builder.Services.AddScoped<NutrientConfigService>();
+
 
 
 
