@@ -91,6 +91,7 @@ public class RelatorioServiceTests
         var novoJson = "{\"novo\":true}";
 
         var atualizado = await service.AtualizarJsonRelatorioAsync(coleta.Id, relatorio.Id, usuarioId, novoJson);
+        var atualizado = await service.AtualizarJsonRelatorioAsync(coleta.Id, relatorio.Id, usuarioId, novoJson);
 
         Assert.True(atualizado);
         var entidade = context.Relatorios.Single(r => r.Id == relatorio.Id);
