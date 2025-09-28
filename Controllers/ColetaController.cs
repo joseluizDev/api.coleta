@@ -42,6 +42,20 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
+        [HttpDelete("{id}")]
+        [Authorize]
+        public IActionResult DeletarColeta(Guid id)
+        {
+            var coleta = _coletaService.ObterColetaPorId(id);
+            if (coleta == null)
+            {
+                return NotFound(new { message = "Coleta não encontrada." });
+            }
+
+            _coletaService.DeletarColeta(id);
+            return Ok(new { message = "Coleta deletada com sucesso." });
+        }
+
 
     }
 }

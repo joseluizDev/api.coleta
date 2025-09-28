@@ -77,5 +77,9 @@ namespace api.coleta.repositories
             };
         }
 
+        public MColeta? ObterColetaPorId(Guid id)
+        {
+            return _coletaRepository.ObterPorId(id);
+        }
     }
 }
