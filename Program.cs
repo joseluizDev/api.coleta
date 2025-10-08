@@ -20,6 +20,9 @@ using BackAppPromo.Infrastructure.Authentication;
 using api.minionStorage.Services;
 using api.coleta.Services;
 using api.dashboard.Services;
+using DotNetEnv;
+
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,7 +81,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 
 
-builder.Services.Configure<GoogleApiSettings>(builder.Configuration.GetSection("GoogleApi"));
+builder.Services.Configure<GoogleApiSettings>(options =>
+{
+    options.ApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? "";
+});
 
 
 builder.Services.AddScoped<IJwtToken, JwtTokenService>();

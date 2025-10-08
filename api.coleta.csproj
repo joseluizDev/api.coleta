@@ -47,6 +47,7 @@
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
 	  <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+	  <PackageReference Include="DotNetEnv" Version="3.0.0" />
   </ItemGroup>
 
 </Project>
