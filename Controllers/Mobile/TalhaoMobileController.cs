@@ -39,7 +39,7 @@ namespace api.coleta.Controllers.Mobile
                 {
                     return BadRequest($"Erro ao validar token: {tokenEx.Message}");
                 }
-                
+
                 var userId = _jwtToken.ObterUsuarioIdDoToken(token);
                 if (userId == null) return BadRequest("ID do usuário não encontrado no token.");
 
