@@ -3,6 +3,7 @@ using api.coleta.Data.Repositories;
 using api.coleta.Utils;
 using api.fazenda.models;
 using api.coleta.Models.Entidades;
+using api.coleta.Models.DTOs;
 
 namespace api.fazenda.repositories
 {
@@ -74,9 +75,9 @@ namespace api.fazenda.repositories
             };
         }
 
-        public List<Fazenda>   ListarTodasFazendas(Guid userId)
+        public List<Fazenda> ListarTodasFazendas(Guid userId)
         {
-            return Context.Fazendas.Where(x => x.UsuarioID == userId ).ToList();
+            return Context.Fazendas.Where(x => x.UsuarioID == userId).ToList();
         }
 
         public List<Fazenda> ListarFazendasPorUsuarioOuAdmin(Guid userId)
@@ -96,28 +97,43 @@ namespace api.fazenda.repositories
             return Context.Fazendas.Where(x => x.UsuarioID == userId).ToList();
         }
 
-        public List<object> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
+        public List<FazendaComTalhoesDTO> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
         {
             var usuario = Context.Usuarios.FirstOrDefault(u => u.Id == userId);
 
             if (usuario == null)
-                return new List<object>();
+                return new List<FazendaComTalhoesDTO>();
 
             Guid targetUserId = usuario.adminId ?? userId;
 
             // Buscar fazendas com seus talhões em uma única consulta
             var fazendasComTalhoes = Context.Fazendas
                 .Where(f => f.UsuarioID == targetUserId)
-                .Select(f => new
+                .Select(f => new FazendaComTalhoesDTO
                 {
-                    Fazenda = f,
+                    Id = f.Id,
+                    Nome = f.Nome,
+                    Lat = f.Lat,
+                    Lng = f.Lng,
+                    ClienteID = f.ClienteID,
                     Talhoes = Context.Talhoes
                         .Where(t => t.FazendaID == f.Id)
-                        .ToList()
-                })
-                .ToList();
+                        .SelectMany(t => Context.TalhaoJson
+                            .Where(tj => tj.TalhaoID == t.Id)
+                            .Select(tj => new TalhaoMobileDTO
+                            {
+                                Id = tj.Id,
+                                Nome = tj.Nome,
+                                Area = tj.Area,
+                                Coordenadas = tj.Coordenadas,
+                                Observacao = tj.Observacao,
+                                TalhaoID = tj.TalhaoID,
+                                FazendaID = t.FazendaID,
+                                ClienteID = t.ClienteID
+                            })).ToList()
+                }).ToList();
 
-            return fazendasComTalhoes.Cast<object>().ToList();
+            return fazendasComTalhoes;
         }
     }
-}                                              
+}
