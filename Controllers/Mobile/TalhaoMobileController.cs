@@ -122,11 +122,15 @@ namespace api.coleta.Controllers.Mobile
                 var usuarioAdmin = _usuarioRepository.ObterPorId(usuario.adminId.Value);
                 if (usuarioAdmin == null) return NotFound("Administrador não encontrado.");
 
-                // 5. Criar o talhão para o usuário admin
+                // 5. Buscar a fazenda para obter o ClienteID
+                var fazenda = _fazendaService.BuscarFazendaPorId(usuarioAdmin.Id, request.FazendaID);
+                if (fazenda == null) return NotFound("Fazenda não encontrada.");
+
+                // 6. Criar o talhão para o usuário admin
                 var talhaoRequest = new TalhaoRequestDTO
                 {
                     FazendaID = request.FazendaID,
-                    ClienteID = Guid.Empty, // Você pode ajustar isso conforme necessário
+                    ClienteID = fazenda.ClienteID,
                     Talhoes = new List<Talhoes>
                     {
                         new Talhoes
