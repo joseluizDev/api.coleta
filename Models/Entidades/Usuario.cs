@@ -28,9 +28,7 @@ namespace api.coleta.Models.Entidades
 
         public Guid? adminId { get; set; }
         public virtual Usuario? Admin { get; set; }
-        public Usuario()
-        {
-        }
+        public Usuario(){ }
         public Usuario(UsuarioResquestDTO usuario)
         {
             NomeCompleto = usuario.NomeCompleto;
@@ -39,6 +37,16 @@ namespace api.coleta.Models.Entidades
             Telefone = usuario.Telefone;
             Senha = usuario.Senha;
             Validador();
+        }
+        public Usuario Atualizar(UsuarioResquestDTO usuario)
+        {
+            NomeCompleto = usuario.NomeCompleto;
+            CPF = usuario.CPF;
+            Email = usuario.Email;
+            Telefone = usuario.Telefone;
+            Senha = usuario.Senha;
+            Validador();
+            return this;
         }
 
         private void Validador()
@@ -58,17 +66,7 @@ namespace api.coleta.Models.Entidades
         }
 
         // atualizar usuario
-        public Usuario Atualizar(UsuarioResquestDTO usuario)
-        {
-            NomeCompleto = usuario.NomeCompleto;
-            CPF = usuario.CPF;
-            Email = usuario.Email;
-            Telefone = usuario.Telefone;
-            Senha = usuario.Senha;
-            Validador();
-            return this;
-        }
-
+     
         // atualizar funcionario incluindo observacao e ativo
         public Usuario AtualizarFuncionario(UsuarioResquestDTO usuario, string? observacao, bool ativo)
         {

@@ -4,6 +4,7 @@ using api.coleta.Utils;
 using api.coleta.Utils.Maps;
 using api.fazenda.models;
 using api.fazenda.Models.Entidades;
+using api.coleta.Models.DTOs;
 using Microsoft.Extensions.Options;
 
 
@@ -100,7 +101,7 @@ namespace api.fazenda.repositories
             return fazendas.ToResponseDtoList();
         }
 
-        public List<object> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
+        public List<FazendaComTalhoesDTO> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
         {
             return _fazendaRepository.ListarFazendasComTalhoesPorUsuarioOuAdmin(userId);
         }

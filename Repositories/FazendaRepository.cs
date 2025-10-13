@@ -3,6 +3,7 @@ using api.coleta.Data.Repositories;
 using api.coleta.Utils;
 using api.fazenda.models;
 using api.coleta.Models.Entidades;
+using api.coleta.Models.DTOs;
 
 namespace api.fazenda.repositories
 {
@@ -74,9 +75,9 @@ namespace api.fazenda.repositories
             };
         }
 
-        public List<Fazenda>   ListarTodasFazendas(Guid userId)
+        public List<Fazenda> ListarTodasFazendas(Guid userId)
         {
-            return Context.Fazendas.Where(x => x.UsuarioID == userId ).ToList();
+            return Context.Fazendas.Where(x => x.UsuarioID == userId).ToList();
         }
 
         public List<Fazenda> ListarFazendasPorUsuarioOuAdmin(Guid userId)
@@ -96,28 +97,74 @@ namespace api.fazenda.repositories
             return Context.Fazendas.Where(x => x.UsuarioID == userId).ToList();
         }
 
-        public List<object> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
+        public List<FazendaComTalhoesDTO> ListarFazendasComTalhoesPorUsuarioOuAdmin(Guid userId)
         {
             var usuario = Context.Usuarios.FirstOrDefault(u => u.Id == userId);
 
             if (usuario == null)
-                return new List<object>();
+                return new List<FazendaComTalhoesDTO>();
 
             Guid targetUserId = usuario.adminId ?? userId;
 
-            // Buscar fazendas com seus talhões em uma única consulta
-            var fazendasComTalhoes = Context.Fazendas
+            // Buscar fazendas do usuário
+            var fazendas = Context.Fazendas
                 .Where(f => f.UsuarioID == targetUserId)
                 .Select(f => new
                 {
-                    Fazenda = f,
-                    Talhoes = Context.Talhoes
-                        .Where(t => t.FazendaID == f.Id)
-                        .ToList()
+                    f.Id,
+                    f.Nome,
+                    f.Lat,
+                    f.Lng,
+                    f.ClienteID
                 })
                 .ToList();
 
-            return fazendasComTalhoes.Cast<object>().ToList();
+            // Buscar todos os talhões relacionados às fazendas em uma única query
+            var fazendaIds = fazendas.Select(f => f.Id).ToList();
+
+            var talhoesData = Context.TalhaoJson
+                .Where(tj => Context.Talhoes
+                    .Where(t => fazendaIds.Contains(t.FazendaID))
+                    .Select(t => t.Id)
+                    .Contains(tj.TalhaoID))
+                .Select(tj => new
+                {
+                    tj.Id,
+                    tj.Nome,
+                    tj.Area,
+                    tj.Coordenadas,
+                    tj.Observacao,
+                    tj.TalhaoID,
+                    FazendaID = tj.Talhao.FazendaID,
+                    ClienteID = tj.Talhao.ClienteID
+                })
+                .ToList();
+
+            // Combinar os dados em memória
+            var fazendasComTalhoes = fazendas.Select(f => new FazendaComTalhoesDTO
+            {
+                Id = f.Id,
+                Nome = f.Nome,
+                Lat = f.Lat,
+                Lng = f.Lng,
+                ClienteID = f.ClienteID,
+                Talhoes = talhoesData
+                    .Where(t => t.FazendaID == f.Id)
+                    .Select(t => new TalhaoMobileDTO
+                    {
+                        Id = t.Id,
+                        Nome = t.Nome,
+                        Area = t.Area,
+                        Coordenadas = t.Coordenadas,
+                        Observacao = t.Observacao,
+                        TalhaoID = t.TalhaoID,
+                        FazendaID = t.FazendaID,
+                        ClienteID = t.ClienteID
+                    })
+                    .ToList()
+            }).ToList();
+
+            return fazendasComTalhoes;
         }
     }
-}                                              
+}
