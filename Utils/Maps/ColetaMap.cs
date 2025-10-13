@@ -21,7 +21,8 @@ namespace api.coleta.Utils.Maps
                 Nome = coleta.NomeColeta,
                 TipoAnalise = coleta.TipoAnalise?.Select(x => x.ToString()).ToList(),
                 Safra = coleta.Safra != null ? coleta.Safra.ToResponseDto()! : null!,
-                Talhao = coleta.Talhao != null ? coleta.Talhao.ToTalhaoResponseDto()! : null!
+                Talhao = coleta.Talhao != null ? coleta.Talhao.ToTalhaoResponseDto()! : null!,
+                FazendaID = coleta.FazendaID
             };
         }
 
@@ -37,7 +38,7 @@ namespace api.coleta.Utils.Maps
                 Id = coleta.Id,
                 TalhaoID = coleta.TalhaoID,
                 Talhao = coleta.Talhao?.ToTalhoes() ?? null!,
-                FazendaID = coleta.Talhao?.Talhao?.FazendaID,
+                FazendaID = coleta.FazendaID,
                 ClienteID = coleta.Talhao?.Talhao?.ClienteID,
                 Safra = coleta.Safra,
                 SafraID = coleta.SafraID,

@@ -9,6 +9,7 @@ namespace api.coleta.models
     {
         public string Nome { get; set; }
         public string Endereco { get; set; }
+        public Guid? FazendaID { get; set; }
         public double Lat { get; set; }
         public double Lng { get; set; }
         public string reference { get; set; }
@@ -36,6 +37,8 @@ namespace api.coleta.models
         public SafraResponseDTO Safra { get; set; }
         
         public TalhaoResponseDTO Talhao { get; set; }
+
+        public Guid? FazendaID { get; set; }
         
 
         // Dados resumidos de Cliente

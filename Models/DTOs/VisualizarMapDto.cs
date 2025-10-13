@@ -10,6 +10,7 @@ namespace api.coleta.Models.DTOs
     {
         public Guid? Id { get; set; }
         public Guid TalhaoID { get; set; }
+        public Guid? FazendaID { get; set; }
         public Guid? SafraID { get; set; }
         
         [JsonPropertyName("geoJson")]

@@ -64,7 +64,7 @@ namespace api.coleta.Repositories
 
             // Filtro por Fazenda
             if (query.FazendaID.HasValue)
-                clientesQuery = clientesQuery.Where(c => c.Safra != null && c.Safra.FazendaID == query.FazendaID.Value);
+                clientesQuery = clientesQuery.Where(c => c.FazendaID == query.FazendaID.Value);
 
             // Filtro por Talhão
             if (query.TalhaoID.HasValue)

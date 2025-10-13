@@ -89,6 +89,9 @@ namespace api.coleta.Migrations
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid?>("FazendaID")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid>("GeojsonID")
                         .HasColumnType("char(36)");
 
@@ -123,6 +126,8 @@ namespace api.coleta.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FazendaID");
 
                     b.HasIndex("GeojsonID");
 
@@ -648,6 +653,10 @@ namespace api.coleta.Migrations
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Coleta", b =>
                 {
+                    b.HasOne("api.fazenda.Models.Entidades.Fazenda", "Fazenda")
+                        .WithMany()
+                        .HasForeignKey("FazendaID");
+
                     b.HasOne("api.coleta.Models.Entidades.Geojson", "Geojson")
                         .WithMany()
                         .HasForeignKey("GeojsonID")
@@ -675,6 +684,8 @@ namespace api.coleta.Migrations
                         .HasForeignKey("UsuarioRespID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Fazenda");
 
                     b.Navigation("Geojson");
 
