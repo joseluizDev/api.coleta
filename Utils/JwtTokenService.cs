@@ -31,7 +31,7 @@ namespace BackAppPromo.Infrastructure.Authentication
                 {
                     new Claim(ClaimTypes.Name, usuario.Id.ToString())
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(1),
+                Expires = DateTime.UtcNow.AddDays(1),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _issuer,
                 Audience = _audience
