@@ -142,6 +142,23 @@ public class UsuarioService : ServiceBase
         return usuario.ToFuncionarioResponseDto();
     }
 
+    public string? RefreshToken(string token)
+    {
+        var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+        if (userId == null)
+        {
+            return null;
+        }
+
+        var usuario = _usuarioRepository.ObterPorId(userId.Value);
+        if (usuario == null)
+        {
+            return null;
+        }
+
+        return _jwtToken.GerarToken(usuario);
+    }
+
     public FuncionarioResponseDTO? AtualizarFuncionario(Guid userId, FuncionarioRequestDTO funcionarioDto)
     {
         var usuario = _usuarioRepository.ObterFuncionario(funcionarioDto.Id, userId);
