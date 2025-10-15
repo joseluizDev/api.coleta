@@ -428,6 +428,9 @@ namespace api.coleta.Services
                     points = new List<object>()
                 };
 
+                // Contador de zonas (polígonos) identificadas
+                int zonas = 0;
+
 
                 if (!string.IsNullOrEmpty(coleta.Geojson.Pontos))
                 {
@@ -502,6 +505,7 @@ namespace api.coleta.Services
                                                     cordenadas = coordinates[0]
                                                 };
                                                 geoJsonData.grid.Add(gridData);
+                                                zonas++;
                                             }
                                         }
                                         catch
@@ -531,6 +535,7 @@ namespace api.coleta.Services
                                                             cordenadas = coordinates[0]
                                                         };
                                                         geoJsonData.grid.Add(gridData);
+                                                        zonas++;
                                                     }
                                                 }
                                                 catch
@@ -546,6 +551,7 @@ namespace api.coleta.Services
                                                                 cordenadas = coordinates
                                                             };
                                                             geoJsonData.grid.Add(gridData);
+                                                            zonas++;
                                                         }
                                                     }
                                                     catch
@@ -586,6 +592,7 @@ namespace api.coleta.Services
                                                     cordenadas = coordsList
                                                 };
                                                 geoJsonData.grid.Add(gridData);
+                                                zonas++;
                                             }
                                         }
                                     }
@@ -667,6 +674,7 @@ namespace api.coleta.Services
                                         cordenadas = coordsList
                                     };
                                     geoJsonData.grid.Add(gridData);
+                                    zonas++;
                                 }
                                 else
                                 {
@@ -688,11 +696,21 @@ namespace api.coleta.Services
                     }
                 }
 
-
+                // Buscar cliente e fazenda para o talhão relacionado
+                var talhaoRelacionado = _talhaoService.BuscarTalhaoPorTalhaoJson(coleta.TalhaoID);
+                var clienteDto = talhaoRelacionado?.Cliente?.ToResponseDto();
+                var fazendaDto = talhaoRelacionado?.Fazenda?.ToResponseDto();
 
                 var item = new
                 {
                     id = coleta.Id,
+                    // Informações solicitadas
+                    cliente = clienteDto != null ? new { id = clienteDto.Id, nome = clienteDto.Nome } : null,
+                    fazenda = fazendaDto != null ? new { id = fazendaDto.Id, nome = fazendaDto.Nome } : null,
+                    areaHa = coleta.Talhao != null ? coleta.Talhao.Area : 0,
+                    talhaoNome = coleta.Talhao != null ? coleta.Talhao.Nome : null,
+                    nomeColeta = !string.IsNullOrWhiteSpace(coleta.NomeColeta) ? coleta.NomeColeta : (talhaoJson.Nome ?? ""),
+                    zonas = zonas,
                     talhao = coleta.Talhao != null ? new
                     {
                         id = coleta.Talhao.Id,
@@ -716,7 +734,7 @@ namespace api.coleta.Services
                     observacao = coleta.Observacao ?? "",
                     tipoColeta = coleta.TipoColeta,
                     tipoAnalise = coleta.TipoAnalise,
-                    profundidade = coleta.Profundidade
+                    profundidade = FormatarProfundidade(coleta.Profundidade)
                 };
 
                 result.Add(item);
@@ -816,6 +834,27 @@ namespace api.coleta.Services
             }
 
             return result;
+        }
+
+        private static string FormatarProfundidade(string profundidadeEnum)
+        {
+            // Mapeia nomes de enum para formato humano (ex.: ZeroAVinte -> "0-20")
+            // Aceita string porque nas DTOs esse campo já está como string
+            return profundidadeEnum switch
+            {
+                "ZeroADez" => "0-10",
+                "ZeroAVinte" => "0-20",
+                "ZeroATrinta" => "0-30",
+                "ZeroAQuarenta" => "0-40",
+                "ZeroACinquenta" => "0-50",
+                "ZeroASetenta" => "0-70",
+                "DezAVinte" => "10-20",
+                "VinteATrinta" => "20-30",
+                "TrintaAQuarenta" => "30-40",
+                "QuarentaACinquenta" => "40-50",
+                "CinquentaASetenta" => "50-70",
+                _ => profundidadeEnum
+            };
         }
 
         private int ContarPontosPlanejados(Geojson? geojson)
