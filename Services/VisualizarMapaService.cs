@@ -61,7 +61,7 @@ namespace api.coleta.Services
             try
             {
                 // Validação do GeoJSON
-                if (visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Undefined || 
+                if (visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Undefined ||
                     visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Null)
                 {
                     throw new ArgumentException("GeoJSON é obrigatório e deve ser um objeto JSON válido.");
@@ -103,6 +103,10 @@ namespace api.coleta.Services
                 if (UnitOfWork.Commit())
                 {
                     Console.WriteLine("Commit realizado com sucesso");
+
+                    // Enviar notificação de forma assíncrona
+                    EnviarNotificacaoNovaColeta(userID, visualizarMapa.NomeColeta);
+
                     return map.ToVisualizarDto();
                 }
                 else
@@ -135,7 +139,7 @@ namespace api.coleta.Services
                 }
 
                 // Validação do GeoJSON se foi informado
-                if (visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Undefined && 
+                if (visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
                     visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Null)
                 {
                     // Buscar o GeoJSON existente
@@ -151,19 +155,19 @@ namespace api.coleta.Services
                 // Atualizar os campos da coleta
                 if (!string.IsNullOrEmpty(visualizarMapa.NomeColeta))
                     coletaExistente.NomeColeta = visualizarMapa.NomeColeta;
-                
+
                 if (visualizarMapa.TalhaoID != Guid.Empty)
                     coletaExistente.TalhaoID = visualizarMapa.TalhaoID;
-                
+
                 if (visualizarMapa.FuncionarioID != Guid.Empty)
                     coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID;
-                
+
                 if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
                 {
                     if (Enum.TryParse<TipoColeta>(visualizarMapa.TipoColeta, out var tipoColeta))
                         coletaExistente.TipoColeta = tipoColeta;
                 }
-                
+
                 if (visualizarMapa.TipoAnalise != null && visualizarMapa.TipoAnalise.Any())
                 {
                     var tiposAnaliseValidos = new List<TipoAnalise>();
@@ -174,13 +178,13 @@ namespace api.coleta.Services
                     }
                     coletaExistente.TipoAnalise = tiposAnaliseValidos;
                 }
-                
+
                 if (!string.IsNullOrEmpty(visualizarMapa.Profundidade))
                 {
                     if (Enum.TryParse<Profundidade>(visualizarMapa.Profundidade, out var profundidade))
                         coletaExistente.Profundidade = profundidade;
                 }
-                
+
                 if (!string.IsNullOrEmpty(visualizarMapa.Observacao))
                     coletaExistente.Observacao = visualizarMapa.Observacao;
 
@@ -1049,6 +1053,29 @@ namespace api.coleta.Services
                 Console.WriteLine($"Erro ao atualizar o status de coleta: {ex.Message}");
                 return false;
             }
+        }
+
+        private void EnviarNotificacaoNovaColeta(Guid userId, string nomeColeta)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var usuario = _usuarioRepository.ObterPorId(userId);
+                    if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                    {
+                        await _oneSignalService.EnviarNotificacaoAsync(
+                            usuario.FcmToken,
+                            "Nova Coleta",
+                            $"Uma nova coleta '{nomeColeta}' foi salva para você!"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao enviar notificação: {ex.Message}");
+                }
+            });
         }
     }
 }

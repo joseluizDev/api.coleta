@@ -46,17 +46,6 @@ namespace api.coleta.repositories
             }
             _coletaRepository.Adicionar(coletaEntidade);
             UnitOfWork.Commit();
-
-            // Buscar o usuário e enviar notificação se ele tiver fcmToken
-            var usuario = _usuarioRepository.ObterPorId(usuarioId);
-            if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
-            {
-                await _oneSignalService.EnviarNotificacaoAsync(
-                    usuario.FcmToken,
-                    "Nova Coleta",
-                    $"Uma nova coleta '{coletas.Nome}' foi salva para você!"
-                );
-            }
         }
 
         public void AtualizarColeta(ColetaRequestDTO coleta)

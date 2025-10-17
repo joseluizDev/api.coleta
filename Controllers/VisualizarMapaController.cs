@@ -14,22 +14,16 @@ namespace api.coleta.Controllers
         private readonly VisualizarMapaService _visualizarMapaService;
         private readonly INotificador _notificador;
         private readonly IJwtToken _jwtToken;
-        private readonly Interfaces.IOneSignalService _oneSignalService;
-        private readonly Data.Repository.UsuarioRepository _usuarioRepository;
 
         public VisualizarMapaController(
             VisualizarMapaService visualizarMapaService,
             INotificador notificador,
-            IJwtToken jwtToken,
-            Interfaces.IOneSignalService oneSignalService,
-            Data.Repository.UsuarioRepository usuarioRepository)
+            IJwtToken jwtToken)
             : base(notificador)
         {
             _visualizarMapaService = visualizarMapaService;
             _notificador = notificador;
             _jwtToken = jwtToken;
-            _oneSignalService = oneSignalService;
-            _usuarioRepository = usuarioRepository;
         }
 
         [HttpPost("salvar")]
@@ -81,9 +75,6 @@ namespace api.coleta.Controllers
                 var visualizarMapaSalvo = _visualizarMapaService.Salvar(userId, visualizarMapa);
                 if (visualizarMapaSalvo == null)
                     return BadRequest("Erro ao salvar visualização de mapa. Verifique se o talhão e funcionário existem no sistema.");
-
-                // Enviar notificação push para o funcionário responsável de forma assíncrona
-                EnviarNotificacaoAsync(visualizarMapa.FuncionarioID, visualizarMapa.NomeColeta);
 
                 return Ok(visualizarMapaSalvo);
             }
@@ -277,45 +268,6 @@ namespace api.coleta.Controllers
                 return NotFound(new { message = "Visualização de mapa não encontrada." });
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
-        }
-
-        /// <summary>
-        /// Envia notificação push de forma assíncrona sem bloquear a resposta
-        /// </summary>
-        private void EnviarNotificacaoAsync(Guid funcionarioId, string? nomeColeta)
-        {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var funcionario = _usuarioRepository.ObterPorId(funcionarioId);
-                    if (funcionario?.FcmToken == null)
-                    {
-                        Console.WriteLine($"Funcionário {funcionarioId} não possui FCM Token cadastrado.");
-                        return;
-                    }
-
-                    var sucesso = await _oneSignalService.EnviarNotificacaoAsync(
-                        funcionario.FcmToken,
-                        "Nova Coleta Adicionada",
-                        $"Uma nova coleta '{nomeColeta ?? "sem nome"}' foi adicionada."
-                    );
-
-                    if (sucesso)
-                    {
-                        Console.WriteLine($"Notificação enviada com sucesso para o funcionário {funcionario.NomeCompleto}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Falha ao enviar notificação para o funcionário {funcionario.NomeCompleto}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Erro ao enviar notificação: {ex.Message}");
-                    Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                }
-            });
         }
     }
 }
