@@ -14,6 +14,7 @@ using api.talhao.Services;
 using api.cliente.Models.DTOs;
 using api.safra.Services;
 using api.safra.Models.DTOs;
+using api.coleta.Interfaces;
 
 namespace api.coleta.Services
 {
@@ -31,6 +32,8 @@ namespace api.coleta.Services
         private readonly TalhaoService _talhaoService;
         private readonly SafraService _safraService;
         private readonly PontoColetadoRepository _pontoColetadoRepository;
+        private readonly IOneSignalService _oneSignalService;
+        private readonly Data.Repository.UsuarioRepository _usuarioRepository;
         public VisualizarMapaService(
             UsuarioService usuarioService,
             VisualizarMapaRepository visualizarMapaRepository,
@@ -38,7 +41,9 @@ namespace api.coleta.Services
             GeoJsonRepository geoJsonRepository,
             TalhaoService talhaoService,
             SafraService safraService,
-            PontoColetadoRepository pontoColetadoRepository)
+            PontoColetadoRepository pontoColetadoRepository,
+            IOneSignalService oneSignalService,
+            Data.Repository.UsuarioRepository usuarioRepository)
             : base(unitOfWork)
         {
             _visualizarMapaRepository = visualizarMapaRepository;
@@ -47,6 +52,8 @@ namespace api.coleta.Services
             _usuarioService = usuarioService;
             _safraService = safraService;
             _pontoColetadoRepository = pontoColetadoRepository;
+            _oneSignalService = oneSignalService;
+            _usuarioRepository = usuarioRepository;
         }
 
         public VisualizarMapOutputDto? Salvar(Guid userID, VisualizarMapInputDto visualizarMapa)
@@ -1012,6 +1019,28 @@ namespace api.coleta.Services
 
                 _pontoColetadoRepository.Adicionar(pontoColetado);
                 UnitOfWork.Commit();
+
+                // Enviar notificação push para o usuário responsável pela coleta
+                var usuario = _usuarioRepository.ObterPorId(co.UsuarioRespID);
+                if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _oneSignalService.EnviarNotificacaoAsync(
+                                usuario.FcmToken,
+                                "Nova Coleta Registrada",
+                                $"Uma nova coleta foi salva para você! Nome: {co.NomeColeta ?? "Coleta"}"
+                            );
+                        }
+                        catch (Exception notifEx)
+                        {
+                            Console.WriteLine($"Erro ao enviar notificação: {notifEx.Message}");
+                        }
+                    });
+                }
+
                 return true;
             }
             catch (Exception ex)

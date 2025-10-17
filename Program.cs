@@ -124,6 +124,7 @@ builder.Services.AddScoped<UtilsService>();
 
 builder.Services.AddScoped<VisualizarMapaRepository>();
 builder.Services.AddScoped<PontoColetadoRepository>();
+builder.Services.AddScoped<api.coleta.Interfaces.IOneSignalService, api.coleta.Services.OneSignalService>();
 builder.Services.AddScoped<VisualizarMapaService>(provider =>
     new VisualizarMapaService(
         provider.GetRequiredService<UsuarioService>(),
@@ -132,7 +133,9 @@ builder.Services.AddScoped<VisualizarMapaService>(provider =>
         provider.GetRequiredService<GeoJsonRepository>(),
         provider.GetRequiredService<TalhaoService>(),
         provider.GetRequiredService<SafraService>(),
-        provider.GetRequiredService<PontoColetadoRepository>()
+        provider.GetRequiredService<PontoColetadoRepository>(),
+        provider.GetRequiredService<api.coleta.Interfaces.IOneSignalService>(),
+        provider.GetRequiredService<UsuarioRepository>()
     )
 );
 
