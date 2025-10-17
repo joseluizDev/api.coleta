@@ -103,10 +103,6 @@ namespace api.coleta.Services
                 if (UnitOfWork.Commit())
                 {
                     Console.WriteLine("Commit realizado com sucesso");
-
-                    // Enviar notificação de forma assíncrona
-                    EnviarNotificacaoNovaColeta(userID, visualizarMapa.NomeColeta);
-
                     return map.ToVisualizarDto();
                 }
                 else
@@ -1052,6 +1048,29 @@ namespace api.coleta.Services
                 // Log do erro
                 Console.WriteLine($"Erro ao atualizar o status de coleta: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task EnviarNotificacaoVisualizacaoMapaAsync(VisualizarMapOutputDto visualizarMapa)
+        {
+            try
+            {
+                if (visualizarMapa == null)
+                    return;
+
+                var usuario = _usuarioRepository.ObterPorId(visualizarMapa.UsuarioRespID);
+                if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    await _oneSignalService.EnviarNotificacaoAsync(
+                        usuario.FcmToken,
+                        "Nova Visualização de Mapa",
+                        $"Uma nova visualização de mapa '{visualizarMapa.NomeColeta ?? "sem nome"}' foi criada para você!"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao enviar notificação de visualização de mapa: {ex.Message}");
             }
         }
 

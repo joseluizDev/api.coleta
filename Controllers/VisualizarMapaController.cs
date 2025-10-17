@@ -76,6 +76,9 @@ namespace api.coleta.Controllers
                 if (visualizarMapaSalvo == null)
                     return BadRequest("Erro ao salvar visualização de mapa. Verifique se o talhão e funcionário existem no sistema.");
 
+                // Enviar notificação de forma assíncrona
+                _ = Task.Run(() => _visualizarMapaService.EnviarNotificacaoVisualizacaoMapaAsync(visualizarMapaSalvo));
+
                 return Ok(visualizarMapaSalvo);
             }
             catch (ArgumentException ex)
