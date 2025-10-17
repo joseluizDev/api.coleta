@@ -22,13 +22,22 @@ public class UsuarioService : ServiceBase
         _jwtToken = jwtToken;
     }
 
-    public UsuarioResquestDTO? BuscarUsuarioPorId(Guid id)
+    public UsuarioResquestDTO? BuscarUsuarioPorId(Guid id, string? fcmToken = null)
     {
         var usuario = _usuarioRepository.ObterPorId(id);
         if (usuario == null)
         {
             return null;
         }
+
+        // Atualiza o fcmToken se fornecido
+        if (!string.IsNullOrEmpty(fcmToken) && usuario.FcmToken != fcmToken)
+        {
+            usuario.FcmToken = fcmToken;
+            _usuarioRepository.Atualizar(usuario);
+            UnitOfWork.Commit();
+        }
+
         return usuario.ToRequestDto();
     }
 

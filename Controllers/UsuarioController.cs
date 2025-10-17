@@ -65,7 +65,7 @@ namespace api.coleta.Controllers
 
         [HttpGet("buscar")]
         [Authorize]
-        public IActionResult BuscarUsuarioPorId()
+        public IActionResult BuscarUsuarioPorId([FromHeader(Name = "fcmToken")] string? fcmToken)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace api.coleta.Controllers
 
                 Guid userId = userIdNullable.Value;
 
-                var usuario = _usuarioService.BuscarUsuarioPorId(userId);
+                var usuario = _usuarioService.BuscarUsuarioPorId(userId, fcmToken);
                 if (usuario == null)
                     return NotFound("Usuário não encontrado.");
 
