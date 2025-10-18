@@ -1,5 +1,6 @@
 using api.cliente.Interfaces;
 using api.coleta.Data;
+using api.coleta.Data.Repository;
 using api.coleta.Interfaces;
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
@@ -10,16 +11,19 @@ namespace api.coleta.Services
     public class MensagemAgendadaService : ServiceBase
     {
         private readonly MensagemAgendadaRepository _repository;
+        private readonly UsuarioRepository _usuarioRepository;
         private readonly IOneSignalService _oneSignalService;
         private readonly INotificador _notificador;
 
         public MensagemAgendadaService(
             IUnitOfWork unitOfWork,
             MensagemAgendadaRepository repository,
+            UsuarioRepository usuarioRepository,
             IOneSignalService oneSignalService,
             INotificador notificador) : base(unitOfWork)
         {
             _repository = repository;
+            _usuarioRepository = usuarioRepository;
             _oneSignalService = oneSignalService;
             _notificador = notificador;
         }
@@ -126,16 +130,34 @@ namespace api.coleta.Services
             {
                 var unitOfWorkImplements = UnitOfWork as UnitOfWorkImplements;
 
-                if (string.IsNullOrEmpty(mensagem.FcmToken))
+                // Busca o usuário destinatário para obter o FCM token atualizado
+                if (!mensagem.UsuarioId.HasValue)
                 {
-                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Token FCM não fornecido");
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Usuário destinatário não especificado");
+                    _repository.Atualizar(mensagem);
+                    await unitOfWorkImplements!.CommitAsync();
+                    return;
+                }
+
+                var usuario = await _usuarioRepository.ObterPorIdAsync(mensagem.UsuarioId.Value);
+                if (usuario == null)
+                {
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Usuário destinatário não encontrado");
+                    _repository.Atualizar(mensagem);
+                    await unitOfWorkImplements!.CommitAsync();
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Token FCM não cadastrado para o usuário");
                     _repository.Atualizar(mensagem);
                     await unitOfWorkImplements!.CommitAsync();
                     return;
                 }
 
                 var sucesso = await _oneSignalService.EnviarNotificacaoAsync(
-                    mensagem.FcmToken,
+                    usuario.FcmToken,
                     mensagem.Titulo,
                     mensagem.Mensagem
                 );

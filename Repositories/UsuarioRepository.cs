@@ -1,8 +1,9 @@
-﻿using api.coleta.Models.Entidades;
+using api.coleta.Models.Entidades;
 using api.coleta.Data.Repositories;
 using api.coleta.Utils;
 using api.fazenda.Models.Entidades;
 using api.funcionario.Models.DTOs;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.coleta.Data.Repository
 {
@@ -73,6 +74,11 @@ namespace api.coleta.Data.Repository
                 TotalPages = totalPages,
                 CurrentPage = page
             };
+        }
+
+        public async Task<Usuario?> ObterPorIdAsync(Guid id)
+        {
+            return await DbSet.FirstOrDefaultAsync(x => x.Id == id);
         }
 
     }
