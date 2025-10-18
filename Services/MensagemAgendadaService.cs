@@ -10,6 +10,7 @@ namespace api.coleta.Services
 {
     public class MensagemAgendadaService : ServiceBase
     {
+        private const int MaxTentativasEnvio = 5;
         private readonly MensagemAgendadaRepository _repository;
         private readonly UsuarioRepository _usuarioRepository;
         private readonly IOneSignalService _oneSignalService;
@@ -165,6 +166,23 @@ namespace api.coleta.Services
             return true;
         }
 
+        private void RegistrarFalhaEnvio(MensagemAgendada mensagem, string mensagemErro)
+        {
+            mensagem.TentativasEnvio++;
+            mensagem.DataHoraEnviada = null;
+
+            if (mensagem.TentativasEnvio >= MaxTentativasEnvio)
+            {
+                mensagem.Status = StatusMensagem.Falha;
+                mensagem.MensagemErro = $"{mensagemErro} (tentativas esgotadas)";
+            }
+            else
+            {
+                mensagem.Status = StatusMensagem.Pendente;
+                mensagem.MensagemErro = mensagemErro;
+            }
+        }
+
         public async Task ProcessarMensagensPendentesAsync()
         {
             var mensagensPendentes = await _repository.ObterMensagensPendentesAsync();
@@ -173,10 +191,19 @@ namespace api.coleta.Services
             {
                 try
                 {
+                    if (mensagem.TentativasEnvio >= MaxTentativasEnvio)
+                    {
+                        mensagem.Status = StatusMensagem.Falha;
+                        mensagem.DataHoraEnviada = null;
+                        mensagem.MensagemErro ??= "Tentativas esgotadas";
+                        _repository.Atualizar(mensagem);
+                        continue;
+                    }
+
                     // Validar se tem FuncionarioId
                     if (!mensagem.FuncionarioId.HasValue)
                     {
-                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FuncionarioId não informado");
+                        RegistrarFalhaEnvio(mensagem, "FuncionarioId não informado");
                         _repository.Atualizar(mensagem);
                         continue;
                     }
@@ -197,7 +224,7 @@ namespace api.coleta.Services
                     // Validar se o funcionário existe e tem FcmToken
                     if (funcionario == null)
                     {
-                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Funcionário não encontrado");
+                        RegistrarFalhaEnvio(mensagem, "Funcionário não encontrado");
                         _repository.Atualizar(mensagem);
                         continue;
                     }
@@ -208,7 +235,7 @@ namespace api.coleta.Services
 
                     if (string.IsNullOrWhiteSpace(fcmToken))
                     {
-                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FcmToken do funcionário não encontrado");
+                        RegistrarFalhaEnvio(mensagem, "FcmToken do funcionário não encontrado");
                         _repository.Atualizar(mensagem);
                         continue;
                     }
@@ -222,14 +249,14 @@ namespace api.coleta.Services
                     }
                     else
                     {
-                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Falha ao enviar notificação via OneSignal");
+                        RegistrarFalhaEnvio(mensagem, "Falha ao enviar notificação via OneSignal");
                     }
 
                     _repository.Atualizar(mensagem);
                 }
                 catch (Exception ex)
                 {
-                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, $"Erro ao processar mensagem: {ex.Message}");
+                    RegistrarFalhaEnvio(mensagem, $"Erro ao processar mensagem: {ex.Message}");
                     _repository.Atualizar(mensagem);
                 }
             }
