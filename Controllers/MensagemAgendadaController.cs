@@ -35,15 +35,15 @@ namespace api.coleta.Controllers
         public async Task<IActionResult> ObterTodas([FromQuery] MensagemAgendadaQueryDTO query)
         {
             var token = ObterIDDoToken();
-            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (funcionarioId == null)
+            if (usuarioId == null)
             {
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
-            // Força o filtro pelo funcionário logado
-            query.FuncionarioId = funcionarioId.Value;
+            // Força o filtro pelo usuário logado (admin que criou)
+            query.UsuarioId = usuarioId.Value;
 
             var (mensagens, total) = await _service.ObterMensagensComFiltrosAsync(query);
 
@@ -61,16 +61,16 @@ namespace api.coleta.Controllers
         public async Task<IActionResult> ObterTodasSemFiltro()
         {
             var token = ObterIDDoToken();
-            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (funcionarioId == null)
+            if (usuarioId == null)
             {
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
             var query = new MensagemAgendadaQueryDTO
             {
-                FuncionarioId = funcionarioId.Value
+                UsuarioId = usuarioId.Value
             };
 
             var (mensagens, total) = await _service.ObterMensagensComFiltrosAsync(query);
@@ -81,9 +81,9 @@ namespace api.coleta.Controllers
         public async Task<IActionResult> ObterPorId(Guid id)
         {
             var token = ObterIDDoToken();
-            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (funcionarioId == null)
+            if (usuarioId == null)
             {
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
@@ -93,8 +93,8 @@ namespace api.coleta.Controllers
             if (mensagem == null)
                 return NotFound();
 
-            // Verifica se a mensagem pertence ao funcionário logado
-            if (mensagem.FuncionarioId != funcionarioId.Value)
+            // Verifica se a mensagem pertence ao usuário logado (admin que criou)
+            if (mensagem.UsuarioId != usuarioId.Value)
             {
                 return Forbid();
             }
@@ -114,21 +114,21 @@ namespace api.coleta.Controllers
         public async Task<IActionResult> Atualizar(Guid id, [FromBody] MensagemAgendadaRequestDTO request)
         {
             var token = ObterIDDoToken();
-            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (funcionarioId == null)
+            if (usuarioId == null)
             {
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
-            // Verifica se a mensagem existe e pertence ao funcionário
+            // Verifica se a mensagem existe e pertence ao usuário (admin que criou)
             var mensagemExistente = await _service.ObterPorIdAsync(id);
             if (mensagemExistente == null)
             {
                 return NotFound(new { message = "Mensagem não encontrada." });
             }
 
-            if (mensagemExistente.FuncionarioId != funcionarioId.Value)
+            if (mensagemExistente.UsuarioId != usuarioId.Value)
             {
                 return Forbid();
             }
@@ -141,21 +141,21 @@ namespace api.coleta.Controllers
         public async Task<IActionResult> Cancelar(Guid id)
         {
             var token = ObterIDDoToken();
-            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (funcionarioId == null)
+            if (usuarioId == null)
             {
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
-            // Verifica se a mensagem existe e pertence ao funcionário
+            // Verifica se a mensagem existe e pertence ao usuário (admin que criou)
             var mensagemExistente = await _service.ObterPorIdAsync(id);
             if (mensagemExistente == null)
             {
                 return NotFound(new { message = "Mensagem não encontrada." });
             }
 
-            if (mensagemExistente.FuncionarioId != funcionarioId.Value)
+            if (mensagemExistente.UsuarioId != usuarioId.Value)
             {
                 return Forbid();
             }
@@ -168,14 +168,14 @@ namespace api.coleta.Controllers
         public async Task<IActionResult> ObterEstatisticas()
         {
             var token = ObterIDDoToken();
-            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (funcionarioId == null)
+            if (usuarioId == null)
             {
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
-            var estatisticas = await _service.ObterEstatisticasAsync(funcionarioId.Value);
+            var estatisticas = await _service.ObterEstatisticasAsync(usuarioId.Value);
             return CustomResponse(estatisticas);
         }
     }

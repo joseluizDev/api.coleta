@@ -130,34 +130,34 @@ namespace api.coleta.Services
             {
                 var unitOfWorkImplements = UnitOfWork as UnitOfWorkImplements;
 
-                // Busca o usuário destinatário para obter o FCM token atualizado
-                if (!mensagem.UsuarioId.HasValue)
+                // Busca o funcionário destinatário para obter o FCM token atualizado
+                if (!mensagem.FuncionarioId.HasValue)
                 {
-                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Usuário destinatário não especificado");
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Funcionário destinatário não especificado");
                     _repository.Atualizar(mensagem);
                     await unitOfWorkImplements!.CommitAsync();
                     return;
                 }
 
-                var usuario = await _usuarioRepository.ObterPorIdAsync(mensagem.UsuarioId.Value);
-                if (usuario == null)
+                var funcionario = await _usuarioRepository.ObterPorIdAsync(mensagem.FuncionarioId.Value);
+                if (funcionario == null)
                 {
-                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Usuário destinatário não encontrado");
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Funcionário destinatário não encontrado");
                     _repository.Atualizar(mensagem);
                     await unitOfWorkImplements!.CommitAsync();
                     return;
                 }
 
-                if (string.IsNullOrEmpty(usuario.FcmToken))
+                if (string.IsNullOrEmpty(funcionario.FcmToken))
                 {
-                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Token FCM não cadastrado para o usuário");
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Token FCM não cadastrado para o funcionário");
                     _repository.Atualizar(mensagem);
                     await unitOfWorkImplements!.CommitAsync();
                     return;
                 }
 
                 var sucesso = await _oneSignalService.EnviarNotificacaoAsync(
-                    usuario.FcmToken,
+                    funcionario.FcmToken,
                     mensagem.Titulo,
                     mensagem.Mensagem
                 );
@@ -196,7 +196,7 @@ namespace api.coleta.Services
             return await _repository.ContarMensagensPendentesAsync();
         }
 
-        public async Task<bool> MarcarComoLidaAsync(Guid mensagemId, Guid usuarioId)
+        public async Task<bool> MarcarComoLidaAsync(Guid mensagemId, Guid funcionarioId)
         {
             var mensagem = await _repository.ObterPorIdAsync(mensagemId);
 
@@ -206,8 +206,8 @@ namespace api.coleta.Services
                 return false;
             }
 
-            // Verifica se a mensagem é destinada ao usuário
-            if (mensagem.UsuarioId != usuarioId)
+            // Verifica se a mensagem é destinada ao funcionário
+            if (mensagem.FuncionarioId != funcionarioId)
             {
                 _notificador.Notificar(new Notificacao("Você não tem permissão para marcar esta mensagem como lida"));
                 return false;
@@ -229,11 +229,11 @@ namespace api.coleta.Services
             return true;
         }
 
-        public async Task<List<MensagemAgendadaResponseDTO>> ObterMensagensDoUsuarioAsync(Guid usuarioId, bool apenasNaoLidas = false)
+        public async Task<List<MensagemAgendadaResponseDTO>> ObterMensagensDoFuncionarioAsync(Guid funcionarioId, bool apenasNaoLidas = false)
         {
             var query = new MensagemAgendadaQueryDTO
             {
-                UsuarioId = usuarioId
+                FuncionarioId = funcionarioId
             };
 
             var mensagens = await _repository.ObterMensagensComFiltrosAsync(query);
@@ -246,11 +246,11 @@ namespace api.coleta.Services
             return mensagens.Select(ConverterParaResponseDTO).ToList();
         }
 
-        public async Task<object> ObterEstatisticasAsync(Guid funcionarioId)
+        public async Task<object> ObterEstatisticasAsync(Guid usuarioId)
         {
             var query = new MensagemAgendadaQueryDTO
             {
-                FuncionarioId = funcionarioId
+                UsuarioId = usuarioId
             };
 
             var todas = await _repository.ObterMensagensComFiltrosAsync(query);

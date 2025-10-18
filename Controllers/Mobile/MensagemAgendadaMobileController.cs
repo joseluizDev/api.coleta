@@ -24,7 +24,7 @@ namespace api.coleta.Controllers.Mobile
         }
 
         /// <summary>
-        /// Lista todas as mensagens do usuário logado
+        /// Lista todas as mensagens do funcionário logado
         /// </summary>
         [HttpGet]
         [Route("listar")]
@@ -36,13 +36,13 @@ namespace api.coleta.Controllers.Mobile
                 return BadRequest(new { message = "Token inválido." });
             }
 
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-            if (userId == null)
+            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (funcionarioId == null)
             {
-                return BadRequest(new { message = "Usuário não encontrado no token." });
+                return BadRequest(new { message = "Funcionário não encontrado no token." });
             }
 
-            var mensagens = await _service.ObterMensagensDoUsuarioAsync(userId.Value, apenasNaoLidas);
+            var mensagens = await _service.ObterMensagensDoFuncionarioAsync(funcionarioId.Value, apenasNaoLidas);
             return CustomResponse(mensagens);
         }
 
@@ -59,10 +59,10 @@ namespace api.coleta.Controllers.Mobile
                 return BadRequest(new { message = "Token inválido." });
             }
 
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-            if (userId == null)
+            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (funcionarioId == null)
             {
-                return BadRequest(new { message = "Usuário não encontrado no token." });
+                return BadRequest(new { message = "Funcionário não encontrado no token." });
             }
 
             var mensagem = await _service.ObterPorIdAsync(id);
@@ -72,8 +72,8 @@ namespace api.coleta.Controllers.Mobile
                 return NotFound(new { message = "Mensagem não encontrada." });
             }
 
-            // Verifica se a mensagem pertence ao usuário
-            if (mensagem.UsuarioId != userId.Value)
+            // Verifica se a mensagem é destinada ao funcionário
+            if (mensagem.FuncionarioId != funcionarioId.Value)
             {
                 return Forbid();
             }
@@ -94,13 +94,13 @@ namespace api.coleta.Controllers.Mobile
                 return BadRequest(new { message = "Token inválido." });
             }
 
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-            if (userId == null)
+            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (funcionarioId == null)
             {
-                return BadRequest(new { message = "Usuário não encontrado no token." });
+                return BadRequest(new { message = "Funcionário não encontrado no token." });
             }
 
-            var sucesso = await _service.MarcarComoLidaAsync(id, userId.Value);
+            var sucesso = await _service.MarcarComoLidaAsync(id, funcionarioId.Value);
 
             if (!sucesso)
             {
@@ -111,7 +111,7 @@ namespace api.coleta.Controllers.Mobile
         }
 
         /// <summary>
-        /// Conta mensagens não lidas do usuário
+        /// Conta mensagens não lidas do funcionário
         /// </summary>
         [HttpGet]
         [Route("nao-lidas/contar")]
@@ -123,13 +123,13 @@ namespace api.coleta.Controllers.Mobile
                 return BadRequest(new { message = "Token inválido." });
             }
 
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-            if (userId == null)
+            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (funcionarioId == null)
             {
-                return BadRequest(new { message = "Usuário não encontrado no token." });
+                return BadRequest(new { message = "Funcionário não encontrado no token." });
             }
 
-            var mensagens = await _service.ObterMensagensDoUsuarioAsync(userId.Value, apenasNaoLidas: true);
+            var mensagens = await _service.ObterMensagensDoFuncionarioAsync(funcionarioId.Value, apenasNaoLidas: true);
 
             return CustomResponse(new
             {
@@ -151,13 +151,13 @@ namespace api.coleta.Controllers.Mobile
                 return BadRequest(new { message = "Token inválido." });
             }
 
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-            if (userId == null)
+            var funcionarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (funcionarioId == null)
             {
-                return BadRequest(new { message = "Usuário não encontrado no token." });
+                return BadRequest(new { message = "Funcionário não encontrado no token." });
             }
 
-            var mensagens = await _service.ObterMensagensDoUsuarioAsync(userId.Value, apenasNaoLidas: true);
+            var mensagens = await _service.ObterMensagensDoFuncionarioAsync(funcionarioId.Value, apenasNaoLidas: true);
 
             return CustomResponse(mensagens.OrderByDescending(m => m.DataHoraEnvio).ToList());
         }
