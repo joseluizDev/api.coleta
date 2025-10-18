@@ -174,6 +174,56 @@ namespace api.coleta.Services
             return await _repository.ContarMensagensPendentesAsync();
         }
 
+        public async Task<bool> MarcarComoLidaAsync(Guid mensagemId, Guid usuarioId)
+        {
+            var mensagem = await _repository.ObterPorIdAsync(mensagemId);
+
+            if (mensagem == null)
+            {
+                _notificador.Notificar(new Notificacao("Mensagem não encontrada"));
+                return false;
+            }
+
+            // Verifica se a mensagem é destinada ao usuário
+            if (mensagem.UsuarioId != usuarioId)
+            {
+                _notificador.Notificar(new Notificacao("Você não tem permissão para marcar esta mensagem como lida"));
+                return false;
+            }
+
+            // Só pode marcar como lida se estiver no status Enviada
+            if (mensagem.Status != StatusMensagem.Enviada)
+            {
+                _notificador.Notificar(new Notificacao("Apenas mensagens enviadas podem ser marcadas como lidas"));
+                return false;
+            }
+
+            mensagem.Status = StatusMensagem.Lida;
+            _repository.Atualizar(mensagem);
+
+            var unitOfWorkImplements = UnitOfWork as UnitOfWorkImplements;
+            await unitOfWorkImplements!.CommitAsync();
+
+            return true;
+        }
+
+        public async Task<List<MensagemAgendadaResponseDTO>> ObterMensagensDoUsuarioAsync(Guid usuarioId, bool apenasNaoLidas = false)
+        {
+            var query = new MensagemAgendadaQueryDTO
+            {
+                UsuarioId = usuarioId
+            };
+
+            var mensagens = await _repository.ObterMensagensComFiltrosAsync(query);
+
+            if (apenasNaoLidas)
+            {
+                mensagens = mensagens.Where(m => m.Status != StatusMensagem.Lida).ToList();
+            }
+
+            return mensagens.Select(ConverterParaResponseDTO).ToList();
+        }
+
         public async Task<object> ObterEstatisticasAsync(Guid funcionarioId)
         {
             var query = new MensagemAgendadaQueryDTO

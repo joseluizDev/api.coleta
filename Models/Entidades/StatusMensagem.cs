@@ -5,6 +5,7 @@ namespace api.coleta.Models.Entidades
         Pendente = 0,
         Enviada = 1,
         Falha = 2,
-        Cancelada = 3
+        Cancelada = 3,
+        Lida = 4
     }
 }
