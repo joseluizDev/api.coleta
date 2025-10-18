@@ -181,8 +181,18 @@ namespace api.coleta.Services
                         continue;
                     }
 
-                    // Buscar o usuário pelo FuncionarioId
-                    var funcionario = await _usuarioRepository.ObterPorIdAsync(mensagem.FuncionarioId.Value);
+                    // Buscar o usuário (funcionário) relacionado para obter o FCM token
+                    var funcionario = mensagem.Funcionario;
+
+                    if (funcionario == null && mensagem.FuncionarioId.HasValue)
+                    {
+                        if (mensagem.UsuarioId.HasValue)
+                        {
+                            funcionario = _usuarioRepository.ObterFuncionario(mensagem.FuncionarioId.Value, mensagem.UsuarioId.Value);
+                        }
+
+                        funcionario ??= await _usuarioRepository.ObterPorIdAsync(mensagem.FuncionarioId.Value);
+                    }
 
                     // Validar se o funcionário existe e tem FcmToken
                     if (funcionario == null)
@@ -192,7 +202,11 @@ namespace api.coleta.Services
                         continue;
                     }
 
-                    if (string.IsNullOrEmpty(funcionario.FcmToken))
+                    mensagem.Funcionario = funcionario;
+
+                    var fcmToken = funcionario.FcmToken;
+
+                    if (string.IsNullOrWhiteSpace(fcmToken))
                     {
                         mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FcmToken do funcionário não encontrado");
                         _repository.Atualizar(mensagem);
@@ -200,7 +214,7 @@ namespace api.coleta.Services
                     }
 
                     // Enviar notificação
-                    var enviada = await _oneSignalService.EnviarNotificacaoAsync(funcionario.FcmToken, mensagem.Titulo, mensagem.Mensagem);
+                    var enviada = await _oneSignalService.EnviarNotificacaoAsync(fcmToken, mensagem.Titulo, mensagem.Mensagem);
 
                     if (enviada)
                     {

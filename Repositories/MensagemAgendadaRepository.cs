@@ -36,6 +36,7 @@ namespace api.coleta.Repositories
         {
             var agora = DateTime.Now;
             return await Context.MensagensAgendadas
+                .Include(m => m.Funcionario)
                 .Where(m => m.Status == StatusMensagem.Pendente && m.DataHoraEnvio <= agora)
                 .ToListAsync();
         }

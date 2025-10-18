@@ -29,6 +29,7 @@ namespace api.coleta.Jobs
                     using (var scope = _serviceProvider.CreateScope())
                     {
                         var mensagemService = scope.ServiceProvider.GetRequiredService<MensagemAgendadaService>();
+                        
                         await mensagemService.ProcessarMensagensPendentesAsync();
                     }
 
