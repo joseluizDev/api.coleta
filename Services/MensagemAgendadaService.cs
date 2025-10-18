@@ -36,15 +36,12 @@ namespace api.coleta.Services
                 Titulo = request.Titulo,
                 FuncionarioId = request.FuncionarioId,
                 DataHoraEnvio = request.DataHoraEnvio,
-                FcmToken = request.FcmToken,
                 Mensagem = request.Mensagem,
                 Status = StatusMensagem.Pendente,
-                TentativasEnvio = 0,
-
+                TentativasEnvio = 0
             };
             _repository.Adicionar(mensagem);
             UnitOfWork.Commit();
-
         }
 
         public List<MensagemAgendada> ObterMensagensPorUsuario(Guid value)
@@ -136,7 +133,6 @@ namespace api.coleta.Services
             mensagem.Mensagem = request.Mensagem;
             mensagem.DataHoraEnvio = request.DataHoraEnvio;
             mensagem.FuncionarioId = request.FuncionarioId;
-            mensagem.FcmToken = request.FcmToken;
 
             _repository.Atualizar(mensagem);
             UnitOfWork.Commit();
@@ -177,28 +173,34 @@ namespace api.coleta.Services
             {
                 try
                 {
-                    string? fcmToken = mensagem.FcmToken;
-
-                    // Se tiver FuncionarioId, buscar o FcmToken do usuário
-                    if (mensagem.FuncionarioId.HasValue)
+                    // Validar se tem FuncionarioId
+                    if (!mensagem.FuncionarioId.HasValue)
                     {
-                        var funcionario = await _usuarioRepository.ObterPorIdAsync(mensagem.FuncionarioId.Value);
-                        if (funcionario != null && !string.IsNullOrEmpty(funcionario.FcmToken))
-                        {
-                            fcmToken = funcionario.FcmToken;
-                        }
+                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FuncionarioId não informado");
+                        _repository.Atualizar(mensagem);
+                        continue;
                     }
 
-                    // Validar se há um FcmToken disponível
-                    if (string.IsNullOrEmpty(fcmToken))
+                    // Buscar o usuário pelo FuncionarioId
+                    var funcionario = await _usuarioRepository.ObterPorIdAsync(mensagem.FuncionarioId.Value);
+
+                    // Validar se o funcionário existe e tem FcmToken
+                    if (funcionario == null)
                     {
-                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FcmToken não encontrado");
+                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Funcionário não encontrado");
+                        _repository.Atualizar(mensagem);
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(funcionario.FcmToken))
+                    {
+                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FcmToken do funcionário não encontrado");
                         _repository.Atualizar(mensagem);
                         continue;
                     }
 
                     // Enviar notificação
-                    var enviada = await _oneSignalService.EnviarNotificacaoAsync(fcmToken, mensagem.Titulo, mensagem.Mensagem);
+                    var enviada = await _oneSignalService.EnviarNotificacaoAsync(funcionario.FcmToken, mensagem.Titulo, mensagem.Mensagem);
 
                     if (enviada)
                     {

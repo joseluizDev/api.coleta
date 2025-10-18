@@ -7,8 +7,7 @@ namespace api.coleta.Models.DTOs
         public string Titulo { get; set; } = string.Empty;
         public string Mensagem { get; set; } = string.Empty;
         public DateTime DataHoraEnvio { get; set; }
-        public string? FcmToken { get; set; }
-        
+
         public Guid? UsuarioId { get; set; }
         public Guid? FuncionarioId { get; set; }
     }
@@ -21,7 +20,6 @@ namespace api.coleta.Models.DTOs
         public DateTime DataHoraEnvio { get; set; }
         public DateTime? DataHoraEnviada { get; set; }
         public StatusMensagem Status { get; set; }
-        public string? FcmToken { get; set; }
         public Guid? UsuarioId { get; set; }
         public Guid? FuncionarioId { get; set; }
         public string? MensagemErro { get; set; }

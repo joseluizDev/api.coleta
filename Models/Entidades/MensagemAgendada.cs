@@ -17,7 +17,6 @@ namespace api.coleta.Models.Entidades
             Titulo = dto.Titulo;
             Mensagem = dto.Mensagem;
             DataHoraEnvio = dto.DataHoraEnvio;
-            FcmToken = dto.FcmToken;
             UsuarioId = dto.UsuarioId;
             FuncionarioId = dto.FuncionarioId;
             Status = StatusMensagem.Pendente;
@@ -29,7 +28,6 @@ namespace api.coleta.Models.Entidades
             Titulo = dto.Titulo;
             Mensagem = dto.Mensagem;
             DataHoraEnvio = dto.DataHoraEnvio;
-            FcmToken = dto.FcmToken;
             UsuarioId = dto.UsuarioId;
             FuncionarioId = dto.FuncionarioId;
             return this;
@@ -68,9 +66,6 @@ namespace api.coleta.Models.Entidades
 
         [Required]
         public StatusMensagem Status { get; set; }
-
-        [MaxLength(500)]
-        public string? FcmToken { get; set; }
 
         [ForeignKey("Usuario")]
         public Guid? UsuarioId { get; set; }
