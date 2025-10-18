@@ -25,14 +25,29 @@ namespace api.coleta.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CriarMensagem([FromBody] MensagemAgendadaRequestDTO request)
+        public IActionResult CriarMensagem([FromBody] MensagemAgendadaRequestDTO request)
         {
-            var mensagem = await _service.CriarMensagemAgendadaAsync(request);
-            return CustomResponse(mensagem);
+
+            var token = ObterIDDoToken();
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+            if (usuarioId == null)
+            {
+                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+            }
+            request.UsuarioId = usuarioId.Value;
+            try
+            {
+                _service.CriarMensagemAgendada(request);
+                return CustomResponse();
+            }
+            catch
+            {
+                return BadRequest(new { message = "Erro ao processar o token." });
+            }
         }
 
         [HttpGet]
-        public async Task<IActionResult> ObterTodas([FromQuery] MensagemAgendadaQueryDTO query)
+        public IActionResult ObterTodas()
         {
             var token = ObterIDDoToken();
             var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
@@ -42,154 +57,12 @@ namespace api.coleta.Controllers
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
-            // Força o filtro pelo usuário logado (admin que criou)
-            query.UsuarioId = usuarioId.Value;
-
-            var (mensagens, total) = await _service.ObterMensagensComFiltrosAsync(query);
-
-            return CustomResponse(new
-            {
-                mensagens,
-                total,
-                pagina = query.Page ?? 1,
-                tamanhoPagina = query.PageSize,
-                totalPaginas = (int)Math.Ceiling(total / (double)query.PageSize)
-            });
-        }
-
-        [HttpGet("todas")]
-        public async Task<IActionResult> ObterTodasSemFiltro()
-        {
-            var token = ObterIDDoToken();
-            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (usuarioId == null)
-            {
-                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
-            }
-
-            var query = new MensagemAgendadaQueryDTO
-            {
-                UsuarioId = usuarioId.Value
-            };
-
-            var (mensagens, total) = await _service.ObterMensagensComFiltrosAsync(query);
+            var mensagens = _service.ObterMensagensPorUsuario(usuarioId.Value);
             return CustomResponse(mensagens);
-        }
-
-        [HttpGet("funcionarios")]
-        public async Task<IActionResult> ObterMensagensDeFuncionarios([FromQuery] MensagemAgendadaQueryDTO query)
-        {
-            var token = ObterIDDoToken();
-            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (usuarioId == null)
-            {
-                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
-            }
-
-            // Busca mensagens de todos os funcionários do admin
-            var (mensagens, total) = await _service.ObterMensagensDeFuncionariosAsync(usuarioId.Value, query);
-
-            return CustomResponse(new
-            {
-                mensagens,
-                total,
-                pagina = query.Page ?? 1,
-                tamanhoPagina = query.PageSize,
-                totalPaginas = (int)Math.Ceiling(total / (double)query.PageSize)
-            });
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> ObterPorId(Guid id)
-        {
-            var token = ObterIDDoToken();
-            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (usuarioId == null)
-            {
-                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
-            }
-
-            var mensagem = await _service.ObterPorIdAsync(id);
-
-            if (mensagem == null)
-                return NotFound();
-
-            // Verifica se a mensagem pertence ao usuário logado (admin que criou)
-            if (mensagem.UsuarioId != usuarioId.Value)
-            {
-                return Forbid();
-            }
-
-            return CustomResponse(mensagem);
-        }
-
-        [HttpGet("usuario/{usuarioId}")]
-        public async Task<IActionResult> ObterPorUsuario(Guid usuarioId)
-        {
-            var mensagens = await _service.ObterMensagensPorUsuarioAsync(usuarioId);
-            return CustomResponse(mensagens);
-        }
-
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Atualizar(Guid id, [FromBody] MensagemAgendadaRequestDTO request)
-        {
-            var token = ObterIDDoToken();
-            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (usuarioId == null)
-            {
-                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
-            }
-
-            // Verifica se a mensagem existe e pertence ao usuário (admin que criou)
-            var mensagemExistente = await _service.ObterPorIdAsync(id);
-            if (mensagemExistente == null)
-            {
-                return NotFound(new { message = "Mensagem não encontrada." });
-            }
-
-            if (mensagemExistente.UsuarioId != usuarioId.Value)
-            {
-                return Forbid();
-            }
-
-            var sucesso = await _service.AtualizarMensagemAsync(id, request);
-            return CustomResponse(new { sucesso });
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Cancelar(Guid id)
-        {
-            var token = ObterIDDoToken();
-            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (usuarioId == null)
-            {
-                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
-            }
-
-            // Verifica se a mensagem existe e pertence ao usuário (admin que criou)
-            var mensagemExistente = await _service.ObterPorIdAsync(id);
-            if (mensagemExistente == null)
-            {
-                return NotFound(new { message = "Mensagem não encontrada." });
-            }
-
-            if (mensagemExistente.UsuarioId != usuarioId.Value)
-            {
-                return Forbid();
-            }
-
-            var sucesso = await _service.CancelarMensagemAsync(id);
-            return CustomResponse(new { sucesso });
         }
 
         [HttpGet("estatisticas")]
-        public async Task<IActionResult> ObterEstatisticas()
+        public IActionResult ObterEstatisticas()
         {
             var token = ObterIDDoToken();
             var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
@@ -199,7 +72,7 @@ namespace api.coleta.Controllers
                 return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
             }
 
-            var estatisticas = await _service.ObterEstatisticasAsync(usuarioId.Value);
+            var estatisticas = _service.ObterEstatisticas(usuarioId.Value);
             return CustomResponse(estatisticas);
         }
     }

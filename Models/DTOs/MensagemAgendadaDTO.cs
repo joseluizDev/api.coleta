@@ -47,4 +47,13 @@ namespace api.coleta.Models.DTOs
         public int? Page { get; set; }
         public int PageSize { get; set; } = 50;
     }
+
+    public class MensagemAgendadaEstatisticasDTO
+    {
+        public int Total { get; set; }
+        public int TotalPendentes { get; set; }
+        public int TotalEnviadas { get; set; }
+        public int TotalFalhas { get; set; }
+        public int TotalCanceladas { get; set; }
+    }
 }
