@@ -265,6 +265,14 @@ namespace api.coleta.Services
             };
         }
 
+        public async Task<(List<MensagemAgendadaResponseDTO> mensagens, int total)> ObterMensagensDeFuncionariosAsync(Guid adminId, MensagemAgendadaQueryDTO query)
+        {
+            var mensagens = await _repository.ObterMensagensDeFuncionariosDoAdminAsync(adminId, query);
+            var total = await _repository.ContarMensagensDeFuncionariosDoAdminAsync(adminId, query);
+
+            return (mensagens.Select(ConverterParaResponseDTO).ToList(), total);
+        }
+
         private MensagemAgendadaResponseDTO ConverterParaResponseDTO(MensagemAgendada mensagem)
         {
             return new MensagemAgendadaResponseDTO

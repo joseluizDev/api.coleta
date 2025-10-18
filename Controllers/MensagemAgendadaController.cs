@@ -77,6 +77,30 @@ namespace api.coleta.Controllers
             return CustomResponse(mensagens);
         }
 
+        [HttpGet("funcionarios")]
+        public async Task<IActionResult> ObterMensagensDeFuncionarios([FromQuery] MensagemAgendadaQueryDTO query)
+        {
+            var token = ObterIDDoToken();
+            var usuarioId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (usuarioId == null)
+            {
+                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+            }
+
+            // Busca mensagens de todos os funcionários do admin
+            var (mensagens, total) = await _service.ObterMensagensDeFuncionariosAsync(usuarioId.Value, query);
+
+            return CustomResponse(new
+            {
+                mensagens,
+                total,
+                pagina = query.Page ?? 1,
+                tamanhoPagina = query.PageSize,
+                totalPaginas = (int)Math.Ceiling(total / (double)query.PageSize)
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {

@@ -115,5 +115,65 @@ namespace api.coleta.Repositories
                 .CountAsync();
 
         }
+
+        public async Task<List<MensagemAgendada>> ObterMensagensDeFuncionariosDoAdminAsync(Guid adminId, MensagemAgendadaQueryDTO query)
+        {
+            var mensagensQuery = Context.MensagensAgendadas
+                .Where(m => m.Funcionario != null && m.Funcionario.adminId == adminId);
+
+            if (query.FuncionarioId.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.FuncionarioId == query.FuncionarioId.Value);
+            }
+
+            if (query.Status.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.Status == query.Status.Value);
+            }
+
+            if (query.DataInicio.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio >= query.DataInicio.Value);
+            }
+
+            if (query.DataFim.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio <= query.DataFim.Value);
+            }
+
+            // Paginação
+            var skip = ((query.Page ?? 1) - 1) * query.PageSize;
+            mensagensQuery = mensagensQuery.Skip(skip).Take(query.PageSize);
+
+            return await mensagensQuery.ToListAsync();
+        }
+
+        public async Task<int> ContarMensagensDeFuncionariosDoAdminAsync(Guid adminId, MensagemAgendadaQueryDTO query)
+        {
+            var mensagensQuery = Context.MensagensAgendadas
+                .Where(m => m.Funcionario != null && m.Funcionario.adminId == adminId);
+
+            if (query.FuncionarioId.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.FuncionarioId == query.FuncionarioId.Value);
+            }
+
+            if (query.Status.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.Status == query.Status.Value);
+            }
+
+            if (query.DataInicio.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio >= query.DataInicio.Value);
+            }
+
+            if (query.DataFim.HasValue)
+            {
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio <= query.DataFim.Value);
+            }
+
+            return await mensagensQuery.CountAsync();
+        }
     }
 }
