@@ -44,14 +44,14 @@ namespace api.coleta.Jobs
 
             try
             {
-                var totalPendentes = await mensagemService.ContarMensagensPendentesAsync();
+                // var totalPendentes = await mensagemService.ContarMensagensPendentesAsync();
 
-                if (totalPendentes > 0)
-                {
-                    _logger.LogInformation("Processando {count} mensagens pendentes", totalPendentes);
-                    await mensagemService.ProcessarMensagensPendentesAsync();
-                    _logger.LogInformation("Mensagens processadas com sucesso");
-                }
+                // if (totalPendentes > 0)
+                // {
+                //     _logger.LogInformation("Processando {count} mensagens pendentes", totalPendentes);
+                //     await mensagemService.ProcessarMensagensPendentesAsync();
+                //     _logger.LogInformation("Mensagens processadas com sucesso");
+                // }
             }
             catch (Exception ex)
             {
