@@ -10,122 +10,110 @@ namespace api.coleta.Repositories
     {
         public MensagemAgendadaRepository(ApplicationDbContext context) : base(context)
         {
+
         }
 
         public async Task<List<MensagemAgendada>> ObterMensagensPendentesParaEnvioAsync()
         {
-            var agora = DateTime.Now;
-
-            return await DbSet
-                .Where(m => m.Status == StatusMensagem.Pendente
-                         && m.DataHoraEnvio <= agora)
-                .OrderBy(m => m.DataHoraEnvio)
+            return await Context.MensagensAgendadas
+                .Where(m => m.Status == StatusMensagem.Pendente && m.DataHoraEnvio <= DateTime.UtcNow)
                 .ToListAsync();
         }
 
         public async Task<List<MensagemAgendada>> ObterMensagensPorUsuarioAsync(Guid usuarioId)
         {
-            return await DbSet
+            return await Context.MensagensAgendadas
                 .Where(m => m.UsuarioId == usuarioId)
-                .OrderByDescending(m => m.DataHoraEnvio)
                 .ToListAsync();
+
         }
 
         public async Task<List<MensagemAgendada>> ObterMensagensComFiltrosAsync(MensagemAgendadaQueryDTO query)
         {
-            var queryable = DbSet.AsQueryable();
+            var mensagensQuery = Context.MensagensAgendadas.AsQueryable();
 
-            // Filtro por funcionário que criou/enviou
-            if (query.FuncionarioId.HasValue)
-            {
-                queryable = queryable.Where(m => m.FuncionarioId == query.FuncionarioId.Value);
-            }
-
-            // Filtro por usuário destinatário
             if (query.UsuarioId.HasValue)
             {
-                queryable = queryable.Where(m => m.UsuarioId == query.UsuarioId.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.UsuarioId == query.UsuarioId.Value);
             }
 
-            // Filtro por status
             if (query.Status.HasValue)
             {
-                queryable = queryable.Where(m => m.Status == query.Status.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.Status == query.Status.Value);
             }
 
-            // Filtro por data de envio (início)
             if (query.DataInicio.HasValue)
             {
-                queryable = queryable.Where(m => m.DataHoraEnvio >= query.DataInicio.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio >= query.DataInicio.Value);
             }
 
-            // Filtro por data de envio (fim)
             if (query.DataFim.HasValue)
             {
-                queryable = queryable.Where(m => m.DataHoraEnvio <= query.DataFim.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio <= query.DataFim.Value);
             }
-
-            // Ordenação
-            queryable = queryable.OrderByDescending(m => m.DataHoraEnvio);
 
             // Paginação
-            if (query.Page.HasValue && query.Page.Value > 0)
-            {
-                queryable = queryable
-                    .Skip((query.Page.Value - 1) * query.PageSize)
-                    .Take(query.PageSize);
-            }
+            var skip = ((query.Page ?? 1) - 1) * query.PageSize;
+            mensagensQuery = mensagensQuery.Skip(skip).Take(query.PageSize);
 
-            return await queryable.ToListAsync();
+            return await mensagensQuery.ToListAsync();
+
+
         }
 
         public async Task<int> ContarMensagensComFiltrosAsync(MensagemAgendadaQueryDTO query)
         {
-            var queryable = DbSet.AsQueryable();
-
-            if (query.FuncionarioId.HasValue)
-            {
-                queryable = queryable.Where(m => m.FuncionarioId == query.FuncionarioId.Value);
-            }
+            var mensagensQuery = Context.MensagensAgendadas.AsQueryable();
 
             if (query.UsuarioId.HasValue)
             {
-                queryable = queryable.Where(m => m.UsuarioId == query.UsuarioId.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.UsuarioId == query.UsuarioId.Value);
             }
 
             if (query.Status.HasValue)
             {
-                queryable = queryable.Where(m => m.Status == query.Status.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.Status == query.Status.Value);
             }
 
             if (query.DataInicio.HasValue)
             {
-                queryable = queryable.Where(m => m.DataHoraEnvio >= query.DataInicio.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio >= query.DataInicio.Value);
             }
 
             if (query.DataFim.HasValue)
             {
-                queryable = queryable.Where(m => m.DataHoraEnvio <= query.DataFim.Value);
+                mensagensQuery = mensagensQuery.Where(m => m.DataHoraEnvio <= query.DataFim.Value);
             }
 
-            return await queryable.CountAsync();
+            return await mensagensQuery.CountAsync();
         }
 
         public async Task<List<MensagemAgendada>> ObterTodasMensagensAsync()
         {
-            return await DbSet
-                .OrderByDescending(m => m.DataHoraEnvio)
+            return await Context.MensagensAgendadas
+                .Where(m => true)
+                .ToListAsync();
+        }
+        public async Task<List<MensagemAgendada>> ObterTodasMensagensDoUsuarioAsync(Guid usuarioId)
+        {
+            return await Context.MensagensAgendadas
+                .Where(m => m.UsuarioId == usuarioId)
                 .ToListAsync();
         }
 
+
         public async Task<MensagemAgendada?> ObterPorIdAsync(Guid id)
         {
-            return await DbSet.FirstOrDefaultAsync(m => m.Id == id);
+            return await Context.MensagensAgendadas.FindAsync(id);
+
         }
 
         public async Task<int> ContarMensagensPendentesAsync()
         {
-            return await DbSet.CountAsync(m => m.Status == StatusMensagem.Pendente);
+            return await Context.MensagensAgendadas
+                .Where(m => m.Status == StatusMensagem.Pendente)
+                .CountAsync();
+
         }
     }
 }
