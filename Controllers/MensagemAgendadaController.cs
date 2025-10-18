@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace api.coleta.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/mensagens")]
     [Authorize]
     public class MensagemAgendadaController : BaseController
     {
