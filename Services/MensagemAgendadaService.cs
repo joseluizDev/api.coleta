@@ -89,22 +89,15 @@ namespace api.coleta.Services
 
         public MensagemAgendadaEstatisticasDTO ObterEstatisticas(Guid usuarioId)
         {
-            var result = _repository.ObterMensagensPorUsuario(usuarioId)
-                .GroupBy(m => m.Status)
-                .Select(g => new
-                {
-                    Status = g.Key,
-                    Count = g.Count()
-                })
-                .ToList();
+            var result = _repository.ObterMensagensPorUsuario(usuarioId).ToList();
 
             return new MensagemAgendadaEstatisticasDTO
             {
-                Total = result.Sum(r => r.Count),
-                TotalPendentes = result.FirstOrDefault(r => r.Status == StatusMensagem.Pendente)?.Count ?? 0,
-                TotalEnviadas = result.FirstOrDefault(r => r.Status == StatusMensagem.Enviada)?.Count ?? 0,
-                TotalFalhas = result.FirstOrDefault(r => r.Status == StatusMensagem.Falha)?.Count ?? 0,
-                TotalCanceladas = result.FirstOrDefault(r => r.Status == StatusMensagem.Cancelada)?.Count ?? 0
+                Total = result.Count,
+                TotalPendentes = result.Count(r => r.Status == StatusMensagem.Pendente),
+                TotalEnviadas = result.Count(r => r.Status == StatusMensagem.Enviada),
+                TotalFalhas = result.Count(r => r.Status == StatusMensagem.Falha),
+                TotalCanceladas = result.Count(r => r.Status == StatusMensagem.Cancelada)
             };
         }
     }

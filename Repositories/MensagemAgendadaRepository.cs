@@ -17,7 +17,8 @@ namespace api.coleta.Repositories
         {
             return Context.MensagensAgendadas
                 .Where(m => m.UsuarioId == usuarioId)
-                .ToList();
+                 .OrderByDescending(m => m.DataHoraEnvio)
+                 .ToList();
         }
 
         public async Task<List<MensagemAgendada>> ObterTodasAsync()
