@@ -52,6 +52,41 @@ namespace api.coleta.Services
             return _repository.ObterMensagensPorUsuario(value);
         }
 
+        public async Task<List<MensagemAgendada>> ObterMensagensDoFuncionarioAsync(Guid funcionarioId, bool apenasNaoLidas)
+        {
+            var mensagens = await _repository.ObterTodasAsync();
+            
+            var query = mensagens.Where(m => m.FuncionarioId == funcionarioId);
+            
+            if (apenasNaoLidas)
+            {
+                query = query.Where(m => m.Status == StatusMensagem.Enviada);
+            }
+            
+            return query.OrderByDescending(m => m.DataHoraEnvio).ToList();
+        }
+
+        public async Task<MensagemAgendada?> ObterPorIdAsync(Guid id)
+        {
+            return await _repository.ObterPorIdAsync(id);
+        }
+
+        public async Task<bool> MarcarComoLidaAsync(Guid id, Guid funcionarioId)
+        {
+            var mensagem = await _repository.ObterPorIdAsync(id);
+            
+            if (mensagem == null || mensagem.FuncionarioId != funcionarioId)
+            {
+                return false;
+            }
+
+            mensagem.Status = StatusMensagem.Lida;
+            _repository.Atualizar(mensagem);
+            UnitOfWork.Commit();
+            
+            return true;
+        }
+
         public MensagemAgendadaEstatisticasDTO ObterEstatisticas(Guid usuarioId)
         {
             var result = _repository.ObterMensagensPorUsuario(usuarioId)

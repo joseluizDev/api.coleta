@@ -37,26 +37,21 @@ namespace api.coleta.Jobs
             _logger.LogInformation("MensagemAgendadaJob finalizado em: {time}", DateTimeOffset.Now);
         }
 
-        private async Task ProcessarMensagensAsync()
+        private Task ProcessarMensagensAsync()
         {
             using var scope = _serviceProvider.CreateScope();
             var mensagemService = scope.ServiceProvider.GetRequiredService<MensagemAgendadaService>();
 
             try
             {
-                // var totalPendentes = await mensagemService.ContarMensagensPendentesAsync();
-
-                // if (totalPendentes > 0)
-                // {
-                //     _logger.LogInformation("Processando {count} mensagens pendentes", totalPendentes);
-                //     await mensagemService.ProcessarMensagensPendentesAsync();
-                //     _logger.LogInformation("Mensagens processadas com sucesso");
-                // }
+                _logger.LogInformation("Job de mensagens agendadas está ativo mas sem processamento ativo");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao processar mensagens: {message}", ex.Message);
             }
+
+            return Task.CompletedTask;
         }
 
         public override Task StopAsync(CancellationToken cancellationToken)

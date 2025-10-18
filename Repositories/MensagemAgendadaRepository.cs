@@ -19,5 +19,16 @@ namespace api.coleta.Repositories
                 .Where(m => m.UsuarioId == usuarioId)
                 .ToList();
         }
+
+        public async Task<List<MensagemAgendada>> ObterTodasAsync()
+        {
+            return await Context.MensagensAgendadas.ToListAsync();
+        }
+
+        public async Task<MensagemAgendada?> ObterPorIdAsync(Guid id)
+        {
+            return await Context.MensagensAgendadas
+                .FirstOrDefaultAsync(m => m.Id == id);
+        }
     }
 }
