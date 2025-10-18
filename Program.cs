@@ -21,6 +21,7 @@ using api.minionStorage.Services;
 using api.coleta.Services;
 using api.dashboard.Services;
 using DotNetEnv;
+using api.coleta.Jobs;
 
 
 DotNetEnv.Env.Load();
@@ -157,6 +158,7 @@ builder.Services.AddScoped<NutrientConfigService>();
 builder.Services.AddScoped<MensagemAgendadaRepository>();
 builder.Services.AddScoped<MensagemAgendadaService>();
 
+builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 string corsPolicyName = "AllowAnyOrigin";
 builder.Services.AddCors(options =>

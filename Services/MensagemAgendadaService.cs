@@ -168,5 +168,60 @@ namespace api.coleta.Services
 
             return true;
         }
+
+        public async Task ProcessarMensagensPendentesAsync()
+        {
+            var mensagensPendentes = await _repository.ObterMensagensPendentesAsync();
+
+            foreach (var mensagem in mensagensPendentes)
+            {
+                try
+                {
+                    string? fcmToken = mensagem.FcmToken;
+
+                    // Se tiver FuncionarioId, buscar o FcmToken do usuário
+                    if (mensagem.FuncionarioId.HasValue)
+                    {
+                        var funcionario = await _usuarioRepository.ObterPorIdAsync(mensagem.FuncionarioId.Value);
+                        if (funcionario != null && !string.IsNullOrEmpty(funcionario.FcmToken))
+                        {
+                            fcmToken = funcionario.FcmToken;
+                        }
+                    }
+
+                    // Validar se há um FcmToken disponível
+                    if (string.IsNullOrEmpty(fcmToken))
+                    {
+                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "FcmToken não encontrado");
+                        _repository.Atualizar(mensagem);
+                        continue;
+                    }
+
+                    // Enviar notificação
+                    var enviada = await _oneSignalService.EnviarNotificacaoAsync(fcmToken, mensagem.Titulo, mensagem.Mensagem);
+
+                    if (enviada)
+                    {
+                        mensagem.AtualizarStatus(StatusMensagem.Enviada, DateTime.Now);
+                    }
+                    else
+                    {
+                        mensagem.AtualizarStatus(StatusMensagem.Falha, null, "Falha ao enviar notificação via OneSignal");
+                    }
+
+                    _repository.Atualizar(mensagem);
+                }
+                catch (Exception ex)
+                {
+                    mensagem.AtualizarStatus(StatusMensagem.Falha, null, $"Erro ao processar mensagem: {ex.Message}");
+                    _repository.Atualizar(mensagem);
+                }
+            }
+
+            if (mensagensPendentes.Any())
+            {
+                UnitOfWork.Commit();
+            }
+        }
     }
 }

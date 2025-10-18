@@ -31,5 +31,13 @@ namespace api.coleta.Repositories
             return await Context.MensagensAgendadas
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
+
+        public async Task<List<MensagemAgendada>> ObterMensagensPendentesAsync()
+        {
+            var agora = DateTime.Now;
+            return await Context.MensagensAgendadas
+                .Where(m => m.Status == StatusMensagem.Pendente && m.DataHoraEnvio <= agora)
+                .ToListAsync();
+        }
     }
 }
