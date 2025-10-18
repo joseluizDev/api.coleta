@@ -55,14 +55,14 @@ namespace api.coleta.Services
         public async Task<List<MensagemAgendada>> ObterMensagensDoFuncionarioAsync(Guid funcionarioId, bool apenasNaoLidas)
         {
             var mensagens = await _repository.ObterTodasAsync();
-            
+
             var query = mensagens.Where(m => m.FuncionarioId == funcionarioId);
-            
+
             if (apenasNaoLidas)
             {
                 query = query.Where(m => m.Status == StatusMensagem.Enviada);
             }
-            
+
             return query.OrderByDescending(m => m.DataHoraEnvio).ToList();
         }
 
@@ -74,7 +74,7 @@ namespace api.coleta.Services
         public async Task<bool> MarcarComoLidaAsync(Guid id, Guid funcionarioId)
         {
             var mensagem = await _repository.ObterPorIdAsync(id);
-            
+
             if (mensagem == null || mensagem.FuncionarioId != funcionarioId)
             {
                 return false;
@@ -83,7 +83,7 @@ namespace api.coleta.Services
             mensagem.Status = StatusMensagem.Lida;
             _repository.Atualizar(mensagem);
             UnitOfWork.Commit();
-            
+
             return true;
         }
 
