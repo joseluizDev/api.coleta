@@ -19,7 +19,5 @@ namespace api.coleta.Repositories
                 .Where(m => m.UsuarioId == usuarioId)
                 .ToList();
         }
-
-
     }
 }
