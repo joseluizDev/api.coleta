@@ -100,5 +100,73 @@ namespace api.coleta.Services
                 TotalCanceladas = result.Count(r => r.Status == StatusMensagem.Cancelada)
             };
         }
+
+        public MensagemAgendada? ObterMensagemPorId(Guid id, Guid usuarioId)
+        {
+            var mensagem = _repository.ObterPorId(id);
+
+            // Verifica se a mensagem existe e pertence ao usuário
+            if (mensagem == null || mensagem.UsuarioId != usuarioId)
+            {
+                return null;
+            }
+
+            return mensagem;
+        }
+
+        public bool AtualizarMensagem(Guid id, MensagemAgendadaRequestDTO request, Guid usuarioId)
+        {
+            var mensagem = _repository.ObterPorId(id);
+
+            // Verifica se a mensagem existe e pertence ao usuário
+            if (mensagem == null || mensagem.UsuarioId != usuarioId)
+            {
+                return false;
+            }
+
+            // Não permite atualizar mensagens já enviadas
+            if (mensagem.Status == StatusMensagem.Enviada)
+            {
+                _notificador.Notificar(new Notificacao("Não é possível atualizar uma mensagem já enviada."));
+                return false;
+            }
+
+            // Atualiza apenas os campos permitidos
+            mensagem.Titulo = request.Titulo;
+            mensagem.Mensagem = request.Mensagem;
+            mensagem.DataHoraEnvio = request.DataHoraEnvio;
+            mensagem.FuncionarioId = request.FuncionarioId;
+            mensagem.FcmToken = request.FcmToken;
+
+            _repository.Atualizar(mensagem);
+            UnitOfWork.Commit();
+
+            return true;
+        }
+
+        public bool CancelarMensagem(Guid id, Guid usuarioId)
+        {
+            var mensagem = _repository.ObterPorId(id);
+
+            // Verifica se a mensagem existe e pertence ao usuário
+            if (mensagem == null || mensagem.UsuarioId != usuarioId)
+            {
+                return false;
+            }
+
+            // Não permite cancelar mensagens já enviadas ou lidas
+            if (mensagem.Status == StatusMensagem.Enviada || mensagem.Status == StatusMensagem.Lida)
+            {
+                _notificador.Notificar(new Notificacao("Não é possível cancelar uma mensagem já enviada ou lida."));
+                return false;
+            }
+
+            // Marca como cancelada ao invés de deletar
+            mensagem.Status = StatusMensagem.Cancelada;
+            _repository.Atualizar(mensagem);
+            UnitOfWork.Commit();
+
+            return true;
+        }
     }
 }
