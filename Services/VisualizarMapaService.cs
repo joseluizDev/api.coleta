@@ -14,6 +14,7 @@ using api.talhao.Services;
 using api.cliente.Models.DTOs;
 using api.safra.Services;
 using api.safra.Models.DTOs;
+using api.coleta.Interfaces;
 
 namespace api.coleta.Services
 {
@@ -31,6 +32,8 @@ namespace api.coleta.Services
         private readonly TalhaoService _talhaoService;
         private readonly SafraService _safraService;
         private readonly PontoColetadoRepository _pontoColetadoRepository;
+        private readonly IOneSignalService _oneSignalService;
+        private readonly Data.Repository.UsuarioRepository _usuarioRepository;
         public VisualizarMapaService(
             UsuarioService usuarioService,
             VisualizarMapaRepository visualizarMapaRepository,
@@ -38,7 +41,9 @@ namespace api.coleta.Services
             GeoJsonRepository geoJsonRepository,
             TalhaoService talhaoService,
             SafraService safraService,
-            PontoColetadoRepository pontoColetadoRepository)
+            PontoColetadoRepository pontoColetadoRepository,
+            IOneSignalService oneSignalService,
+            Data.Repository.UsuarioRepository usuarioRepository)
             : base(unitOfWork)
         {
             _visualizarMapaRepository = visualizarMapaRepository;
@@ -47,6 +52,8 @@ namespace api.coleta.Services
             _usuarioService = usuarioService;
             _safraService = safraService;
             _pontoColetadoRepository = pontoColetadoRepository;
+            _oneSignalService = oneSignalService;
+            _usuarioRepository = usuarioRepository;
         }
 
         public VisualizarMapOutputDto? Salvar(Guid userID, VisualizarMapInputDto visualizarMapa)
@@ -54,7 +61,7 @@ namespace api.coleta.Services
             try
             {
                 // Validação do GeoJSON
-                if (visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Undefined || 
+                if (visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Undefined ||
                     visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Null)
                 {
                     throw new ArgumentException("GeoJSON é obrigatório e deve ser um objeto JSON válido.");
@@ -128,7 +135,7 @@ namespace api.coleta.Services
                 }
 
                 // Validação do GeoJSON se foi informado
-                if (visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Undefined && 
+                if (visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
                     visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Null)
                 {
                     // Buscar o GeoJSON existente
@@ -144,19 +151,19 @@ namespace api.coleta.Services
                 // Atualizar os campos da coleta
                 if (!string.IsNullOrEmpty(visualizarMapa.NomeColeta))
                     coletaExistente.NomeColeta = visualizarMapa.NomeColeta;
-                
+
                 if (visualizarMapa.TalhaoID != Guid.Empty)
                     coletaExistente.TalhaoID = visualizarMapa.TalhaoID;
-                
+
                 if (visualizarMapa.FuncionarioID != Guid.Empty)
                     coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID;
-                
+
                 if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
                 {
                     if (Enum.TryParse<TipoColeta>(visualizarMapa.TipoColeta, out var tipoColeta))
                         coletaExistente.TipoColeta = tipoColeta;
                 }
-                
+
                 if (visualizarMapa.TipoAnalise != null && visualizarMapa.TipoAnalise.Any())
                 {
                     var tiposAnaliseValidos = new List<TipoAnalise>();
@@ -167,13 +174,13 @@ namespace api.coleta.Services
                     }
                     coletaExistente.TipoAnalise = tiposAnaliseValidos;
                 }
-                
+
                 if (!string.IsNullOrEmpty(visualizarMapa.Profundidade))
                 {
                     if (Enum.TryParse<Profundidade>(visualizarMapa.Profundidade, out var profundidade))
                         coletaExistente.Profundidade = profundidade;
                 }
-                
+
                 if (!string.IsNullOrEmpty(visualizarMapa.Observacao))
                     coletaExistente.Observacao = visualizarMapa.Observacao;
 
@@ -991,6 +998,28 @@ namespace api.coleta.Services
 
                 _pontoColetadoRepository.Adicionar(pontoColetado);
                 UnitOfWork.Commit();
+
+                // Enviar notificação push para o usuário responsável pela coleta
+                var usuario = _usuarioRepository.ObterPorId(co.UsuarioRespID);
+                if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _oneSignalService.EnviarNotificacaoAsync(
+                                usuario.FcmToken,
+                                "Nova Coleta Registrada",
+                                $"Uma nova coleta foi salva para você! Nome: {co.NomeColeta ?? "Coleta"}"
+                            );
+                        }
+                        catch (Exception notifEx)
+                        {
+                            Console.WriteLine($"Erro ao enviar notificação: {notifEx.Message}");
+                        }
+                    });
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -999,6 +1028,52 @@ namespace api.coleta.Services
                 Console.WriteLine($"Erro ao atualizar o status de coleta: {ex.Message}");
                 return false;
             }
+        }
+
+        public async Task EnviarNotificacaoVisualizacaoMapaAsync(VisualizarMapOutputDto visualizarMapa)
+        {
+            try
+            {
+                if (visualizarMapa == null)
+                    return;
+
+                var usuario = _usuarioRepository.ObterPorId(visualizarMapa.UsuarioRespID);
+                if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    await _oneSignalService.EnviarNotificacaoAsync(
+                        usuario.FcmToken,
+                        "Nova Visualização de Mapa",
+                        $"Uma nova visualização de mapa '{visualizarMapa.NomeColeta ?? "sem nome"}' foi criada para você!"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao enviar notificação de visualização de mapa: {ex.Message}");
+            }
+        }
+
+        private void EnviarNotificacaoNovaColeta(Guid userId, string nomeColeta)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var usuario = _usuarioRepository.ObterPorId(userId);
+                    if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                    {
+                        await _oneSignalService.EnviarNotificacaoAsync(
+                            usuario.FcmToken,
+                            "Nova Coleta",
+                            $"Uma nova coleta '{nomeColeta}' foi salva para você!"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao enviar notificação: {ex.Message}");
+                }
+            });
         }
     }
 }

@@ -26,6 +26,9 @@ namespace api.coleta.Models.Entidades
 
         public bool Ativo { get; set; }
 
+        [MaxLength(500)]
+        public string? FcmToken { get; set; }
+
         public Guid? adminId { get; set; }
         public virtual Usuario? Admin { get; set; }
         public Usuario(){ }
@@ -36,6 +39,7 @@ namespace api.coleta.Models.Entidades
             Email = usuario.Email;
             Telefone = usuario.Telefone;
             Senha = usuario.Senha;
+            FcmToken = usuario.FcmToken;
             Validador();
         }
         public Usuario Atualizar(UsuarioResquestDTO usuario)
@@ -45,6 +49,7 @@ namespace api.coleta.Models.Entidades
             Email = usuario.Email;
             Telefone = usuario.Telefone;
             Senha = usuario.Senha;
+            FcmToken = usuario.FcmToken;
             Validador();
             return this;
         }
@@ -75,6 +80,7 @@ namespace api.coleta.Models.Entidades
             Email = usuario.Email;
             Telefone = usuario.Telefone;
             Senha = usuario.Senha;
+            FcmToken = usuario.FcmToken;
             Observacao = observacao;
             Ativo = ativo;
             Validador();

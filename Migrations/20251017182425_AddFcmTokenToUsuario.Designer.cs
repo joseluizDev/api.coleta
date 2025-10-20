@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251017182425_AddFcmTokenToUsuario")]
+    partial class AddFcmTokenToUsuario
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -307,56 +310,6 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MColetas");
-                });
-
-            modelBuilder.Entity("api.coleta.Models.Entidades.MensagemAgendada", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("DataHoraEnviada")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("DataHoraEnvio")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("DataInclusao")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid?>("FuncionarioId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Mensagem")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
-
-                    b.Property<string>("MensagemErro")
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TentativasEnvio")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<Guid?>("UsuarioId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FuncionarioId");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("MensagensAgendadas");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Minerais", b =>
@@ -786,21 +739,6 @@ namespace api.coleta.Migrations
                     b.Navigation("Fazenda");
 
                     b.Navigation("Talhao");
-
-                    b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("api.coleta.Models.Entidades.MensagemAgendada", b =>
-                {
-                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Funcionario")
-                        .WithMany()
-                        .HasForeignKey("FuncionarioId");
-
-                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId");
-
-                    b.Navigation("Funcionario");
 
                     b.Navigation("Usuario");
                 });

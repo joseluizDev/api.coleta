@@ -22,13 +22,22 @@ public class UsuarioService : ServiceBase
         _jwtToken = jwtToken;
     }
 
-    public UsuarioResquestDTO? BuscarUsuarioPorId(Guid id)
+    public UsuarioResquestDTO? BuscarUsuarioPorId(Guid id, string? fcmToken = null)
     {
         var usuario = _usuarioRepository.ObterPorId(id);
         if (usuario == null)
         {
             return null;
         }
+
+        // Atualiza o fcmToken se fornecido
+        if (!string.IsNullOrEmpty(fcmToken) && usuario.FcmToken != fcmToken)
+        {
+            usuario.FcmToken = fcmToken;
+            _usuarioRepository.Atualizar(usuario);
+            UnitOfWork.Commit();
+        }
+
         return usuario.ToRequestDto();
     }
 
@@ -140,6 +149,23 @@ public class UsuarioService : ServiceBase
             throw new Exception("Funcionário não encontrado.");
         }
         return usuario.ToFuncionarioResponseDto();
+    }
+
+    public string? RefreshToken(string token)
+    {
+        var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+        if (userId == null)
+        {
+            return null;
+        }
+
+        var usuario = _usuarioRepository.ObterPorId(userId.Value);
+        if (usuario == null)
+        {
+            return null;
+        }
+
+        return _jwtToken.GerarToken(usuario);
     }
 
     public FuncionarioResponseDTO? AtualizarFuncionario(Guid userId, FuncionarioRequestDTO funcionarioDto)

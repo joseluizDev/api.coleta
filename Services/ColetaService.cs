@@ -7,6 +7,8 @@ using api.coleta.Services;
 using api.coleta.Settings;
 using api.coleta.Utils;
 using api.coleta.Utils.Maps;
+using api.coleta.Interfaces;
+using api.coleta.Data.Repository;
 using Microsoft.Extensions.Options;
 
 namespace api.coleta.repositories
@@ -14,10 +16,14 @@ namespace api.coleta.repositories
     public class ColetaService : ServiceBase
     {
         private readonly ColetaRepository _coletaRepository;
+        private readonly UsuarioRepository _usuarioRepository;
+        private readonly IOneSignalService _oneSignalService;
 
-        public ColetaService(ColetaRepository coletaRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
+        public ColetaService(ColetaRepository coletaRepository, UsuarioRepository usuarioRepository, IOneSignalService oneSignalService, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _coletaRepository = coletaRepository;
+            _usuarioRepository = usuarioRepository;
+            _oneSignalService = oneSignalService;
         }
 
         public ColetaResponseDTO? BuscarColetaPorId(Guid id)
@@ -31,7 +37,7 @@ namespace api.coleta.repositories
             return coleta.ToResponseDto();
         }
 
-        public void SalvarColetas(ColetaRequestDTO coletas)
+        public async Task SalvarColetas(ColetaRequestDTO coletas, Guid usuarioId)
         {
             var coletaEntidade = coletas.ToEntity();
             if (coletaEntidade == null)

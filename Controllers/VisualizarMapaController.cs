@@ -15,7 +15,10 @@ namespace api.coleta.Controllers
         private readonly INotificador _notificador;
         private readonly IJwtToken _jwtToken;
 
-        public VisualizarMapaController(VisualizarMapaService visualizarMapaService, INotificador notificador, IJwtToken jwtToken)
+        public VisualizarMapaController(
+            VisualizarMapaService visualizarMapaService,
+            INotificador notificador,
+            IJwtToken jwtToken)
             : base(notificador)
         {
             _visualizarMapaService = visualizarMapaService;
@@ -72,6 +75,9 @@ namespace api.coleta.Controllers
                 var visualizarMapaSalvo = _visualizarMapaService.Salvar(userId, visualizarMapa);
                 if (visualizarMapaSalvo == null)
                     return BadRequest("Erro ao salvar visualização de mapa. Verifique se o talhão e funcionário existem no sistema.");
+
+                // Enviar notificação de forma assíncrona
+                _ = Task.Run(() => _visualizarMapaService.EnviarNotificacaoVisualizacaoMapaAsync(visualizarMapaSalvo));
 
                 return Ok(visualizarMapaSalvo);
             }
@@ -266,8 +272,5 @@ namespace api.coleta.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
-
-
-
     }
 }

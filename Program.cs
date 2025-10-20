@@ -21,6 +21,8 @@ using api.minionStorage.Services;
 using api.coleta.Services;
 using api.dashboard.Services;
 using DotNetEnv;
+using api.coleta.Jobs;
+
 
 DotNetEnv.Env.Load();
 
@@ -124,6 +126,7 @@ builder.Services.AddScoped<UtilsService>();
 
 builder.Services.AddScoped<VisualizarMapaRepository>();
 builder.Services.AddScoped<PontoColetadoRepository>();
+builder.Services.AddScoped<api.coleta.Interfaces.IOneSignalService, api.coleta.Services.OneSignalService>();
 builder.Services.AddScoped<VisualizarMapaService>(provider =>
     new VisualizarMapaService(
         provider.GetRequiredService<UsuarioService>(),
@@ -132,7 +135,9 @@ builder.Services.AddScoped<VisualizarMapaService>(provider =>
         provider.GetRequiredService<GeoJsonRepository>(),
         provider.GetRequiredService<TalhaoService>(),
         provider.GetRequiredService<SafraService>(),
-        provider.GetRequiredService<PontoColetadoRepository>()
+        provider.GetRequiredService<PontoColetadoRepository>(),
+        provider.GetRequiredService<api.coleta.Interfaces.IOneSignalService>(),
+        provider.GetRequiredService<UsuarioRepository>()
     )
 );
 
@@ -150,8 +155,10 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<NutrientConfigRepository>();
 builder.Services.AddScoped<NutrientConfigService>();
 
+builder.Services.AddScoped<MensagemAgendadaRepository>();
+builder.Services.AddScoped<MensagemAgendadaService>();
 
-
+builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 string corsPolicyName = "AllowAnyOrigin";
 builder.Services.AddCors(options =>
