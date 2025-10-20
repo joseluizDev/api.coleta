@@ -42,7 +42,7 @@ namespace api.coleta.Utils.Maps
                         : "N/A",
                 Funcionario = !string.IsNullOrWhiteSpace(coleta?.UsuarioResp?.NomeCompleto) ? coleta.UsuarioResp.NomeCompleto : "N/A",
                 Observacao = !string.IsNullOrWhiteSpace(coleta?.Observacao) ? coleta.Observacao : "N/A",
-                Profundidade = coleta != null ? coleta.Profundidade.ToString() : "N/A",
+                Profundidade = coleta != null ? ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()) : "N/A",
                 TiposAnalise = tiposAnalise,
                 JsonRelatorio = relatorio.JsonRelatorio,
                 IsRelatorio = !string.IsNullOrWhiteSpace(relatorio.JsonRelatorio)

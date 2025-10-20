@@ -734,7 +734,7 @@ namespace api.coleta.Services
                     observacao = coleta.Observacao ?? "",
                     tipoColeta = coleta.TipoColeta,
                     tipoAnalise = coleta.TipoAnalise,
-                    profundidade = FormatarProfundidade(coleta.Profundidade)
+                    profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade)
                 };
 
                 result.Add(item);
@@ -819,7 +819,7 @@ namespace api.coleta.Services
                     } : null,
                     dataUltimaColeta = dataUltimaColeta,
                     tipoColeta = coleta.TipoColeta.ToString(),
-                    profundidade = coleta.Profundidade.ToString(),
+                    profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()),
                     observacao = coleta.Observacao ?? "",
                     dataCriacao = coleta.DataInclusao,
                     geojson = geojson != null ? new
@@ -834,27 +834,6 @@ namespace api.coleta.Services
             }
 
             return result;
-        }
-
-        private static string FormatarProfundidade(string profundidadeEnum)
-        {
-            // Mapeia nomes de enum para formato humano (ex.: ZeroAVinte -> "0-20")
-            // Aceita string porque nas DTOs esse campo já está como string
-            return profundidadeEnum switch
-            {
-                "ZeroADez" => "0-10",
-                "ZeroAVinte" => "0-20",
-                "ZeroATrinta" => "0-30",
-                "ZeroAQuarenta" => "0-40",
-                "ZeroACinquenta" => "0-50",
-                "ZeroASetenta" => "0-70",
-                "DezAVinte" => "10-20",
-                "VinteATrinta" => "20-30",
-                "TrintaAQuarenta" => "30-40",
-                "QuarentaACinquenta" => "40-50",
-                "CinquentaASetenta" => "50-70",
-                _ => profundidadeEnum
-            };
         }
 
         private int ContarPontosPlanejados(Geojson? geojson)

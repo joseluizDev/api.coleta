@@ -49,7 +49,7 @@ namespace api.coleta.Utils.Maps
                 Observacao = coleta.Observacao,
                 TipoColeta = coleta.TipoColeta.ToString(),
                 TipoAnalise = coleta.TipoAnalise?.Select(x => x.ToString()).ToList(),
-                Profundidade = coleta.Profundidade.ToString(),
+                Profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()),
                 NomeColeta = coleta.NomeColeta
             };
         }
