@@ -138,6 +138,21 @@ namespace api.talhao.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+        [HttpGet]
+        [Route("listar-agrupado-por-fazenda")]
+        [Authorize]
+        public IActionResult ListarTalhoesAgrupadosPorFazenda([FromQuery] Guid? fazendaId = null)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var talhoes = _talhaoService.ListarTalhoesAgrupadosPorFazenda(userId, fazendaId);
+                return Ok(talhoes);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
         
     }
 }

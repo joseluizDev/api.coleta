@@ -21,6 +21,7 @@ namespace api.coleta.Utils.Maps
             var talhaoJson = coleta?.Talhao;
             var talhaoEntity = talhaoJson?.Talhao;
             var fazenda = talhaoEntity?.Fazenda ?? coleta?.Safra?.Fazenda;
+            var cliente = fazenda?.Cliente;
             var tiposAnalise = coleta?.TipoAnalise?
                 .Select(x => x.ToString())
                 .ToList() ?? [];
@@ -35,6 +36,7 @@ namespace api.coleta.Utils.Maps
                 Talhao = !string.IsNullOrWhiteSpace(talhaoJson?.Nome) ? talhaoJson.Nome : "N/A",
                 TipoColeta = coleta != null ? coleta.TipoColeta.ToString() : "N/A",
                 Fazenda = !string.IsNullOrWhiteSpace(fazenda?.Nome) ? fazenda.Nome : "N/A",
+                NomeCliente = !string.IsNullOrWhiteSpace(cliente?.Nome) ? cliente.Nome : "N/A",
                 Safra = coleta?.Safra != null && !string.IsNullOrWhiteSpace(coleta.Safra.Observacao)
                     ? coleta.Safra.Observacao
                     : coleta?.Safra != null

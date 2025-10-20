@@ -48,6 +48,7 @@ namespace api.coleta.Repositories
                 .Include(c => c.Talhao)
                     .ThenInclude(t => t.Talhao)
                         .ThenInclude(t => t.Cliente)
+                .Include(c => c.Relatorios)
                 .Where(c => c.UsuarioID == userID);
 
             // Filtro por Nome

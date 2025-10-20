@@ -22,7 +22,8 @@ namespace api.coleta.Utils.Maps
                 TipoAnalise = coleta.TipoAnalise?.Select(x => x.ToString()).ToList(),
                 Safra = coleta.Safra != null ? coleta.Safra.ToResponseDto()! : null!,
                 Talhao = coleta.Talhao != null ? coleta.Talhao.ToTalhaoResponseDto()! : null!,
-                FazendaID = coleta.FazendaID
+                FazendaID = coleta.FazendaID,
+                PossuiRelatorioAnalise = coleta.Relatorios != null && coleta.Relatorios.Any()
             };
         }
 

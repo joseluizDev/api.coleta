@@ -264,5 +264,38 @@ namespace api.talhao.Services
             }
             return null;
         }
+
+        // Listar talhões agrupados por fazenda
+        public List<TalhaoAgrupadoPorFazendaResponseDTO> ListarTalhoesAgrupadosPorFazenda(Guid userId, Guid? fazendaId = null)
+        {
+            var talhoes = _talhaoRepository.ListarTodosComFazenda(userId, fazendaId);
+            
+            // Agrupar por fazenda
+            var talhoesAgrupados = talhoes
+                .GroupBy(t => new { t.FazendaID, t.Fazenda.Nome })
+                .Select(g => new TalhaoAgrupadoPorFazendaResponseDTO
+                {
+                    FazendaID = g.Key.FazendaID,
+                    NomeFazenda = g.Key.Nome,
+                    Talhoes = g.SelectMany(t => 
+                    {
+                        var talhaoJsonList = _talhaoRepository.BuscarTalhaoJson(t.Id);
+                        if (talhaoJsonList != null && talhaoJsonList.Any())
+                        {
+                            return talhaoJsonList.Select(tj => new TalhaoResumoDTO
+                            {
+                                Id = tj.Id,
+                                Nome = tj.Nome,
+                                Area = double.TryParse(tj.Area, out var area) ? area : 0,
+                                Observacao = tj.Observacao
+                            }).ToList();
+                        }
+                        return new List<TalhaoResumoDTO>();
+                    }).ToList()
+                })
+                .ToList();
+
+            return talhoesAgrupados;
+        }
     }
 }

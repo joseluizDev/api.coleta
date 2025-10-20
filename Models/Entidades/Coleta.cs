@@ -25,6 +25,7 @@ namespace api.coleta.Models.Entidades
         public virtual Safra? Safra { get; set; }
         public Guid? FazendaID { get; set; }
         public virtual Fazenda? Fazenda { get; set; }
+        public virtual ICollection<Relatorio>? Relatorios { get; set; }
 
         public Coleta()
         {

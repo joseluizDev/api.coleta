@@ -20,6 +20,7 @@ namespace api.coleta.Models.DTOs
         public string Talhao { get; set; }
         public string TipoColeta { get; set; }
         public string Fazenda { get; set; }
+        public string NomeCliente { get; set; }
         public string Safra { get; set; }
         public string Funcionario { get; set; }
         public string Observacao { get; set; }

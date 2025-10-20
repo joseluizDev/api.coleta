@@ -118,5 +118,19 @@ namespace api.talhao.Repositories
         {
             return Context.Talhoes.Where(item => item.FazendaID == id && item.UsuarioID == userID).FirstOrDefault();
         }
+
+        public List<Talhao> ListarTodosComFazenda(Guid userId, Guid? fazendaId = null)
+        {
+            var query = Context.Talhoes
+                .Include(t => t.Fazenda)
+                .Where(t => t.UsuarioID == userId);
+
+            if (fazendaId.HasValue)
+            {
+                query = query.Where(t => t.FazendaID == fazendaId.Value);
+            }
+
+            return query.ToList();
+        }
     }
 }

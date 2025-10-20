@@ -47,9 +47,11 @@ namespace api.coleta.Repositories
                     .ThenInclude(c => c.Talhao!)
                         .ThenInclude(t => t.Talhao!)
                             .ThenInclude(tt => tt.Fazenda)
+                                .ThenInclude(f => f.Cliente)
                 .Include(x => x.Coleta!)
                     .ThenInclude(c => c.Safra!)
                         .ThenInclude(s => s.Fazenda)
+                            .ThenInclude(f => f.Cliente)
                 .Include(x => x.Coleta!)
                     .ThenInclude(c => c.UsuarioResp)
                 .FirstOrDefaultAsync(x => x.ColetaId == id && x.UsuarioId == userId);

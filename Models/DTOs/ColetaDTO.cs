@@ -40,6 +40,7 @@ namespace api.coleta.models
 
         public Guid? FazendaID { get; set; }
         
+        public bool PossuiRelatorioAnalise { get; set; }
 
         // Dados resumidos de Cliente
 
