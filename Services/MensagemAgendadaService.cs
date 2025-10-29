@@ -183,6 +183,14 @@ namespace api.coleta.Services
             }
         }
 
+        private void MarcarMensagemEnviada(MensagemAgendada mensagem)
+        {
+            mensagem.Status = StatusMensagem.Enviada;
+            mensagem.DataHoraEnviada = DateTime.Now;
+            mensagem.MensagemErro = null;
+            mensagem.TentativasEnvio = 0;
+        }
+
         public async Task ProcessarMensagensPendentesAsync()
         {
             var mensagensPendentes = await _repository.ObterMensagensPendentesAsync();
@@ -245,7 +253,7 @@ namespace api.coleta.Services
 
                     if (enviada)
                     {
-                        mensagem.AtualizarStatus(StatusMensagem.Enviada, DateTime.Now);
+                        MarcarMensagemEnviada(mensagem);
                     }
                     else
                     {
