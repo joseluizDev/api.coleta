@@ -78,6 +78,16 @@ namespace api.vinculoClienteFazenda.Services
             var bounds = projectedPolygon.EnvelopeInternal;
             var hexagons = new List<Geometry>();
 
+            // Validar e corrigir o polígono de entrada
+            var validatedPolygon = ValidateAndFixGeometry(projectedPolygon);
+            if (validatedPolygon == null || validatedPolygon.IsEmpty)
+            {
+                throw new Exception("Polígono inválido após validação");
+            }
+
+            // Criar geometria preparada para melhor performance
+            var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(validatedPolygon);
+
             for (int row = 0; row < ((bounds.MaxY - bounds.MinY) / vertDist) + 1; row++)
             {
                 for (int col = 0; col < ((bounds.MaxX - bounds.MinX) / hexWidth) + 1; col++)
@@ -87,17 +97,81 @@ namespace api.vinculoClienteFazenda.Services
                     double centerY = bounds.MinY + row * vertDist;
                     Polygon hexagon = CreateHexagon(new Coordinate(centerX, centerY), r);
 
-                    if (projectedPolygon.Intersects(hexagon))
+                    if (preparedPolygon.Intersects(hexagon))
                     {
-                        var intersection = projectedPolygon.Intersection(hexagon);
-                        if (!intersection.IsEmpty)
+                        try
                         {
-                            hexagons.Add(intersection);
+                            // Validar e corrigir o hexágono antes da interseção
+                            var validatedHexagon = ValidateAndFixGeometry(hexagon);
+                            if (validatedHexagon != null && !validatedHexagon.IsEmpty)
+                            {
+                                var intersection = validatedPolygon.Intersection(validatedHexagon);
+                                if (intersection != null && !intersection.IsEmpty && intersection.Area > 0)
+                                {
+                                    hexagons.Add(intersection);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Ignora hexágonos problemáticos e continua
+                            Console.WriteLine($"Erro ao processar hexágono na posição ({row}, {col}): {ex.Message}");
+                            continue;
                         }
                     }
                 }
             }
             return hexagons;
+        }
+
+        /// <summary>
+        /// Valida e corrige geometrias para evitar problemas topológicos
+        /// </summary>
+        private Geometry? ValidateAndFixGeometry(Geometry? geometry)
+        {
+            if (geometry == null || geometry.IsEmpty)
+                return geometry;
+
+            try
+            {
+                // Se a geometria já é válida, retorna ela mesma
+                if (geometry.IsValid)
+                    return geometry;
+
+                // Tenta corrigir usando Buffer(0) - técnica comum para corrigir topologia
+                var fixed1 = geometry.Buffer(0);
+                if (fixed1.IsValid)
+                    return fixed1;
+
+                // Tenta usar Normalize + Buffer
+                var normalized = (Geometry)geometry.Copy();
+                normalized.Normalize();
+                var fixed2 = normalized.Buffer(0);
+                if (fixed2.IsValid)
+                    return fixed2;
+
+                // Última tentativa: simplificar ligeiramente
+                var simplified = NetTopologySuite.Simplify.DouglasPeuckerSimplifier.Simplify(geometry, 0.0001);
+                var fixed3 = simplified.Buffer(0);
+                if (fixed3.IsValid)
+                    return fixed3;
+
+                // Se nada funcionou, retorna o resultado do buffer(0) mesmo que inválido
+                return fixed1;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao validar geometria: {ex.Message}");
+                // Em caso de erro, tenta retornar um buffer mínimo
+                try
+                {
+                    return geometry.Buffer(0);
+                }
+                catch
+                {
+                    return geometry;
+                }
+            }
         }
 
         private Polygon CreateHexagon(Coordinate center, double r)
@@ -709,7 +783,7 @@ namespace api.vinculoClienteFazenda.Services
 
             for (int i = 0; i < numPoints; i++)
             {
-                Coordinate point = null;
+                Coordinate? point = null;
                 int attempts = 0;
                 const int maxJitterAttempts = 100;
 
