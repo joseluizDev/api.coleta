@@ -128,5 +128,60 @@ namespace api.coleta.Repositories
 
             return (items, totalItems);
         }
+
+        // Fallback: quando não houver Relatórios, listar Coletas do usuário (com includes) para montar os itens do mobile
+        public async Task<(List<Coleta> Items, int TotalItems)> ListarColetasParaRelatorioMobileAsync(
+            Guid userId,
+            QueryRelatorioMobile query)
+        {
+            if (query.Page < 1) query.Page = 1;
+            if (query.Limit < 1 || query.Limit > 100) query.Limit = 10;
+
+            var coletasQuery = Context.Coletas
+                .Include(c => c.Talhao!)
+                    .ThenInclude(t => t.Talhao!)
+                        .ThenInclude(tt => tt.Fazenda)
+                .Include(c => c.Geojson)
+                .Include(c => c.Safra!)
+                    .ThenInclude(s => s.Fazenda)
+                // Por padrão no mobile, o filtro é pelo responsável da coleta
+                .Where(c => c.UsuarioRespID == userId || c.UsuarioID == userId)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.Fazenda))
+            {
+                var fazendaLower = query.Fazenda.ToLower();
+                coletasQuery = coletasQuery.Where(c =>
+                    (c.Talhao!.Talhao!.Fazenda!.Nome.ToLower().Contains(fazendaLower)) ||
+                    (c.Safra != null && c.Safra.Fazenda!.Nome.ToLower().Contains(fazendaLower))
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Talhao))
+            {
+                var talhaoLower = query.Talhao.ToLower();
+                coletasQuery = coletasQuery.Where(c => c.Talhao!.Nome.ToLower().Contains(talhaoLower));
+            }
+
+            if (query.DataInicio.HasValue)
+            {
+                coletasQuery = coletasQuery.Where(c => c.DataInclusao.Date >= query.DataInicio.Value.Date);
+            }
+
+            if (query.DataFim.HasValue)
+            {
+                coletasQuery = coletasQuery.Where(c => c.DataInclusao.Date <= query.DataFim.Value.Date);
+            }
+
+            int totalColetas = await coletasQuery.CountAsync();
+
+            var coletas = await coletasQuery
+                .OrderByDescending(c => c.DataInclusao)
+                .Skip((query.Page - 1) * query.Limit)
+                .Take(query.Limit)
+                .ToListAsync();
+
+            return (coletas, totalColetas);
+        }
     }
 }

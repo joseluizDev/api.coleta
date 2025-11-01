@@ -97,26 +97,71 @@ namespace api.coleta.Services
                 };
             }
 
-            // Buscar relatórios com filtros
+            // 1) Tenta buscar Relatórios existentes (fluxo original)
             var (relatorios, totalItems) = await _relatorioRepository.ListarRelatoriosMobileAsync(userId, query);
 
+            // 2) Se não houver relatórios, fazer fallback para COLETAS do usuário (para não retornar vazio)
             if (relatorios == null || relatorios.Count == 0)
             {
+                var (coletas, totalColetas) = await _relatorioRepository.ListarColetasParaRelatorioMobileAsync(userId, query);
+
+                // Se também não houver coletas, retorna vazio
+                if (coletas == null || coletas.Count == 0)
+                {
+                    return new RelatorioMobileResponseDTO
+                    {
+                        Success = true,
+                        Data = new List<RelatorioMobileItemDTO>(),
+                        Pagination = new PaginationDTO
+                        {
+                            CurrentPage = query.Page,
+                            TotalPages = 0,
+                            TotalItems = 0,
+                            ItemsPerPage = query.Limit
+                        }
+                    };
+                }
+
+                var itemsFallback = new List<RelatorioMobileItemDTO>();
+                foreach (var coleta in coletas)
+                {
+                    var talhaoC = coleta.Talhao;
+                    var fazendaC = talhaoC?.Talhao?.Fazenda ?? coleta.Safra?.Fazenda;
+
+                    var pontosC = ExtrairPontosDoGeoJson(coleta.Geojson);
+
+                    itemsFallback.Add(new RelatorioMobileItemDTO
+                    {
+                        Id = coleta.Id.ToString(),
+                        Fazenda = fazendaC?.Nome ?? "N/A",
+                        Talhao = talhaoC?.Nome ?? "N/A",
+                        Data = coleta.DataInclusao.ToString("yyyy-MM-dd"),
+                        PontosColetados = ContarPontosColetados(pontosC),
+                        TotalPontos = pontosC.Count,
+                        Profundidade = FormatarProfundidade(coleta.Profundidade),
+                        Grid = DeterminarGrid(coleta.TipoColeta),
+                        Localizacao = fazendaC?.Endereco ?? "N/A",
+                        Pontos = pontosC
+                    });
+                }
+
+                int totalPagesFallback = (int)Math.Ceiling(totalColetas / (double)query.Limit);
+
                 return new RelatorioMobileResponseDTO
                 {
                     Success = true,
-                    Data = new List<RelatorioMobileItemDTO>(),
+                    Data = itemsFallback,
                     Pagination = new PaginationDTO
                     {
                         CurrentPage = query.Page,
-                        TotalPages = 0,
-                        TotalItems = 0,
+                        TotalPages = totalPagesFallback,
+                        TotalItems = totalColetas,
                         ItemsPerPage = query.Limit
                     }
                 };
             }
 
-            // Mapear para DTO
+            // 3) Caso haja relatórios, mapeia normalmente
             var items = new List<RelatorioMobileItemDTO>();
 
             foreach (var relatorio in relatorios)
