@@ -187,7 +187,7 @@ namespace api.vinculoClienteFazenda.Services
                 }
 
                 var geometryType = typeElement.GetString();
-                
+
                 if (!geometryElement.TryGetProperty("coordinates", out var coordinatesElement))
                 {
                     return null;
@@ -197,13 +197,13 @@ namespace api.vinculoClienteFazenda.Services
                 {
                     case "Polygon":
                         return ParsePolygonFromJson(coordinatesElement);
-                    
+
                     case "MultiPolygon":
                         return ParseMultiPolygonFromJson(coordinatesElement);
-                    
+
                     case "Point":
                         return ParsePointFromJson(coordinatesElement);
-                    
+
                     default:
                         Console.WriteLine($"Tipo de geometria não suportado: {geometryType}");
                         return null;
@@ -235,7 +235,7 @@ namespace api.vinculoClienteFazenda.Services
         private Polygon? ParsePolygonFromJson(JsonElement coordinatesElement)
         {
             var rings = new List<LinearRing>();
-            
+
             foreach (var ringElement in coordinatesElement.EnumerateArray())
             {
                 var coordinates = new List<Coordinate>();
@@ -247,7 +247,7 @@ namespace api.vinculoClienteFazenda.Services
                         coordinates.Add(new Coordinate(coords[0], coords[1]));
                     }
                 }
-                
+
                 if (coordinates.Count >= 4) // Polígono precisa de pelo menos 4 pontos (fechado)
                 {
                     // Garantir que o anel está fechado
@@ -255,7 +255,7 @@ namespace api.vinculoClienteFazenda.Services
                     {
                         coordinates.Add(coordinates.First());
                     }
-                    
+
                     rings.Add(_geometryFactory.CreateLinearRing(coordinates.ToArray()));
                 }
             }
@@ -268,7 +268,7 @@ namespace api.vinculoClienteFazenda.Services
             // Primeiro anel é o externo, demais são buracos
             var shell = rings[0];
             var holes = rings.Skip(1).ToArray();
-            
+
             return _geometryFactory.CreatePolygon(shell, holes);
         }
 
@@ -278,7 +278,7 @@ namespace api.vinculoClienteFazenda.Services
         private MultiPolygon? ParseMultiPolygonFromJson(JsonElement coordinatesElement)
         {
             var polygons = new List<Polygon>();
-            
+
             foreach (var polygonElement in coordinatesElement.EnumerateArray())
             {
                 var polygon = ParsePolygonFromJson(polygonElement);
@@ -396,7 +396,7 @@ namespace api.vinculoClienteFazenda.Services
                 {
                     // Parse manual do JsonElement para criar FeatureCollection
                     featureCollection = new NetTopologySuite.Features.FeatureCollection();
-                    
+
                     if (!dados.GeoJsonAreas.TryGetProperty("features", out var featuresElement))
                     {
                         throw new Exception("GeoJSON não contém propriedade 'features'");
