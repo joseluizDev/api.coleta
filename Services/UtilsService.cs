@@ -174,6 +174,128 @@ namespace api.vinculoClienteFazenda.Services
             }
         }
 
+        /// <summary>
+        /// Faz parse de uma geometria a partir de um JsonElement do GeoJSON
+        /// </summary>
+        private Geometry? ParseGeometryFromJson(JsonElement geometryElement)
+        {
+            try
+            {
+                if (!geometryElement.TryGetProperty("type", out var typeElement))
+                {
+                    return null;
+                }
+
+                var geometryType = typeElement.GetString();
+                
+                if (!geometryElement.TryGetProperty("coordinates", out var coordinatesElement))
+                {
+                    return null;
+                }
+
+                switch (geometryType)
+                {
+                    case "Polygon":
+                        return ParsePolygonFromJson(coordinatesElement);
+                    
+                    case "MultiPolygon":
+                        return ParseMultiPolygonFromJson(coordinatesElement);
+                    
+                    case "Point":
+                        return ParsePointFromJson(coordinatesElement);
+                    
+                    default:
+                        Console.WriteLine($"Tipo de geometria não suportado: {geometryType}");
+                        return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao fazer parse da geometria: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Faz parse de um Point a partir de coordenadas JSON
+        /// </summary>
+        private Point? ParsePointFromJson(JsonElement coordinatesElement)
+        {
+            var coords = coordinatesElement.EnumerateArray().Select(c => c.GetDouble()).ToArray();
+            if (coords.Length >= 2)
+            {
+                return _geometryFactory.CreatePoint(new Coordinate(coords[0], coords[1]));
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Faz parse de um Polygon a partir de coordenadas JSON
+        /// </summary>
+        private Polygon? ParsePolygonFromJson(JsonElement coordinatesElement)
+        {
+            var rings = new List<LinearRing>();
+            
+            foreach (var ringElement in coordinatesElement.EnumerateArray())
+            {
+                var coordinates = new List<Coordinate>();
+                foreach (var coordElement in ringElement.EnumerateArray())
+                {
+                    var coords = coordElement.EnumerateArray().Select(c => c.GetDouble()).ToArray();
+                    if (coords.Length >= 2)
+                    {
+                        coordinates.Add(new Coordinate(coords[0], coords[1]));
+                    }
+                }
+                
+                if (coordinates.Count >= 4) // Polígono precisa de pelo menos 4 pontos (fechado)
+                {
+                    // Garantir que o anel está fechado
+                    if (!coordinates.First().Equals2D(coordinates.Last()))
+                    {
+                        coordinates.Add(coordinates.First());
+                    }
+                    
+                    rings.Add(_geometryFactory.CreateLinearRing(coordinates.ToArray()));
+                }
+            }
+
+            if (rings.Count == 0)
+            {
+                return null;
+            }
+
+            // Primeiro anel é o externo, demais são buracos
+            var shell = rings[0];
+            var holes = rings.Skip(1).ToArray();
+            
+            return _geometryFactory.CreatePolygon(shell, holes);
+        }
+
+        /// <summary>
+        /// Faz parse de um MultiPolygon a partir de coordenadas JSON
+        /// </summary>
+        private MultiPolygon? ParseMultiPolygonFromJson(JsonElement coordinatesElement)
+        {
+            var polygons = new List<Polygon>();
+            
+            foreach (var polygonElement in coordinatesElement.EnumerateArray())
+            {
+                var polygon = ParsePolygonFromJson(polygonElement);
+                if (polygon != null)
+                {
+                    polygons.Add(polygon);
+                }
+            }
+
+            if (polygons.Count == 0)
+            {
+                return null;
+            }
+
+            return _geometryFactory.CreateMultiPolygon(polygons.ToArray());
+        }
+
         private Polygon CreateHexagon(Coordinate center, double r)
         {
             var vertices = Enumerable.Range(0, 6)
@@ -272,21 +394,44 @@ namespace api.vinculoClienteFazenda.Services
                 NetTopologySuite.Features.FeatureCollection featureCollection;
                 try
                 {
-                    var reader = new NetTopologySuite.IO.GeoJsonReader();
-
-                    // Converter JsonElement para string com as opções corretas
-                    var geoJsonString = JsonSerializer.Serialize(dados.GeoJsonAreas, new JsonSerializerOptions
+                    // Parse manual do JsonElement para criar FeatureCollection
+                    featureCollection = new NetTopologySuite.Features.FeatureCollection();
+                    
+                    if (!dados.GeoJsonAreas.TryGetProperty("features", out var featuresElement))
                     {
-                        WriteIndented = false
-                    });
+                        throw new Exception("GeoJSON não contém propriedade 'features'");
+                    }
 
-                    Console.WriteLine($"GeoJSON serializado: {geoJsonString.Substring(0, Math.Min(300, geoJsonString.Length))}...");
+                    Console.WriteLine($"Parseando {featuresElement.GetArrayLength()} features...");
 
-                    featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(geoJsonString);
-
-                    if (featureCollection == null)
+                    foreach (var featureElement in featuresElement.EnumerateArray())
                     {
-                        throw new Exception("FeatureCollection é nula após parse");
+                        // Extrair propriedades
+                        var attributes = new NetTopologySuite.Features.AttributesTable();
+                        if (featureElement.TryGetProperty("properties", out var propsElement))
+                        {
+                            if (propsElement.TryGetProperty("id", out var idElement))
+                            {
+                                attributes.Add("id", idElement.GetInt32());
+                            }
+                            if (propsElement.TryGetProperty("type", out var typeElement))
+                            {
+                                attributes.Add("type", typeElement.GetString());
+                            }
+                        }
+
+                        // Extrair geometria
+                        if (!featureElement.TryGetProperty("geometry", out var geometryElement))
+                        {
+                            continue;
+                        }
+
+                        var geometry = ParseGeometryFromJson(geometryElement);
+                        if (geometry != null)
+                        {
+                            var feature = new NetTopologySuite.Features.Feature(geometry, attributes);
+                            featureCollection.Add(feature);
+                        }
                     }
 
                     Console.WriteLine($"GeoJSON parseado com sucesso. Total de features: {featureCollection.Count}");
