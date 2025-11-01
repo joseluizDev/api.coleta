@@ -266,9 +266,37 @@ namespace api.vinculoClienteFazenda.Services
 
                 int pontosPorHex = dados.QtdPontosNaArea;
 
+                Console.WriteLine($"Iniciando geração de pontos. QtdPontosNaArea: {pontosPorHex}");
+
                 // Obter a coleção de features original para acessar os IDs dos hexágonos
-                var reader = new NetTopologySuite.IO.GeoJsonReader();
-                var featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(dados.GeoJsonAreas.ToString());
+                NetTopologySuite.Features.FeatureCollection featureCollection;
+                try
+                {
+                    var reader = new NetTopologySuite.IO.GeoJsonReader();
+                    
+                    // Converter JsonElement para string com as opções corretas
+                    var geoJsonString = JsonSerializer.Serialize(dados.GeoJsonAreas, new JsonSerializerOptions 
+                    { 
+                        WriteIndented = false 
+                    });
+                    
+                    Console.WriteLine($"GeoJSON serializado: {geoJsonString.Substring(0, Math.Min(300, geoJsonString.Length))}...");
+                    
+                    featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(geoJsonString);
+                    
+                    if (featureCollection == null)
+                    {
+                        throw new Exception("FeatureCollection é nula após parse");
+                    }
+                    
+                    Console.WriteLine($"GeoJSON parseado com sucesso. Total de features: {featureCollection.Count}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao fazer parse do GeoJSON: {ex.Message}");
+                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                    throw new Exception($"Failed to correctly read json: {ex.Message}");
+                }
 
                 // 1) Pré-cálculo das áreas (em UTM) por hexágono e alocação proporcional de pontos
                 var areas = new double[featureCollection.Count];
