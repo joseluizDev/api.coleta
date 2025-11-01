@@ -40,6 +40,8 @@ namespace api.coleta.Models.DTOs
         public string Grid { get; set; } = string.Empty;
         public string Localizacao { get; set; } = string.Empty;
         public List<PontoColetaMobileDTO> Pontos { get; set; } = new();
+        // JSON bruto do talhão (coordenadas) para o app mobile desenhar o polígono do talhão
+        public string? TalhaoJson { get; set; }
     }
 
     /// <summary>

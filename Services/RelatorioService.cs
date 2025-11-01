@@ -146,6 +146,7 @@ namespace api.coleta.Services
                         Profundidade = FormatarProfundidade(coleta.Profundidade),
                         Grid = DeterminarGrid(coleta.TipoColeta),
                         Localizacao = fazendaC?.Endereco ?? "N/A",
+                        TalhaoJson = talhaoC?.Coordenadas,
                         Pontos = pontosC
                     });
                 }
@@ -198,6 +199,7 @@ namespace api.coleta.Services
                     Profundidade = FormatarProfundidade(coleta.Profundidade),
                     Grid = DeterminarGrid(coleta.TipoColeta),
                     Localizacao = fazenda?.Endereco ?? "N/A",
+                    TalhaoJson = talhao?.Coordenadas,
                     Pontos = pontos
                 };
 
