@@ -98,13 +98,13 @@ public class RelatorioServiceTests
         Assert.Equal(novoJson, entidade.JsonRelatorio);
     }
 
-            [Fact]
+    [Fact]
     public async Task AtualizarJsonRelatorioAsync_DeveRetornarFalseQuandoNaoEncontrarRelatorio()
     {
         using var context = TestHelper.CreateInMemoryContext();
         var service = CreateService(context);
-    
-        var atualizado = await service.AtualizarJsonRelatorioAsync(Guid.NewGuid(), Guid.NewGuid(),Guid.NewGuid(), "{}");
+
+        var atualizado = await service.AtualizarJsonRelatorioAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "{}");
 
         Assert.False(atualizado);
     }
