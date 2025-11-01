@@ -273,22 +273,22 @@ namespace api.vinculoClienteFazenda.Services
                 try
                 {
                     var reader = new NetTopologySuite.IO.GeoJsonReader();
-                    
+
                     // Converter JsonElement para string com as opções corretas
-                    var geoJsonString = JsonSerializer.Serialize(dados.GeoJsonAreas, new JsonSerializerOptions 
-                    { 
-                        WriteIndented = false 
+                    var geoJsonString = JsonSerializer.Serialize(dados.GeoJsonAreas, new JsonSerializerOptions
+                    {
+                        WriteIndented = false
                     });
-                    
+
                     Console.WriteLine($"GeoJSON serializado: {geoJsonString.Substring(0, Math.Min(300, geoJsonString.Length))}...");
-                    
+
                     featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(geoJsonString);
-                    
+
                     if (featureCollection == null)
                     {
                         throw new Exception("FeatureCollection é nula após parse");
                     }
-                    
+
                     Console.WriteLine($"GeoJSON parseado com sucesso. Total de features: {featureCollection.Count}");
                 }
                 catch (Exception ex)
