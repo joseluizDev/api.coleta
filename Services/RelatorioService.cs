@@ -4,6 +4,7 @@ using api.coleta.Repositories;
 using api.coleta.Utils.Maps;
 using api.minionStorage.Services;
 using System.Text.Json;
+using System.Linq;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace api.coleta.Services
@@ -12,11 +13,13 @@ namespace api.coleta.Services
     {
         private readonly RelatorioRepository _relatorioRepository;
         private readonly IMinioStorage _minioStorage;
+        private readonly PontoColetadoRepository _pontoColetadoRepository;
 
-        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, IUnitOfWork unitOfWork) : base(unitOfWork)
+        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, PontoColetadoRepository pontoColetadoRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
             _minioStorage = minioStorage;
+            _pontoColetadoRepository = pontoColetadoRepository;
         }
 
         public async Task<string?> SalvarRelatorio(RelatorioDTO arquivo, Guid userId)
@@ -128,7 +131,9 @@ namespace api.coleta.Services
                     var talhaoC = coleta.Talhao;
                     var fazendaC = talhaoC?.Talhao?.Fazenda ?? coleta.Safra?.Fazenda;
 
-                    var pontosC = ExtrairPontosDoGeoJson(coleta.Geojson);
+                    // Marcar pontos coletados usando a tabela PontoColetado
+                    var coletadosC = await _pontoColetadoRepository.BuscarPontosPorColetaAsync(coleta.Id);
+                    var pontosC = ExtrairPontosDoGeoJsonMarcandoColetados(coleta.Geojson, coletadosC);
 
                     itemsFallback.Add(new RelatorioMobileItemDTO
                     {
@@ -161,10 +166,15 @@ namespace api.coleta.Services
                 };
             }
 
-            // 3) Caso haja relatórios, mapeia normalmente
+            // 3) Caso haja relatórios, agrupa por ColetaId para evitar duplicidade e mapeia
             var items = new List<RelatorioMobileItemDTO>();
 
-            foreach (var relatorio in relatorios)
+            var relatoriosDistinct = relatorios
+                .GroupBy(r => r.ColetaId)
+                .Select(g => g.OrderByDescending(r => r.DataInclusao).First())
+                .ToList();
+
+            foreach (var relatorio in relatoriosDistinct)
             {
                 if (relatorio.Coleta == null) continue;
 
@@ -173,7 +183,9 @@ namespace api.coleta.Services
                 var fazenda = talhao?.Talhao?.Fazenda ?? coleta.Safra?.Fazenda;
 
                 // Extrair pontos do GeoJSON
-                var pontos = ExtrairPontosDoGeoJson(coleta.Geojson);
+                // Marcar pontos coletados usando a tabela PontoColetado
+                var coletados = await _pontoColetadoRepository.BuscarPontosPorColetaAsync(coleta.Id);
+                var pontos = ExtrairPontosDoGeoJsonMarcandoColetados(coleta.Geojson, coletados);
 
                 var item = new RelatorioMobileItemDTO
                 {
@@ -209,56 +221,59 @@ namespace api.coleta.Services
             };
         }
 
-        private List<PontoColetaMobileDTO> ExtrairPontosDoGeoJson(Geojson? geojson)
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        private List<PontoColetaMobileDTO> ExtrairPontosDoGeoJsonMarcandoColetados(Geojson? geojson, List<PontoColetado> pontosColetados)
         {
             var pontos = new List<PontoColetaMobileDTO>();
-
-            if (geojson == null || string.IsNullOrEmpty(geojson.Pontos))
-                return pontos;
+            if (geojson == null || string.IsNullOrEmpty(geojson.Pontos)) return pontos;
 
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-
-                var geoJsonData = JsonSerializer.Deserialize<JsonElement>(geojson.Pontos, options);
-
+                var geoJsonData = JsonSerializer.Deserialize<JsonElement>(geojson.Pontos, _jsonOptions);
                 if (geoJsonData.TryGetProperty("points", out JsonElement pointsElement))
                 {
+                    // Preparar conjunto para match por coordenadas com tolerância
+                    var coletadosSet = new HashSet<(long lat, long lon)>();
+                    foreach (var pc in pontosColetados)
+                    {
+                        coletadosSet.Add((Round6(pc.Latitude), Round6(pc.Longitude)));
+                    }
+
                     foreach (var point in pointsElement.EnumerateArray())
                     {
                         if (point.TryGetProperty("geometry", out JsonElement geometry) &&
                             geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
                             point.TryGetProperty("properties", out JsonElement properties))
                         {
-                            var ponto = new PontoColetaMobileDTO
+                            var lon = coordinates[0].GetDouble();
+                            var lat = coordinates[1].GetDouble();
+                            var marcadoPorJson = properties.TryGetProperty("coletado", out JsonElement coletadoJson) && coletadoJson.GetBoolean();
+                            var marcadoPorTabela = coletadosSet.Contains((Round6(lat), Round6(lon)));
+
+                            pontos.Add(new PontoColetaMobileDTO
                             {
                                 Id = properties.TryGetProperty("id", out JsonElement id)
                                     ? id.GetInt32().ToString()
                                     : Guid.NewGuid().ToString(),
-                                Longitude = coordinates[0].GetDouble(),
-                                Latitude = coordinates[1].GetDouble(),
-                                Coletado = properties.TryGetProperty("coletado", out JsonElement coletado)
-                                    ? coletado.GetBoolean()
-                                    : false,
-                                DadosAmostra = null // Dados de análise não disponíveis no momento
-                            };
-
-                            pontos.Add(ponto);
+                                Longitude = lon,
+                                Latitude = lat,
+                                Coletado = marcadoPorJson || marcadoPorTabela,
+                                DadosAmostra = null
+                            });
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Log do erro (pode adicionar logger aqui)
                 Console.WriteLine($"Erro ao extrair pontos do GeoJSON: {ex.Message}");
             }
 
             return pontos;
         }
+
+        private static long Round6(double value) => (long)Math.Round(value * 1_000_000d);
 
         private int ContarPontosColetados(List<PontoColetaMobileDTO> pontos)
         {

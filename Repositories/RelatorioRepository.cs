@@ -74,6 +74,7 @@ namespace api.coleta.Repositories
 
             // Query base com todos os relacionamentos necessários
             var queryable = Context.Relatorios
+                .AsNoTracking()
                 .Include(r => r.Coleta!)
                     .ThenInclude(c => c.Talhao!)
                         .ThenInclude(t => t.Talhao!)
@@ -138,6 +139,7 @@ namespace api.coleta.Repositories
             if (query.Limit < 1 || query.Limit > 100) query.Limit = 10;
 
             var coletasQuery = Context.Coletas
+                .AsNoTracking()
                 .Include(c => c.Talhao!)
                     .ThenInclude(t => t.Talhao!)
                         .ThenInclude(tt => tt.Fazenda)
