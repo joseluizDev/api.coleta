@@ -328,30 +328,44 @@ namespace api.vinculoClienteFazenda.Services
                     if (pontosAlocados <= 0)
                     {
                         perHexCounts[hexagonId] = 0;
+                        Console.WriteLine($"Hexágono {hexagonId}: 0 pontos alocados (área muito pequena ou inválida)");
                         continue;
                     }
+
+                    Console.WriteLine($"Processando hexágono {hexagonId}: alocados {pontosAlocados} pontos, área = {areas[fIdx]:F2} m²");
 
                     List<Coordinate> pontosGerados = new();
                     string metodoUsado = "triangulacao";
 
-                    if (feature.Geometry is Polygon poly)
+                    try
                     {
-                        // Transformar para UTM
-                        var polyUtm = TransformPolygon(poly, transformToUtm);
-                        pontosGerados = GenerateExactPointsForPolygon(polyUtm, pontosAlocados, random, out metodoUsado);
+                        if (feature.Geometry is Polygon poly)
+                        {
+                            // Transformar para UTM
+                            var polyUtm = TransformPolygon(poly, transformToUtm);
+                            pontosGerados = GenerateExactPointsForPolygon(polyUtm, pontosAlocados, random, out metodoUsado);
+                        }
+                        else if (feature.Geometry is MultiPolygon multi)
+                        {
+                            // Transformar cada componente para UTM e distribuir por área
+                            var polysUtm = multi.Geometries.Cast<Polygon>().Select(p => TransformPolygon(p, transformToUtm)).ToList();
+                            pontosGerados = DistributePointsInMultiPolygon(polysUtm, pontosAlocados, random);
+                            metodoUsado = "multipolygon_distribution";
+                        }
+                        else
+                        {
+                            // Geometria não suportada
+                            Console.WriteLine($"Hexágono {hexagonId}: Tipo de geometria não suportado: {feature.Geometry?.GeometryType ?? "null"}");
+                            continue;
+                        }
                     }
-                    else if (feature.Geometry is MultiPolygon multi)
+                    catch (Exception ex)
                     {
-                        // Transformar cada componente para UTM e distribuir por área
-                        var polysUtm = multi.Geometries.Cast<Polygon>().Select(p => TransformPolygon(p, transformToUtm)).ToList();
-                        pontosGerados = DistributePointsInMultiPolygon(polysUtm, pontosAlocados, random);
-                        metodoUsado = "triangulacao"; // pode incluir fallback internamente
+                        Console.WriteLine($"Erro ao processar hexágono {hexagonId}: {ex.Message}");
+                        pontosGerados = new List<Coordinate>();
                     }
-                    else
-                    {
-                        // Geometria não suportada
-                        continue;
-                    }
+
+                    Console.WriteLine($"Hexágono {hexagonId}: gerados {pontosGerados.Count} pontos usando método '{metodoUsado}'");
 
                     // Adicionar os pontos com o ID do hexágono
                     foreach (var ponto in pontosGerados)
@@ -366,6 +380,10 @@ namespace api.vinculoClienteFazenda.Services
                         metodosUsados.Add(metodoUsado);
                     }
                 }
+
+                Console.WriteLine($"Total de pontos gerados: {pointsWithHexagonId.Count}");
+                Console.WriteLine($"Métodos utilizados: {string.Join(", ", metodosUsados)}");
+
 
                 // Criar resposta com metadados
                 var pointsGeoJson = ConvertPointsToGeoJson(pointsWithHexagonId);
@@ -434,24 +452,107 @@ namespace api.vinculoClienteFazenda.Services
         /// </summary>
         private List<Coordinate> GenerateExactPointsForPolygon(Polygon polygon, int numPoints, Random random, out string metodoUsado)
         {
-            // Gera pontos organizados (distribuição uniforme) usando candidatos via triangulação
-            var points = GenerateEvenlyDistributedPoints(polygon, numPoints, random);
+            metodoUsado = "unknown"; // Inicialização padrão
 
-            // Lloyd relaxation (centroidal Voronoi) for more regular spacing
-            points = LloydRelaxation(polygon, points, iterations: 3);
-
-            metodoUsado = "even_farthest+lloyd3+triangulation_candidates";
-
-            if (points.Count < numPoints)
+            if (numPoints <= 0)
             {
-                // Complementa (edge cases) com rejection sampling
-                var fallback = GeneratePointsByRejectionSampling(polygon, numPoints - points.Count, random);
-                points.AddRange(fallback);
-                metodoUsado += "+rejection_sampling";
+                metodoUsado = "none";
+                return new List<Coordinate>();
             }
 
-            // Garantir exatamente N
-            if (points.Count > numPoints) points = points.Take(numPoints).ToList();
+            // Validar e corrigir o polígono antes de processar
+            var validatedPolygon = ValidateAndFixGeometry(polygon) as Polygon;
+            if (validatedPolygon == null || validatedPolygon.IsEmpty || validatedPolygon.Area <= 0)
+            {
+                metodoUsado = "invalid_polygon";
+                return new List<Coordinate>();
+            }
+
+            List<Coordinate> points = new();
+
+            try
+            {
+                // Tenta gerar pontos organizados (distribuição uniforme) usando candidatos via triangulação
+                points = GenerateEvenlyDistributedPoints(validatedPolygon, numPoints, random);
+
+                if (points.Count >= numPoints)
+                {
+                    // Lloyd relaxation (centroidal Voronoi) for more regular spacing
+                    points = LloydRelaxation(validatedPolygon, points, iterations: 3);
+                    metodoUsado = "even_farthest+lloyd3+triangulation_candidates";
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro em GenerateEvenlyDistributedPoints: {ex.Message}");
+                points = new List<Coordinate>();
+            }
+
+            // Se falhou ou não gerou pontos suficientes, usar triangulação simples
+            if (points.Count < numPoints)
+            {
+                try
+                {
+                    var triangulationPoints = GeneratePointsByTriangulation(validatedPolygon, numPoints, random);
+                    if (triangulationPoints.Count > points.Count)
+                    {
+                        points = triangulationPoints;
+                        metodoUsado = "triangulation_simple";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro em GeneratePointsByTriangulation: {ex.Message}");
+                }
+            }
+
+            // Se ainda não tem pontos suficientes, usar rejection sampling
+            if (points.Count < numPoints)
+            {
+                try
+                {
+                    var fallback = GeneratePointsByRejectionSampling(validatedPolygon, numPoints - points.Count, random);
+                    points.AddRange(fallback);
+                    string currentMethod = points.Count > 0 && metodoUsado != "unknown" ? metodoUsado + "+" : "";
+                    metodoUsado = currentMethod + "rejection_sampling";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro em GeneratePointsByRejectionSampling: {ex.Message}");
+                }
+            }
+
+            // Se ainda não tem nenhum ponto, usar fallback determinístico
+            if (points.Count == 0)
+            {
+                try
+                {
+                    points = GenerateDeterministicFallbackPoints(validatedPolygon, numPoints, random);
+                    metodoUsado = "deterministic_fallback";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro em GenerateDeterministicFallbackPoints: {ex.Message}");
+                    // Último recurso: usar o centroide
+                    var centroid = validatedPolygon.Centroid;
+                    if (centroid != null && !centroid.IsEmpty)
+                    {
+                        points.Add(new Coordinate(centroid.X, centroid.Y));
+                        metodoUsado = "centroid_only";
+                    }
+                    else
+                    {
+                        metodoUsado = "failed";
+                    }
+                }
+            }
+
+            // Garantir exatamente N pontos (ou o máximo que conseguimos)
+            if (points.Count > numPoints)
+            {
+                points = points.Take(numPoints).ToList();
+            }
+
             return points;
         }
 
@@ -684,8 +785,25 @@ namespace api.vinculoClienteFazenda.Services
         {
             var allPoints = new List<Coordinate>();
 
+            if (polygons == null || polygons.Count == 0 || numPoints <= 0)
+            {
+                return allPoints;
+            }
+
+            // Validar e corrigir cada polígono
+            var validPolygons = polygons
+                .Select(p => ValidateAndFixGeometry(p) as Polygon)
+                .Where(p => p != null && !p.IsEmpty && p.Area > 0)
+                .Cast<Polygon>()
+                .ToList();
+
+            if (validPolygons.Count == 0)
+            {
+                return allPoints;
+            }
+
             // Calcular áreas dos polígonos
-            var polygonAreas = polygons.Select(p => p.Area).ToList();
+            var polygonAreas = validPolygons.Select(p => p.Area).ToList();
             var totalArea = polygonAreas.Sum();
 
             if (totalArea <= 0)
@@ -695,31 +813,28 @@ namespace api.vinculoClienteFazenda.Services
 
             // Distribuir pontos proporcionalmente
             var pointsDistributed = 0;
-            for (int i = 0; i < polygons.Count && pointsDistributed < numPoints; i++)
+            for (int i = 0; i < validPolygons.Count && pointsDistributed < numPoints; i++)
             {
-                var polygon = polygons[i];
+                var polygon = validPolygons[i];
                 var area = polygonAreas[i];
 
                 // Calcular quantos pontos este polígono deve receber
                 int pointsForPolygon;
-                if (i == polygons.Count - 1) // Último polígono recebe os pontos restantes
+                if (i == validPolygons.Count - 1) // Último polígono recebe os pontos restantes
                 {
                     pointsForPolygon = numPoints - pointsDistributed;
                 }
                 else
                 {
-                    pointsForPolygon = (int)Math.Round((area / totalArea) * numPoints);
+                    pointsForPolygon = Math.Max(1, (int)Math.Round((area / totalArea) * numPoints));
                 }
 
-                // Gerar pontos no polígono usando triangulação
-                var polygonPoints = GeneratePointsByTriangulation(polygon, pointsForPolygon, random);
+                if (pointsForPolygon <= 0)
+                    continue;
 
-                // Se triangulação falhou, usar fallback
-                if (polygonPoints.Count < pointsForPolygon)
-                {
-                    var fallbackPoints = GeneratePointsByRejectionSampling(polygon, pointsForPolygon - polygonPoints.Count, random);
-                    polygonPoints.AddRange(fallbackPoints);
-                }
+                // Gerar pontos no polígono usando método robusto
+                string metodoUsado;
+                var polygonPoints = GenerateExactPointsForPolygon(polygon, pointsForPolygon, random, out metodoUsado);
 
                 allPoints.AddRange(polygonPoints);
                 pointsDistributed += polygonPoints.Count;
