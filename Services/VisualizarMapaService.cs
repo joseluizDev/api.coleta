@@ -725,8 +725,8 @@ namespace api.coleta.Services
                     } : null,
                     usuarioRespID = coletaEntity.UsuarioRespID,
                     observacao = coletaEntity.Observacao ?? "",
-                    tipoColeta = coletaEntity.TipoColeta,
-                    tipoAnalise = coletaEntity.TipoAnalise,
+                    tipoColeta = coletaEntity.TipoColeta.ToString(),
+                    tipoAnalise = coletaEntity.TipoAnalise.Select(t => t.ToString()).ToList(),
                     profundidade = ProfundidadeFormatter.Formatar(coletaEntity.Profundidade.ToString())
                 };
 
