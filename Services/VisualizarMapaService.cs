@@ -388,42 +388,28 @@ namespace api.coleta.Services
 
         public List<object> ListarMobilePorFazenda(Guid userID)
         {
+            // Busca com Eager Loading - tudo carregado em UMA query otimizada
             var visualizarMapa = _visualizarMapaRepository.ListarVisualizarMapaMobile(userID);
             if (visualizarMapa == null || visualizarMapa.Count == 0)
             {
                 return [];
             }
 
-            var mappedItems = visualizarMapa.ToVisualizarDtoList();
             var result = new List<object>();
 
-            foreach (var coleta in mappedItems)
+            // Processa cada coleta - SEM consultas adicionais ao banco
+            foreach (var coletaEntity in visualizarMapa)
             {
-                if (coleta == null) continue;
+                if (coletaEntity == null) continue;
 
+                // Valida se os dados essenciais foram carregados pelo Eager Loading
+                if (coletaEntity.Talhao == null || coletaEntity.UsuarioResp == null || coletaEntity.Geojson == null)
+                    continue;
 
-                var talhaoJson = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
-                if (talhaoJson == null) continue;
-
-                var talhaoDto = talhaoJson.ToTalhoes();
-                if (talhaoDto == null) continue;
-
-                coleta.Talhao = talhaoDto;
-
-
-                var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
-                if (funcionario == null) continue;
-
-                var usuarioResp = funcionario.ToResponseDto();
-                if (usuarioResp == null) continue;
-
-                coleta.UsuarioResp = usuarioResp;
-
-
-                var geojson = _geoJsonRepository.ObterPorId(coleta.GeoJsonID);
-                if (geojson == null) continue;
-
-                coleta.Geojson = geojson;
+                // Usa os dados JÁ CARREGADOS pelo Include (SEM consultas adicionais)
+                var talhaoDto = coletaEntity.Talhao.ToTalhoes();
+                var usuarioResp = coletaEntity.UsuarioResp.ToResponseDto();
+                var geojson = coletaEntity.Geojson;
 
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -439,11 +425,11 @@ namespace api.coleta.Services
                 int zonas = 0;
 
 
-                if (!string.IsNullOrEmpty(coleta.Geojson.Pontos))
+                if (!string.IsNullOrEmpty(geojson.Pontos))
                 {
                     try
                     {
-                        var pontos = JsonSerializer.Deserialize<JsonElement>(coleta.Geojson.Pontos, options);
+                        var pontos = JsonSerializer.Deserialize<JsonElement>(geojson.Pontos, options);
 
 
                         if (pontos.TryGetProperty("points", out JsonElement pointsElement))
@@ -521,10 +507,10 @@ namespace api.coleta.Services
                                         }
                                     }
                                 }
-                                else if (!string.IsNullOrEmpty(coleta.Geojson.Grid) && coleta.Geojson.Grid != "1")
+                                else if (!string.IsNullOrEmpty(geojson.Grid) && geojson.Grid != "1")
                                 {
 
-                                    var gridJson = JsonSerializer.Deserialize<JsonElement>(coleta.Geojson.Grid, options);
+                                    var gridJson = JsonSerializer.Deserialize<JsonElement>(geojson.Grid, options);
                                     if (gridJson.ValueKind == JsonValueKind.Array)
                                     {
                                         foreach (var gridItem in gridJson.EnumerateArray())
@@ -570,13 +556,13 @@ namespace api.coleta.Services
                                         }
                                     }
                                 }
-                                else if (coleta.Talhao?.Coordenadas != null)
+                                else if (talhaoDto?.Coordenadas != null)
                                 {
 
                                     try
                                     {
                                         var coordsList = new List<double[]>();
-                                        var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(coleta.Talhao.Coordenadas), options);
+                                        var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(talhaoDto.Coordenadas), options);
 
                                         if (talhaoCoords.ValueKind == JsonValueKind.Array)
                                         {
@@ -618,7 +604,7 @@ namespace api.coleta.Services
                     catch
                     {
 
-                        if (coleta.Talhao?.Coordenadas != null)
+                        if (talhaoDto?.Coordenadas != null)
                         {
                             try
                             {
@@ -628,7 +614,7 @@ namespace api.coleta.Services
                                 try
                                 {
 
-                                    var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(coleta.Talhao.Coordenadas), options);
+                                    var talhaoCoords = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(talhaoDto.Coordenadas), options);
                                     if (talhaoCoords.ValueKind == JsonValueKind.Array)
                                     {
                                         foreach (var coord in talhaoCoords.EnumerateArray())
@@ -703,45 +689,45 @@ namespace api.coleta.Services
                     }
                 }
 
-                // Buscar cliente e fazenda para o talhão relacionado
-                var talhaoRelacionado = _talhaoService.BuscarTalhaoPorTalhaoJson(coleta.TalhaoID);
-                var clienteDto = talhaoRelacionado?.Cliente?.ToResponseDto();
-                var fazendaDto = talhaoRelacionado?.Fazenda?.ToResponseDto();
+                // Cliente e Fazenda JÁ CARREGADOS pelo Eager Loading (ThenInclude)
+                // SEM consultas adicionais ao banco!
+                var clienteDto = coletaEntity.Talhao?.Talhao?.Cliente?.ToResponseDto();
+                var fazendaDto = coletaEntity.Talhao?.Talhao?.Fazenda?.ToResponseDto();
 
                 var item = new
                 {
-                    id = coleta.Id,
+                    id = coletaEntity.Id,
                     // Informações solicitadas
                     cliente = clienteDto != null ? new { id = clienteDto.Id, nome = clienteDto.Nome } : null,
                     fazenda = fazendaDto != null ? new { id = fazendaDto.Id, nome = fazendaDto.Nome } : null,
-                    areaHa = coleta.Talhao != null ? coleta.Talhao.Area : 0,
-                    talhaoNome = coleta.Talhao != null ? coleta.Talhao.Nome : null,
-                    nomeColeta = !string.IsNullOrWhiteSpace(coleta.NomeColeta) ? coleta.NomeColeta : (talhaoJson.Nome ?? ""),
+                    areaHa = talhaoDto != null ? talhaoDto.Area : 0,
+                    talhaoNome = talhaoDto != null ? talhaoDto.Nome : null,
+                    nomeColeta = !string.IsNullOrWhiteSpace(coletaEntity.NomeColeta) ? coletaEntity.NomeColeta : (talhaoDto?.Nome ?? ""),
                     zonas = zonas,
-                    talhao = coleta.Talhao != null ? new
+                    talhao = talhaoDto != null ? new
                     {
-                        id = coleta.Talhao.Id,
-                        area = coleta.Talhao.Area,
-                        nome = coleta.Talhao.Nome,
-                        observacao = coleta.Talhao.observacao,
-                        talhaoID = coleta.Talhao.TalhaoID,
-                        coordenadas = coleta.Talhao.Coordenadas
+                        id = talhaoDto.Id,
+                        area = talhaoDto.Area,
+                        nome = talhaoDto.Nome,
+                        observacao = talhaoDto.observacao,
+                        talhaoID = talhaoDto.TalhaoID,
+                        coordenadas = talhaoDto.Coordenadas
                     } : null,
                     geojson = geoJsonData,
-                    geoJsonID = coleta.GeoJsonID,
-                    usuarioResp = coleta.UsuarioResp != null ? new
+                    geoJsonID = coletaEntity.GeojsonID,
+                    usuarioResp = usuarioResp != null ? new
                     {
-                        id = coleta.UsuarioResp.Id,
-                        nomeCompleto = coleta.UsuarioResp.NomeCompleto,
-                        cpf = coleta.UsuarioResp.CPF,
-                        email = coleta.UsuarioResp.Email,
-                        telefone = coleta.UsuarioResp.Telefone
+                        id = usuarioResp.Id,
+                        nomeCompleto = usuarioResp.NomeCompleto,
+                        cpf = usuarioResp.CPF,
+                        email = usuarioResp.Email,
+                        telefone = usuarioResp.Telefone
                     } : null,
-                    usuarioRespID = coleta.UsuarioRespID,
-                    observacao = coleta.Observacao ?? "",
-                    tipoColeta = coleta.TipoColeta,
-                    tipoAnalise = coleta.TipoAnalise,
-                    profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade)
+                    usuarioRespID = coletaEntity.UsuarioRespID,
+                    observacao = coletaEntity.Observacao ?? "",
+                    tipoColeta = coletaEntity.TipoColeta,
+                    tipoAnalise = coletaEntity.TipoAnalise,
+                    profundidade = ProfundidadeFormatter.Formatar(coletaEntity.Profundidade.ToString())
                 };
 
                 result.Add(item);

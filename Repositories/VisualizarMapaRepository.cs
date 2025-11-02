@@ -153,8 +153,18 @@ namespace api.coleta.Repositories
         public List<Coleta> ListarVisualizarMapaMobile(Guid userId)
         {
             return Context.Coletas
+                .Include(c => c.Geojson)                              // Carrega GeoJSON em uma query
+                .Include(c => c.Talhao)                               // Carrega TalhaoJson
+                    .ThenInclude(t => t.Talhao)                       // Carrega Talhao relacionado
+                        .ThenInclude(t => t.Fazenda)                  // Carrega Fazenda
+                .Include(c => c.Talhao)
+                    .ThenInclude(t => t.Talhao)
+                        .ThenInclude(t => t.Cliente)                  // Carrega Cliente
+                .Include(c => c.UsuarioResp)                          // Carrega Usuario Responsável
+                .Include(c => c.Safra)                                // Carrega Safra se necessário
                 .Where(x => x.UsuarioRespID == userId)
                 .Where(x => !Context.Relatorios.Any(r => r.ColetaId == x.Id))
+                .AsNoTracking()                                        // Melhora performance (read-only)
                 .ToList();
         }
 
