@@ -120,7 +120,7 @@ namespace api.vinculoClienteFazenda.Services
         private List<Geometry> GenerateHexagonalGrid(Polygon projectedPolygon, double hectares)
         {
             // Validar limites aceitáveis
-            const double MIN_HECTARES = 0.01;  // 100 m²
+            const double MIN_HECTARES = 0.500;  // 500 m²
             const double MAX_HECTARES = 1000;  // 1 km²
 
             if (hectares < MIN_HECTARES)
