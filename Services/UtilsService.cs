@@ -29,9 +29,27 @@ namespace api.vinculoClienteFazenda.Services
             try
             {
                 var inputPolygon = ParsePolygon(polygonGeoJson);
-                var transformedPolygon = TransformPolygon(inputPolygon, GetWgs84ToUtm());
+
+                // Validação 1: Polígono não pode ser nulo ou vazio
+                if (inputPolygon == null || inputPolygon.IsEmpty)
+                    throw new Exception("Polígono inválido ou vazio.");
+
+                // Validação 2: Polígono deve ter área
+                if (inputPolygon.Area <= 0)
+                    throw new Exception("Polígono sem área válida.");
+
+                // Calcular zona UTM automaticamente baseado no centroide
+                var transformToUtm = GetWgs84ToUtm(inputPolygon);
+                var transformedPolygon = TransformPolygon(inputPolygon, transformToUtm);
+
+                // Validação 3: Transformação não pode resultar em nulo
+                if (transformedPolygon == null || transformedPolygon.IsEmpty)
+                    throw new Exception("Erro na transformação de coordenadas.");
+
                 var hexagons = GenerateHexagonalGrid(transformedPolygon, hectares);
-                var geoJson = ConvertHexagonsToGeoJson(hexagons);
+
+                // Passar geometria para conversão GeoJSON
+                var geoJson = ConvertHexagonsToGeoJson(hexagons, transformedPolygon);
                 return geoJson;
 
             }
@@ -59,8 +77,39 @@ namespace api.vinculoClienteFazenda.Services
             return _geometryFactory.CreatePolygon(coordinates.ToArray());
         }
 
-        private MathTransform GetWgs84ToUtm() => _ctFactory.CreateFromCoordinateSystems(GeographicCoordinateSystem.WGS84, ProjectedCoordinateSystem.WGS84_UTM(23, true)).MathTransform;
-        private MathTransform GetUtmToWgs84() => _ctFactory.CreateFromCoordinateSystems(ProjectedCoordinateSystem.WGS84_UTM(23, true), GeographicCoordinateSystem.WGS84).MathTransform;
+        /// <summary>
+        /// Calcula automaticamente a zona UTM baseado no centroide da geometria
+        /// </summary>
+        private MathTransform GetWgs84ToUtm(Geometry geometry)
+        {
+            var centroid = geometry.Centroid;
+
+            // Calcular zona UTM automaticamente baseado na longitude
+            int zone = (int)Math.Floor((centroid.Coordinate.X + 180) / 6) + 1;
+
+            // Determinar hemisfério baseado na latitude
+            bool isSouth = centroid.Coordinate.Y < 0;
+
+            return _ctFactory.CreateFromCoordinateSystems(
+                GeographicCoordinateSystem.WGS84,
+                ProjectedCoordinateSystem.WGS84_UTM(zone, isSouth)
+            ).MathTransform;
+        }
+
+        /// <summary>
+        /// Cria transformação de UTM para WGS84 baseado na zona da geometria
+        /// </summary>
+        private MathTransform GetUtmToWgs84(Geometry geometry)
+        {
+            var centroid = geometry.Centroid;
+            int zone = (int)Math.Floor((centroid.Coordinate.X + 180) / 6) + 1;
+            bool isSouth = centroid.Coordinate.Y < 0;
+
+            return _ctFactory.CreateFromCoordinateSystems(
+                ProjectedCoordinateSystem.WGS84_UTM(zone, isSouth),
+                GeographicCoordinateSystem.WGS84
+            ).MathTransform;
+        }
 
         private Polygon TransformPolygon(Polygon polygon, MathTransform transform)
         {
@@ -70,19 +119,40 @@ namespace api.vinculoClienteFazenda.Services
 
         private List<Geometry> GenerateHexagonalGrid(Polygon projectedPolygon, double hectares)
         {
+            // Validar limites aceitáveis
+            const double MIN_HECTARES = 0.01;  // 100 m²
+            const double MAX_HECTARES = 1000;  // 1 km²
+
+            if (hectares < MIN_HECTARES)
+            {
+                throw new Exception($"Área muito pequena. Mínimo: {MIN_HECTARES} ha");
+            }
+
+            if (hectares > MAX_HECTARES)
+            {
+                throw new Exception($"Área muito grande. Máximo: {MAX_HECTARES} ha");
+            }
+
             double areaM2 = hectares * 10000;
             double r = Math.Sqrt((2 * areaM2) / (3 * Math.Sqrt(3)));
+
+            // Validar se o raio é um número válido
+            if (double.IsNaN(r) || double.IsInfinity(r) || r <= 0)
+            {
+                throw new Exception("Erro no cálculo do raio do hexágono.");
+            }
+
             double hexWidth = Math.Sqrt(3) * r;
             double hexHeight = 2 * r;
             double vertDist = hexHeight * 0.75;
             var bounds = projectedPolygon.EnvelopeInternal;
             var hexagons = new List<Geometry>();
 
-            // Validar e corrigir o polígono de entrada
-            var validatedPolygon = ValidateAndFixGeometry(projectedPolygon);
+            // Corrigir e validar o polígono de entrada usando método robusto
+            var validatedPolygon = FixGeometry(projectedPolygon) as Polygon;
             if (validatedPolygon == null || validatedPolygon.IsEmpty)
             {
-                throw new Exception("Polígono inválido após validação");
+                throw new Exception("Não foi possível corrigir a geometria do polígono.");
             }
 
             // Criar geometria preparada para melhor performance
@@ -92,32 +162,41 @@ namespace api.vinculoClienteFazenda.Services
             {
                 for (int col = 0; col < ((bounds.MaxX - bounds.MinX) / hexWidth) + 1; col++)
                 {
-                    double offset = (row % 2 == 0) ? 0 : hexWidth / 2;
-                    double centerX = bounds.MinX + col * hexWidth + offset;
-                    double centerY = bounds.MinY + row * vertDist;
-                    Polygon hexagon = CreateHexagon(new Coordinate(centerX, centerY), r);
-
-                    if (preparedPolygon.Intersects(hexagon))
+                    try
                     {
-                        try
+                        double offset = (row % 2 == 0) ? 0 : hexWidth / 2;
+                        double centerX = bounds.MinX + col * hexWidth + offset;
+                        double centerY = bounds.MinY + row * vertDist;
+                        Polygon hexagon = CreateHexagon(new Coordinate(centerX, centerY), r);
+
+                        if (preparedPolygon.Intersects(hexagon))
                         {
-                            // Validar e corrigir o hexágono antes da interseção
-                            var validatedHexagon = ValidateAndFixGeometry(hexagon);
-                            if (validatedHexagon != null && !validatedHexagon.IsEmpty)
+                            // Aplicar Buffer(0) antes da interseção para evitar TopologyException
+                            var bufferedPolygon = validatedPolygon.Buffer(0);
+                            var bufferedHexagon = hexagon.Buffer(0);
+
+                            if (bufferedHexagon == null || bufferedHexagon.IsEmpty)
+                                continue;
+
+                            var intersection = bufferedPolygon.Intersection(bufferedHexagon);
+
+                            if (intersection != null && !intersection.IsEmpty && intersection.Area > 0)
                             {
-                                var intersection = validatedPolygon.Intersection(validatedHexagon);
-                                if (intersection != null && !intersection.IsEmpty && intersection.Area > 0)
-                                {
-                                    hexagons.Add(intersection);
-                                }
+                                hexagons.Add(intersection);
                             }
                         }
-                        catch (Exception ex)
-                        {
-                            // Ignora hexágonos problemáticos e continua
-                            Console.WriteLine($"Erro ao processar hexágono na posição ({row}, {col}): {ex.Message}");
-                            continue;
-                        }
+                    }
+                    catch (NetTopologySuite.Geometries.TopologyException tex)
+                    {
+                        // TopologyException - geometria com problemas topológicos
+                        Console.WriteLine($"[WARN] Topologia inválida em ({row},{col}): {tex.Message}");
+                        continue;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Outros erros - loga e continua
+                        Console.WriteLine($"[ERROR] Erro ao processar hexágono em ({row},{col}): {ex.Message}");
+                        continue;
                     }
                 }
             }
@@ -163,6 +242,65 @@ namespace api.vinculoClienteFazenda.Services
             {
                 Console.WriteLine($"Erro ao validar geometria: {ex.Message}");
                 // Em caso de erro, tenta retornar um buffer mínimo
+                try
+                {
+                    return geometry.Buffer(0);
+                }
+                catch
+                {
+                    return geometry;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Corrige geometrias com problemas topológicos severos usando múltiplas estratégias
+        /// </summary>
+        private Geometry FixGeometry(Geometry? geometry)
+        {
+            if (geometry == null || geometry.IsEmpty)
+                return geometry ?? _geometryFactory.CreatePolygon();
+
+            try
+            {
+                // Passo 1: Tentar Buffer(0) simples
+                var buffered = geometry.Buffer(0);
+                if (buffered.IsValid && !buffered.IsEmpty)
+                    return buffered;
+
+                // Passo 2: Simplificar preservando topologia
+                var simplified = NetTopologySuite.Simplify.TopologyPreservingSimplifier
+                    .Simplify(geometry, 0.5);
+
+                buffered = simplified.Buffer(0);
+                if (buffered.IsValid && !buffered.IsEmpty)
+                    return buffered;
+
+                // Passo 3: DouglasPeucker com tolerância maior
+                simplified = NetTopologySuite.Simplify.DouglasPeuckerSimplifier
+                    .Simplify(geometry, 1.0);
+
+                buffered = simplified.Buffer(0);
+                if (buffered.IsValid && !buffered.IsEmpty)
+                    return buffered;
+
+                // Passo 4: Última tentativa - Buffer negativo + positivo
+                var negative = geometry.Buffer(-0.5);
+                if (negative != null && !negative.IsEmpty)
+                {
+                    var positive = negative.Buffer(0.5);
+                    if (positive.IsValid && !positive.IsEmpty)
+                        return positive;
+                }
+
+                // Se tudo falhou, retornar o melhor resultado
+                return buffered ?? geometry;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao corrigir geometria: {ex.Message}");
+
+                // Último recurso: retornar buffer(0) ou geometria original
                 try
                 {
                     return geometry.Buffer(0);
@@ -305,9 +443,9 @@ namespace api.vinculoClienteFazenda.Services
             return _geometryFactory.CreatePolygon(vertices.ToArray());
         }
 
-        private JsonElement ConvertHexagonsToGeoJson(List<Geometry> hexagons)
+        private JsonElement ConvertHexagonsToGeoJson(List<Geometry> hexagons, Geometry sourceGeometry)
         {
-            var transform = GetUtmToWgs84();
+            var transform = GetUtmToWgs84(sourceGeometry);
 
             var features = new List<object>();
 
@@ -379,8 +517,6 @@ namespace api.vinculoClienteFazenda.Services
                 int seed = dados.Seed ?? Environment.TickCount;
                 var random = new Random(seed);
 
-                var transformToUtm = GetWgs84ToUtm();
-
                 // Lista para armazenar pontos com seus respectivos IDs de hexágono
                 var pointsWithHexagonId = new List<(Coordinate Point, int HexagonId)>();
                 var perHexCounts = new Dictionary<int, int>();
@@ -392,6 +528,8 @@ namespace api.vinculoClienteFazenda.Services
 
                 // Obter a coleção de features original para acessar os IDs dos hexágonos
                 NetTopologySuite.Features.FeatureCollection featureCollection;
+                Geometry? firstGeometry = null; // Para calcular zona UTM
+
                 try
                 {
                     // Parse manual do JsonElement para criar FeatureCollection
@@ -429,6 +567,10 @@ namespace api.vinculoClienteFazenda.Services
                         var geometry = ParseGeometryFromJson(geometryElement);
                         if (geometry != null)
                         {
+                            // Guardar primeira geometria para cálculo de zona UTM
+                            if (firstGeometry == null)
+                                firstGeometry = geometry;
+
                             var feature = new NetTopologySuite.Features.Feature(geometry, attributes);
                             featureCollection.Add(feature);
                         }
@@ -442,6 +584,15 @@ namespace api.vinculoClienteFazenda.Services
                     Console.WriteLine($"Stack trace: {ex.StackTrace}");
                     throw new Exception($"Failed to correctly read json: {ex.Message}");
                 }
+
+                // Validar que temos pelo menos uma geometria
+                if (firstGeometry == null)
+                {
+                    throw new Exception("Nenhuma geometria válida encontrada no GeoJSON");
+                }
+
+                // Calcular transformação UTM baseado na primeira geometria
+                var transformToUtm = GetWgs84ToUtm(firstGeometry);
 
                 // 1) Pré-cálculo das áreas (em UTM) por hexágono e alocação proporcional de pontos
                 var areas = new double[featureCollection.Count];
@@ -559,7 +710,7 @@ namespace api.vinculoClienteFazenda.Services
 
 
                 // Criar resposta com metadados
-                var pointsGeoJson = ConvertPointsToGeoJson(pointsWithHexagonId);
+                var pointsGeoJson = ConvertPointsToGeoJson(pointsWithHexagonId, firstGeometry);
                 var meta = new PontosDentroDaAreaMeta
                 {
                     PerHexCounts = perHexCounts,
@@ -732,9 +883,9 @@ namespace api.vinculoClienteFazenda.Services
 
 
 
-        private JsonElement ConvertPointsToGeoJson(List<(Coordinate Point, int HexagonId)> pointsWithHexagonId)
+        private JsonElement ConvertPointsToGeoJson(List<(Coordinate Point, int HexagonId)> pointsWithHexagonId, Geometry referenceGeometry)
         {
-            var transform = GetUtmToWgs84();
+            var transform = GetUtmToWgs84(referenceGeometry);
 
             var features = new List<object>();
             int pointId = 1; // ID sequencial para os pontos
@@ -767,9 +918,9 @@ namespace api.vinculoClienteFazenda.Services
         }
 
         // Método original mantido para compatibilidade
-        private JsonElement ConvertPointsToGeoJson(List<Coordinate> points)
+        private JsonElement ConvertPointsToGeoJson(List<Coordinate> points, Geometry referenceGeometry)
         {
-            var transform = GetUtmToWgs84();
+            var transform = GetUtmToWgs84(referenceGeometry);
 
             var features = points.Select((p, index) =>
             {
