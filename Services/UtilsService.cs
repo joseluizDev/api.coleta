@@ -187,49 +187,86 @@ namespace api.vinculoClienteFazenda.Services
 
                             try
                             {
-                                // Aplicar Buffer(0) antes da interseção para evitar TopologyException
-                                var bufferedPolygon = validatedPolygon.Buffer(0);
-                                var bufferedHexagon = hexagon.Buffer(0);
+                                // Método melhorado: aplicar correção em ambas geometrias ANTES da interseção
+                                var fixedPolygon = FixGeometry(validatedPolygon);
+                                var fixedHexagon = FixGeometry(hexagon);
 
-                                if (bufferedHexagon == null || bufferedHexagon.IsEmpty)
+                                if (fixedHexagon == null || fixedHexagon.IsEmpty)
                                 {
-                                    Console.WriteLine($"[WARN] Hexágono buffer vazio em ({row},{col})");
+                                    Console.WriteLine($"[WARN] Hexágono vazio após correção em ({row},{col})");
                                     continue;
                                 }
 
+                                // Aplicar Buffer(0) para garantir topologia válida
+                                var bufferedPolygon = fixedPolygon.Buffer(0);
+                                var bufferedHexagon = fixedHexagon.Buffer(0);
+
+                                // Calcular interseção
                                 var intersection = bufferedPolygon.Intersection(bufferedHexagon);
 
-                                if (intersection != null && !intersection.IsEmpty && intersection.Area > 0)
+                                if (intersection != null && !intersection.IsEmpty)
                                 {
-                                    successfulIntersections++;
-                                    hexagons.Add(intersection);
+                                    // IMPORTANTE: Corrigir a interseção também
+                                    var fixedIntersection = FixGeometry(intersection);
+
+                                    if (fixedIntersection != null && !fixedIntersection.IsEmpty && fixedIntersection.Area > 0)
+                                    {
+                                        // Validar que a geometria final é válida
+                                        if (!fixedIntersection.IsValid)
+                                        {
+                                            Console.WriteLine($"[WARN] Interseção inválida em ({row},{col}). Tentando corrigir...");
+                                            fixedIntersection = fixedIntersection.Buffer(0);
+                                        }
+
+                                        // Verificar novamente após buffer
+                                        if (fixedIntersection.IsValid && fixedIntersection.Area > 0)
+                                        {
+                                            successfulIntersections++;
+                                            hexagons.Add(fixedIntersection);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"[WARN] Interseção ainda inválida após correção em ({row},{col})");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"[WARN] Interseção vazia após correção em ({row},{col}). Area: {fixedIntersection?.Area ?? 0}");
+                                    }
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"[WARN] Interseção vazia em ({row},{col}). Area: {intersection?.Area ?? 0}");
+                                    Console.WriteLine($"[WARN] Interseção vazia em ({row},{col})");
                                 }
                             }
                             catch (NetTopologySuite.Geometries.TopologyException tex)
                             {
-                                // Tentar método alternativo com simplificação
+                                // Tentar método alternativo com simplificação mais agressiva
                                 Console.WriteLine($"[WARN] TopologyException em ({row},{col}): {tex.Message}. Tentando alternativa...");
 
                                 try
                                 {
-                                    // Simplificar ambas geometrias antes da interseção
-                                    var simplifiedPolygon = NetTopologySuite.Simplify.DouglasPeuckerSimplifier.Simplify(validatedPolygon, 0.1);
-                                    var simplifiedHexagon = NetTopologySuite.Simplify.DouglasPeuckerSimplifier.Simplify(hexagon, 0.1);
+                                    // Simplificar com tolerância maior
+                                    var simplifiedPolygon = NetTopologySuite.Simplify.DouglasPeuckerSimplifier.Simplify(validatedPolygon, 0.5);
+                                    var simplifiedHexagon = NetTopologySuite.Simplify.DouglasPeuckerSimplifier.Simplify(hexagon, 0.5);
 
-                                    var bufferedPoly = simplifiedPolygon.Buffer(0);
-                                    var bufferedHex = simplifiedHexagon.Buffer(0);
+                                    // Buffer duplo para garantir topologia válida
+                                    var bufferedPoly = simplifiedPolygon.Buffer(0.1).Buffer(-0.05).Buffer(0);
+                                    var bufferedHex = simplifiedHexagon.Buffer(0.1).Buffer(-0.05).Buffer(0);
 
                                     var intersection = bufferedPoly.Intersection(bufferedHex);
 
                                     if (intersection != null && !intersection.IsEmpty && intersection.Area > 0)
                                     {
-                                        successfulIntersections++;
-                                        hexagons.Add(intersection);
-                                        Console.WriteLine($"[INFO] Recuperado com simplificação em ({row},{col})");
+                                        // Corrigir resultado
+                                        var fixedResult = FixGeometry(intersection).Buffer(0);
+
+                                        if (fixedResult.IsValid && fixedResult.Area > 0)
+                                        {
+                                            successfulIntersections++;
+                                            hexagons.Add(fixedResult);
+                                            Console.WriteLine($"[INFO] Recuperado com simplificação em ({row},{col})");
+                                        }
                                     }
                                 }
                                 catch (Exception ex2)
