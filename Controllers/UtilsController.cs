@@ -22,12 +22,20 @@ namespace api.utils.Controllers
         {
             try
             {
+                // Log para debug
+                Console.WriteLine($"[API] Recebida requisição para gerar hexágonos: {request.Hectares} ha");
+
                 var result = _utilsService.GenerateHexagons(request.Polygon, request.Hectares);
+
+                Console.WriteLine($"[API] Hexágonos gerados com sucesso");
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                Console.WriteLine($"[API ERROR] {ex.Message}");
+                Console.WriteLine($"[API ERROR] StackTrace: {ex.StackTrace}");
+                return BadRequest(new { error = ex.Message, details = ex.StackTrace });
             }
         }
 
