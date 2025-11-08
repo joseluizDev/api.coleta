@@ -265,6 +265,55 @@ namespace api.talhao.Services
             return null;
         }
 
+        // Deletar TalhaoJson por ID
+        public bool DeletarTalhaoJson(Guid userId, Guid talhaoJsonId)
+        {
+            var talhaoJson = _talhaoRepository.BuscarTalhaoJsonPorId(talhaoJsonId);
+            
+            if (talhaoJson != null)
+            {
+                // Verificar se o usuário tem permissão (verificando se o talhão pertence ao usuário)
+                var talhao = _talhaoRepository.BuscarTalhaoId(userId, talhaoJson.TalhaoID);
+                
+                if (talhao != null)
+                {
+                    _talhaoRepository.DeletarTalhaoJson(talhaoJson);
+                    UnitOfWork.Commit();
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Atualizar nome e observação do TalhaoJson
+        public bool AtualizarNomeTalhaoJson(Guid userId, Guid talhaoJsonId, AtualizarNomeTalhaoJsonDTO dto)
+        {
+            var talhaoJson = _talhaoRepository.BuscarTalhaoJsonPorId(talhaoJsonId);
+            
+            if (talhaoJson != null)
+            {
+                // Verificar se o usuário tem permissão (verificando se o talhão pertence ao usuário)
+                var talhao = _talhaoRepository.BuscarTalhaoId(userId, talhaoJson.TalhaoID);
+                
+                if (talhao != null)
+                {
+                    // Atualizar os campos
+                    talhaoJson.Nome = dto.Nome;
+                    if (dto.Observacao != null)
+                    {
+                        talhaoJson.Observacao = dto.Observacao;
+                    }
+                    
+                    _talhaoRepository.AtualizarTalhaoJson(talhaoJson);
+                    UnitOfWork.Commit();
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
         // Listar talhões agrupados por fazenda
         public List<TalhaoAgrupadoPorFazendaResponseDTO> ListarTalhoesAgrupadosPorFazenda(Guid userId, Guid? fazendaId = null)
         {

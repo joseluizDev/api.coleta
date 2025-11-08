@@ -153,6 +153,44 @@ namespace api.talhao.Controllers
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+        [HttpDelete]
+        [Route("deletar-talhao-json/{id}")]
+        public IActionResult DeletarTalhaoJson(Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            
+            if (userId != Guid.Empty)
+            {
+                var resultado = _talhaoService.DeletarTalhaoJson(userId, id);
+                if (resultado)
+                {
+                    return Ok(new { message = "TalhaoJson deletado com sucesso" });
+                }
+                return NotFound(new { message = "TalhaoJson não encontrado ou você não tem permissão para deletá-lo" });
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
+
+        [HttpPut]
+        [Route("atualizar-nome-talhao-json/{id}")]
+        public IActionResult AtualizarNomeTalhaoJson(Guid id, [FromBody] AtualizarNomeTalhaoJsonDTO dto)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            
+            if (userId != Guid.Empty)
+            {
+                var resultado = _talhaoService.AtualizarNomeTalhaoJson(userId, id, dto);
+                if (resultado)
+                {
+                    return Ok(new { message = "Nome do TalhaoJson atualizado com sucesso" });
+                }
+                return NotFound(new { message = "TalhaoJson não encontrado ou você não tem permissão para atualizá-lo" });
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
         
     }
 }

@@ -104,7 +104,9 @@ namespace api.talhao.Repositories
 
         public TalhaoJson BuscarTalhaoJsonPorId(Guid id)
         {
-            return Context.TalhaoJson.FirstOrDefault(c => c.Id == id);
+            return Context.TalhaoJson
+                .AsNoTracking()
+                .FirstOrDefault(c => c.Id == id);
         }
 
         public TalhaoJson DeletarTalhaoPorId(Guid id)
@@ -112,6 +114,21 @@ namespace api.talhao.Repositories
             return Context.TalhaoJson
                 .Where(f => f.TalhaoID == id)
                 .FirstOrDefault();
+        }
+
+        public void DeletarTalhaoJson(TalhaoJson talhaoJson)
+        {
+            // Reattach se necessário
+            if (Context.Entry(talhaoJson).State == EntityState.Detached)
+            {
+                Context.TalhaoJson.Attach(talhaoJson);
+            }
+            Context.TalhaoJson.Remove(talhaoJson);
+        }
+
+        public void AtualizarTalhaoJson(TalhaoJson talhaoJson)
+        {
+            Context.TalhaoJson.Update(talhaoJson);
         }
 
         public Talhao? BuscarTalhaoPorFazendaID(Guid userID, Guid id)

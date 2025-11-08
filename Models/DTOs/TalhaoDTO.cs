@@ -59,4 +59,10 @@ namespace api.talhao.Models.DTOs
         public double Area { get; set; }
         public string? Observacao { get; set; }
     }
+
+    public class AtualizarNomeTalhaoJsonDTO
+    {
+        public string Nome { get; set; }
+        public string? Observacao { get; set; }
+    }
 }
