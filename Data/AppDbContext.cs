@@ -47,4 +47,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<ImagemNdvi> ImagensNdvi { get; set; }
     public DbSet<NutrientConfig> NutrientConfigs { get; set; }
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
+    public DbSet<Recomendacao> Recomendacoes { get; set; }
 }

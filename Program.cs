@@ -32,6 +32,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "API Coleta",
+        Version = "v1",
+        Description = "API para gerenciamento de coletas agrícolas"
+    });
+
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -146,6 +160,9 @@ builder.Services.AddScoped<GeoJsonService>();
 
 builder.Services.AddScoped<RelatorioRepository>();
 builder.Services.AddScoped<RelatorioService>();
+
+builder.Services.AddScoped<RecomendacaoRepository>();
+builder.Services.AddScoped<RecomendacaoService>();
 
 builder.Services.AddScoped<ImagemNdviRepository>();
 builder.Services.AddScoped<ImagemNdviService>();
