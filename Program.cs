@@ -222,16 +222,14 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 
 var app = builder.Build();
 
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseCors(corsPolicyName);
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors(corsPolicyName);
-
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
