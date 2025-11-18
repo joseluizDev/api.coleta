@@ -17,8 +17,9 @@ public class RelatorioServiceTests
     {
         var repository = new RelatorioRepository(context);
         var minioStorage = new FakeMinioStorage();
+        var geoJsonRepository = new GeoJsonRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
-        return new RelatorioService(repository, minioStorage, unitOfWork);
+        return new RelatorioService(repository, minioStorage, geoJsonRepository, unitOfWork);
     }
 
     [Fact]

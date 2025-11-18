@@ -31,95 +31,56 @@ namespace api.coleta.Controllers.Mobile
             _jwtToken = jwtToken;
         }
 
+
+
         /// <summary>
-        /// Visualizar coleta por ID
+        /// Listar todos os relatórios do usuário
         /// </summary>
-        /// <param name="id">ID da coleta</param>
-        /// <returns>Detalhes da coleta</returns>
+        /// <returns>Lista de relatórios do usuário</returns>
         [HttpGet]
-        [Route("coleta/{id}")]
+        [Route("relatorios")]
         [Authorize]
-        public IActionResult VisualizarColetaPorId([FromRoute] Guid id)
+        public async Task<IActionResult> ListarRelatorios()
         {
             var token = ObterIDDoToken();
             var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
-            
+
             if (!userIdNullable.HasValue)
             {
                 return BadRequest(new { message = "Token inválido ou usuário não encontrado." });
             }
 
-            var coleta = _visualizarMapaService.BuscarVisualizarMapaPorId(userIdNullable.Value, id);
-            
-            if (coleta == null)
-            {
-                return NotFound(new { message = "Coleta não encontrada." });
-            }
-
-            return Ok(coleta);
+            var relatorios = await _relatorioService.ListarRelatoriosPorUploadAsync(userIdNullable.Value);
+            return Ok(relatorios);
         }
 
-    
+        /// <summary>
+        /// Obter relatório completo com dados da coleta pelo ID do relatório
+        /// </summary>
+        /// <param name="relatorioId">ID do relatório</param>
+        /// <returns>Dados completos do relatório incluindo JsonRelatorio e dados da coleta (mapa, grid, pontos)</returns>
         [HttpGet]
-        [Route("relatorio/{coletaId}")]
+        [Route("relatorio/{relatorioId:guid}")]
         [Authorize]
-        public async Task<IActionResult> BuscarRelatorioPorColetaId([FromRoute] Guid coletaId)
+        public async Task<IActionResult> ObterRelatorioCompleto(Guid relatorioId)
         {
             var token = ObterIDDoToken();
             var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
-            
+
             if (!userIdNullable.HasValue)
             {
                 return BadRequest(new { message = "Token inválido ou usuário não encontrado." });
             }
 
-            var relatorio = await _relatorioService.GetRelario(coletaId, userIdNullable.Value);
+            var relatorio = await _relatorioService.GetRelatorioCompletoAsync(relatorioId, userIdNullable.Value);
             
             if (relatorio == null)
             {
-                return NotFound(new { message = "Relatório não encontrado para esta coleta." });
+                return NotFound(new { message = "Relatório não encontrado." });
             }
 
             return Ok(relatorio);
         }
 
-        /// <summary>
-        /// Buscar configurações personalizadas com fallback para configurações padrão
-        /// </summary>
-        /// <returns>Lista de configurações personalizadas ou padrão</returns>
-        [HttpGet]
-        [Route("configuracoes/fallback")]
-        [Authorize]
-        public IActionResult BuscarConfiguracoesComFallback()
-        {
-            var token = ObterIDDoToken();
-            var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
-            
-            if (!userIdNullable.HasValue)
-            {
-                return BadRequest(new { message = "Token inválido ou usuário não encontrado." });
-            }
-
-            // Buscar configurações personalizadas do usuário
-            var configuracoesPersonalizadas = _configuracaoPersonalizadaService.ListarConfiguracoesPersonalizadas(userIdNullable.Value);
-            
-            // Se existem configurações personalizadas, retorná-las
-            if (configuracoesPersonalizadas != null && configuracoesPersonalizadas.Count > 0)
-            {
-                return Ok(new 
-                { 
-                    tipo = "personalizada",
-                    configuracoes = configuracoesPersonalizadas 
-                });
-            }
-            
-            // Caso contrário, retornar configurações padrão
-            var configuracoesPadrao = _configuracaoPadraoService.ListarConfiguracoes();
-            return Ok(new 
-            { 
-                tipo = "padrao",
-                configuracoes = configuracoesPadrao 
-            });
-        }
     }
 }

@@ -62,5 +62,22 @@ namespace api.coleta.Repositories
             return Context.Relatorios
                 .FirstOrDefaultAsync(x => x.ColetaId == coletaId && x.Id == relatorioId && x.UsuarioId == userId);
         }
+
+        public Task<Relatorio?> ObterPorRelatorioId(Guid relatorioId, Guid userId)
+        {
+            return Context.Relatorios
+                .Include(x => x.Coleta!)
+                    .ThenInclude(c => c.Talhao!)
+                        .ThenInclude(t => t.Talhao!)
+                            .ThenInclude(tt => tt.Fazenda)
+                                .ThenInclude(f => f.Cliente)
+                .Include(x => x.Coleta!)
+                    .ThenInclude(c => c.Safra!)
+                        .ThenInclude(s => s.Fazenda)
+                            .ThenInclude(f => f.Cliente)
+                .Include(x => x.Coleta!)
+                    .ThenInclude(c => c.UsuarioResp)
+                .FirstOrDefaultAsync(x => x.Id == relatorioId && x.UsuarioId == userId);
+        }
     }
 }
