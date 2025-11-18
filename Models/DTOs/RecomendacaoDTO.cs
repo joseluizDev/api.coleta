@@ -11,9 +11,19 @@ namespace api.coleta.Models.DTOs
         public Guid RelatorioId { get; set; }
         
         /// <summary>
-        /// Descrição da recomendação
+        /// ID da coleta associada
         /// </summary>
-        public string Descricao { get; set; } = string.Empty;
+        public Guid? ColetaId { get; set; }
+        
+        /// <summary>
+        /// Nome da coluna da recomendação
+        /// </summary>
+        public string NomeColuna { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Unidade de medida
+        /// </summary>
+        public string UnidadeMedida { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -32,9 +42,19 @@ namespace api.coleta.Models.DTOs
         public Guid RelatorioId { get; set; }
         
         /// <summary>
-        /// Descrição da recomendação
+        /// ID da coleta associada
         /// </summary>
-        public string Descricao { get; set; } = string.Empty;
+        public Guid? ColetaId { get; set; }
+        
+        /// <summary>
+        /// Nome da coluna da recomendação
+        /// </summary>
+        public string NomeColuna { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Unidade de medida
+        /// </summary>
+        public string UnidadeMedida { get; set; } = string.Empty;
         
         /// <summary>
         /// Data de inclusão da recomendação

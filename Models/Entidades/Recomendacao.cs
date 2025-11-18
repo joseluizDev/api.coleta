@@ -16,8 +16,23 @@ namespace api.coleta.Models.Entidades
         public virtual Relatorio Relatorio { get; set; } = null!;
         
         /// <summary>
-        /// Descrição da recomendação
+        /// ID da coleta associada
         /// </summary>
-        public string Descricao { get; set; } = string.Empty;
+        public Guid? ColetaId { get; set; }
+        
+        /// <summary>
+        /// Navegação para a coleta relacionada
+        /// </summary>
+        public virtual Coleta? Coleta { get; set; }
+        
+        /// <summary>
+        /// Nome da coluna da recomendação
+        /// </summary>
+        public string NomeColuna { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Unidade de medida
+        /// </summary>
+        public string UnidadeMedida { get; set; } = string.Empty;
     }
 }

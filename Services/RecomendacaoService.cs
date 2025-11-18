@@ -36,7 +36,9 @@ namespace api.coleta.Services
             var recomendacao = new Recomendacao
             {
                 RelatorioId = dto.RelatorioId,
-                Descricao = dto.Descricao
+                ColetaId = dto.ColetaId,
+                NomeColuna = dto.NomeColuna,
+                UnidadeMedida = dto.UnidadeMedida
             };
 
             _recomendacaoRepository.Adicionar(recomendacao);
@@ -46,7 +48,9 @@ namespace api.coleta.Services
             {
                 Id = recomendacao.Id,
                 RelatorioId = recomendacao.RelatorioId,
-                Descricao = recomendacao.Descricao,
+                ColetaId = recomendacao.ColetaId,
+                NomeColuna = recomendacao.NomeColuna,
+                UnidadeMedida = recomendacao.UnidadeMedida,
                 DataInclusao = recomendacao.DataInclusao
             };
         }
@@ -66,7 +70,24 @@ namespace api.coleta.Services
             {
                 Id = r.Id,
                 RelatorioId = r.RelatorioId,
-                Descricao = r.Descricao,
+                ColetaId = r.ColetaId,
+                NomeColuna = r.NomeColuna,
+                UnidadeMedida = r.UnidadeMedida,
+                DataInclusao = r.DataInclusao
+            }).ToList();
+        }
+
+        public async Task<List<RecomendacaoOutputDTO>> BuscarPorColetaAsync(Guid coletaId)
+        {
+            var recomendacoes = await _recomendacaoRepository.ListarPorColeta(coletaId);
+            
+            return recomendacoes.Select(r => new RecomendacaoOutputDTO
+            {
+                Id = r.Id,
+                RelatorioId = r.RelatorioId,
+                ColetaId = r.ColetaId,
+                NomeColuna = r.NomeColuna,
+                UnidadeMedida = r.UnidadeMedida,
                 DataInclusao = r.DataInclusao
             }).ToList();
         }
@@ -87,7 +108,9 @@ namespace api.coleta.Services
                 return null;
             }
 
-            recomendacao.Descricao = dto.Descricao;
+            recomendacao.ColetaId = dto.ColetaId;
+            recomendacao.NomeColuna = dto.NomeColuna;
+            recomendacao.UnidadeMedida = dto.UnidadeMedida;
 
             _recomendacaoRepository.Atualizar(recomendacao);
             UnitOfWork.Commit();
@@ -96,7 +119,9 @@ namespace api.coleta.Services
             {
                 Id = recomendacao.Id,
                 RelatorioId = recomendacao.RelatorioId,
-                Descricao = recomendacao.Descricao,
+                ColetaId = recomendacao.ColetaId,
+                NomeColuna = recomendacao.NomeColuna,
+                UnidadeMedida = recomendacao.UnidadeMedida,
                 DataInclusao = recomendacao.DataInclusao
             };
         }

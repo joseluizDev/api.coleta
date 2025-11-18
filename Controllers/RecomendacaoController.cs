@@ -82,6 +82,20 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
+        /// Buscar recomendações de uma coleta específica
+        /// </summary>
+        /// <param name="coletaId">ID da coleta</param>
+        /// <returns>Lista de recomendações</returns>
+        /// <response code="200">Recomendações encontradas</response>
+        [HttpGet("coleta/{coletaId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> BuscarPorColeta([FromRoute] Guid coletaId)
+        {
+            var recomendacoes = await _recomendacaoService.BuscarPorColetaAsync(coletaId);
+            return Ok(recomendacoes);
+        }
+
+        /// <summary>
         /// Atualizar uma recomendação existente
         /// </summary>
         /// <param name="id">ID da recomendação</param>

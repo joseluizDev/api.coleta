@@ -46,6 +46,7 @@ namespace api.coleta.Controllers
             }
         }
 
+        [HttpGet]
         public IActionResult ObterTodas()
         {
             var token = ObterIDDoToken();

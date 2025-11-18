@@ -31,6 +31,14 @@ namespace api.coleta.Repositories
                 .ToListAsync();
         }
         
+        public Task<List<Recomendacao>> ListarPorColeta(Guid coletaId)
+        {
+            return Context.Recomendacoes
+                .Where(x => x.ColetaId == coletaId)
+                .OrderBy(x => x.DataInclusao)
+                .ToListAsync();
+        }
+        
         public Task<Recomendacao?> ObterPorId(Guid id)
         {
             return Context.Recomendacoes
