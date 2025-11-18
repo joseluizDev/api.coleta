@@ -32,7 +32,7 @@ namespace api.coleta.Data.Repository
         }
         public Usuario? LoginMobile(string email, string senha)
         {
-            return Context.Usuarios.Where(x => x.Email == email && x.Senha == senha && x.adminId != null).FirstOrDefault();
+            return Context.Usuarios.Where(x => x.Email == email && x.Senha == senha).FirstOrDefault();
         }
 
         public PagedResult<Usuario> ListarFuncionarios(QueryFuncionario query, Guid userId)
