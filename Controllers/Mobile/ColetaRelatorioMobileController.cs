@@ -33,10 +33,7 @@ namespace api.coleta.Controllers.Mobile
 
 
 
-        /// <summary>
-        /// Listar todos os relatórios do usuário
-        /// </summary>
-        /// <returns>Lista de relatórios do usuário</returns>
+   
         [HttpGet]
         [Route("relatorios")]
         [Authorize]
@@ -54,11 +51,7 @@ namespace api.coleta.Controllers.Mobile
             return Ok(relatorios);
         }
 
-        /// <summary>
-        /// Obter relatório completo com dados da coleta pelo ID do relatório
-        /// </summary>
-        /// <param name="relatorioId">ID do relatório</param>
-        /// <returns>Dados completos do relatório incluindo JsonRelatorio e dados da coleta (mapa, grid, pontos)</returns>
+       
         [HttpGet]
         [Route("relatorio/{relatorioId:guid}")]
         [Authorize]

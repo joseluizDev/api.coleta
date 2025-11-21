@@ -4,6 +4,7 @@ using api.coleta.Repositories;
 using api.coleta.Utils.Maps;
 using api.minionStorage.Services;
 using static System.Net.Mime.MediaTypeNames;
+using api.coleta.Utils;
 
 namespace api.coleta.Services
 {
@@ -95,6 +96,116 @@ namespace api.coleta.Services
             }
 
             var relatorioDto = RelatorioMapDto.MapRelatorio(relatorio);
+            
+            // Processar classificações dos nutrientes para cada objeto
+            var classificacoesPorObjeto = new List<object>();
+            if (!string.IsNullOrEmpty(relatorio.JsonRelatorio))
+            {
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var jsonData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(relatorio.JsonRelatorio, options);
+                var pontos = jsonData;
+                if (pontos.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    // Primeiro, calcular médias de CTC e Argila para todos os objetos
+                    double sumCtc = 0, sumArgila = 0;
+                    int countCtc = 0, countArgila = 0;
+                    
+                    foreach (var ponto in pontos.EnumerateArray())
+                    {
+                        if (ponto.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        {
+                            foreach (var prop in ponto.EnumerateObject())
+                            {
+                                if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetDouble(out double val))
+                                {
+                                    if (prop.Name == "CTC")
+                                    {
+                                        sumCtc += val;
+                                        countCtc++;
+                                    }
+                                    else if (prop.Name == "Argila" || prop.Name == "Mat. Org.")
+                                    {
+                                        sumArgila += val;
+                                        countArgila++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    double mediaCtc = countCtc > 0 ? sumCtc / countCtc : 0;
+                    double mediaArgila = countArgila > 0 ? sumArgila / countArgila : 0;
+                    
+                    // Processar cada objeto individualmente
+                    foreach (var ponto in pontos.EnumerateArray())
+                    {
+                        if (ponto.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        {
+                            int? objetoId = null;
+                            var nutrientesClassificados = new Dictionary<string, object>();
+                            
+                            foreach (var prop in ponto.EnumerateObject())
+                            {
+                                string atributo = prop.Name;
+                                
+                                // Capturar ID do objeto
+                                if (atributo == "ID")
+                                {
+                                    if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out int id))
+                                    {
+                                        objetoId = id;
+                                    }
+                                    continue;
+                                }
+                                
+                                // Processar apenas atributos numéricos
+                                if (prop.Value.ValueKind != System.Text.Json.JsonValueKind.Number)
+                                    continue;
+                                    
+                                if (!prop.Value.TryGetDouble(out double valor))
+                                    continue;
+                                
+                                // Determinar referência e valor de referência
+                                string? referencia = null;
+                                double valorReferencia = 0;
+                                
+                                if (atributo.Contains("Ca") || atributo.Contains("Mg") || atributo.Contains("K") || 
+                                    atributo.Contains("Al") || atributo.Contains("H+Al") || atributo == "Mg/CTC" || atributo == "Ca + Mg")
+                                {
+                                    referencia = "CTC";
+                                    valorReferencia = mediaCtc;
+                                }
+                                else if ((atributo.Contains("P") || atributo.Contains("Fósforo")) && !atributo.Contains("Resina"))
+                                {
+                                    referencia = "Argila";
+                                    valorReferencia = mediaArgila;
+                                }
+                                
+                                var result = NutrienteConfig.GetNutrientClassification(atributo, valor, valorReferencia, referencia);
+                                if (result != null)
+                                {
+                                    nutrientesClassificados[atributo] = new
+                                    {
+                                        valor = valor,
+                                        classificacao = result.Classificacao,
+                                        cor = result.Cor,
+                                        intervalos = result.Intervalos
+                                    };
+                                }
+                            }
+                            
+                            if (objetoId.HasValue)
+                            {
+                                classificacoesPorObjeto.Add(new
+                                {
+                                    id = objetoId.Value,
+                                    nutrientes = nutrientesClassificados
+                                });
+                            }
+                        }
+                    }
+                }
+            }
             
             // Montar dados da coleta com geojson processado
             ColetaDadosDTO? dadosColeta = null;
@@ -222,7 +333,8 @@ namespace api.coleta.Services
                 TiposAnalise = relatorioDto.TiposAnalise,
                 JsonRelatorio = relatorioDto.JsonRelatorio,
                 IsRelatorio = relatorioDto.IsRelatorio,
-                DadosColeta = dadosColeta
+                DadosColeta = dadosColeta,
+                NutrientesClassificados = classificacoesPorObjeto
             };
         }
     }

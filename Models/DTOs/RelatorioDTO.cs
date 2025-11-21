@@ -5,9 +5,9 @@ namespace api.coleta.Models.DTOs
     public class RelatorioDTO
     {
         public Guid? Id { get; set; }
-        public IFormFile Arquivo { get; set; }
-        public string ArquivoJson { get; set; }
-        public string ColetaId { get; set; }
+        public IFormFile? Arquivo { get; set; }
+        public string? ArquivoJson { get; set; }
+        public string? ColetaId { get; set; }
     }
 
     public class RelatorioOuputDTO
@@ -58,6 +58,9 @@ namespace api.coleta.Models.DTOs
         
         // Dados da coleta (mapa, grid, pontos)
         public ColetaDadosDTO? DadosColeta { get; set; }
+        
+        // Classificações dos nutrientes por objeto
+        public List<object>? NutrientesClassificados { get; set; }
     }
 
     public class ColetaDadosDTO
@@ -71,4 +74,6 @@ namespace api.coleta.Models.DTOs
         public int Zonas { get; set; }
         public decimal? AreaHa { get; set; }
     }
+
+
 }
