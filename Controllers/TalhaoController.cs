@@ -30,10 +30,17 @@ namespace api.talhao.Controllers
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
+                // Primeiro tenta buscar como Talhão principal
                 var talhao = _talhaoService.BuscarTalhaoPorId(userId, id);
-                if (talhao == null)
-                    return NotFound("Talhão não encontrado");
-                return Ok(talhao);
+                if (talhao != null)
+                    return Ok(talhao);
+
+                // Se não encontrar, tenta buscar como TalhaoJson e retorna o talhão principal
+                var talhaoPorJson = _talhaoService.BuscarTalhaoPorTalhao(userId, id);
+                if (talhaoPorJson != null)
+                    return Ok(talhaoPorJson);
+
+                return NotFound("Talhão não encontrado");
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
