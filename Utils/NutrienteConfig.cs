@@ -74,19 +74,19 @@ class  NutrienteConfig
                 dependencia = new { tipo = "config_dependentes", referencia = "CTC" },
                 descricao = "Classificação baseada em intervalos do config_dependentes usando CTC média do talhão."
             },
-            ["Aluminio Al"] = new
+            ["Alumínio Al"] = new
+            {
+                intervalos = (object[])null,
+                dependencia = new { tipo = "config_dependentes", referencia = "CTC" },
+                descricao = "Classificação baseada em intervalos do config_dependentes usando CTC média do talhão."
+            },
+            ["Acidez Potencial (H+Al) (cmolc/dm³)"] = new
             {
                 intervalos = (object[])null,
                 dependencia = new { tipo = "config_dependentes", referencia = "CTC" },
                 descricao = "Classificação baseada em intervalos do config_dependentes usando CTC média do talhão."
             },
             ["Ca + Mg (cmolc/dm³)"] = new
-            {
-                intervalos = (object[])null,
-                dependencia = new { tipo = "config_dependentes", referencia = "CTC" },
-                descricao = "Classificação baseada em intervalos do config_dependentes usando CTC média do talhão."
-            },
-            ["Acidez Potencial - H+Al (cmolc/dm³)"] = new
             {
                 intervalos = (object[])null,
                 dependencia = new { tipo = "config_dependentes", referencia = "CTC" },
@@ -390,6 +390,20 @@ class  NutrienteConfig
                 dependencia = (object)null,
                 descricao = "Classificação e cor próprias."
             }
+            ,
+            ["Na (mg/dm³)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 0.2, classificacao = "Muito Baixo" },
+                    new { min = 0.2, max = 0.5, classificacao = "Baixo" },
+                    new { min = 0.5, max = 1.0, classificacao = "Médio" },
+                    new { min = 1.0, max = 2.0, classificacao = "Adequado" },
+                    new { min = 2.0, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Sódio (Na) em mg/dm³ - valores de exemplo; ajuste conforme necessidade de domínio."
+            }
         }
     };
 
@@ -399,8 +413,8 @@ class  NutrienteConfig
         ["Ca"] = "Cálcio - Ca (cmolc/dm³)",
         ["Mg"] = "Magnésio - Mg (cmolc/dm³)",
         ["K"] = "Potássio - K (cmolc/dm³)",
-        ["Al"] = "Alumínio - Al (cmolc/dm³)",
-        ["H+Al"] = "Acidez Potencial - H+Al (cmolc/dm³)",
+        ["Al"] = "Alumínio Al",
+        ["H+Al"] = "Acidez Potencial (H+Al) (cmolc/dm³)",
         ["Ca+Mg"] = "Ca + Mg (cmolc/dm³)",
         ["CTC"] = "CTC a pH 7 (T)",
         ["V"] = "V%",
@@ -413,7 +427,7 @@ class  NutrienteConfig
         ["Ca/Mg"] = "Ca/Mg",
         ["Ca/K"] = "Ca/K",
         ["Mg/K"] = "Mg/K",
-        ["PMELICH 1"] = "Fósforo - P Mehlich-1 (mg/dm³)",
+        ["PMELICH 1"] = "Fósforo Mehlich ",
         ["P RESINA"] = "Fósforo - P Resina (mg/dm³)",
         ["Mat. Org."] = "Matéria Orgânica - MO (g/dm³)",
         ["C. organico"] = "Carbono Orgânico - C (g/dm³)",
@@ -423,7 +437,9 @@ class  NutrienteConfig
         ["Mn"] = "Mn (mg/dm³)",
         ["Fe"] = "Fe (mg/dm³)",
         ["S"] = "S (mg/dm³)",
-        ["Na"] = "Na (mg/dm³)"
+        ["Na"] = "Na (mg/dm³)",
+        ["Soma de bases"] = "SB (cmolc/dm³)",
+        ["CTC efetiva"] = "CTC Efetiva (t)"
     };
 
 
@@ -934,6 +950,10 @@ class  NutrienteConfig
         public List<IntervaloInfo> Intervalos { get; set; }
     }
 
+    // Cache estático de intervalos para evitar recálculos
+    private static readonly Dictionary<string, List<IntervaloInfo>> _intervalosCache = new Dictionary<string, List<IntervaloInfo>>();
+    private static readonly object _cacheLock = new object();
+
     public static NutrientFullResult GetNutrientClassification(string attribute, double averageValue, double referenceValue, string reference = null)
     {
         // Treat null or invalid values as 0
@@ -950,6 +970,29 @@ class  NutrienteConfig
             ValorMedio = averageValue,
             Intervalos = new List<IntervaloInfo>()
         };
+        
+        // Usar cache para intervalos se dispon\u00edvel
+        string cacheKey = $"{fullAttribute}_{reference}_{referenceValue}";
+        List<IntervaloInfo> intervalosCache = null;
+        lock (_cacheLock)
+        {
+            if (_intervalosCache.TryGetValue(cacheKey, out intervalosCache))
+            {
+                result.Intervalos = intervalosCache;
+                // Encontrar classifica\u00e7\u00e3o do valor atual
+                foreach (var intervalo in intervalosCache)
+                {
+                    if ((intervalo.Min == null || averageValue >= intervalo.Min) &&
+                        (intervalo.Max == null || averageValue < intervalo.Max))
+                    {
+                        result.Classificacao = intervalo.Classificacao;
+                        result.Cor = intervalo.Cor;
+                        return result;
+                    }
+                }
+                return result;
+            }
+        }
 
         var soja = (Dictionary<string, object>)DefaultNutrienteConfig["soja"];
         if (soja.ContainsKey(fullAttribute))
@@ -981,9 +1024,15 @@ class  NutrienteConfig
                                 {
                                     dynamic intervaloRef = interval[reference == "CTC" ? "intervalo_ctc" : "intervalo_argila"];
                                     
+                                    double? minRef = null;
+                                    double? maxRef = null;
+                                    
+                                    try { if (intervaloRef.min != null) minRef = (double?)intervaloRef.min; } catch {}
+                                    try { if (intervaloRef.max != null) maxRef = (double?)intervaloRef.max; } catch {}
+                                    
                                     // Check if reference value falls in this interval range
-                                    bool referenciaCorreta = (intervaloRef.min == null || referenceValue >= intervaloRef.min) &&
-                                                           (intervaloRef.max == null || referenceValue < intervaloRef.max);
+                                    bool referenciaCorreta = (minRef == null || referenceValue >= minRef) &&
+                                                           (maxRef == null || referenceValue < maxRef);
                                     
                                     if (referenciaCorreta)
                                     {
@@ -1044,6 +1093,19 @@ class  NutrienteConfig
                 }
             }
         }
+        
+        // Armazenar em cache para reutiliza\u00e7\u00e3o
+        if (result.Intervalos.Count > 0)
+        {
+            lock (_cacheLock)
+            {
+                if (!_intervalosCache.ContainsKey(cacheKey))
+                {
+                    _intervalosCache[cacheKey] = result.Intervalos;
+                }
+            }
+        }
+        
         return result;
     }
 }

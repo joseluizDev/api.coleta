@@ -13,12 +13,117 @@ namespace api.coleta.Services
         private readonly RelatorioRepository _relatorioRepository;
         private readonly IMinioStorage _minioStorage;
         private readonly GeoJsonRepository _geoJsonRepository;
+        private readonly NutrientConfigRepository _nutrientConfigRepository;
 
-        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, GeoJsonRepository geoJsonRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
+        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, GeoJsonRepository geoJsonRepository, NutrientConfigRepository nutrientConfigRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
             _minioStorage = minioStorage;
             _geoJsonRepository = geoJsonRepository;
+            _nutrientConfigRepository = nutrientConfigRepository;
+        }
+
+        /// <summary>
+        /// Classifica um valor usando configuração personalizada.
+        /// Retorna null se não houver configuração personalizada para o atributo.
+        /// </summary>
+        private object? ClassificarComConfigPersonalizada(string atributo, double valor, Dictionary<string, NutrientConfig> configsPersonalizadas)
+        {
+            // Tentar buscar pelo nome exato do atributo
+            if (!configsPersonalizadas.TryGetValue(atributo, out var config))
+            {
+                // Tentar buscar pelo mapeamento de chaves curtas
+                if (NutrienteConfig.NutrientKeyMapping.TryGetValue(atributo, out var fullKey))
+                {
+                    configsPersonalizadas.TryGetValue(fullKey, out config);
+                }
+            }
+
+            if (config == null) return null;
+
+            var configData = config.GetConfigData();
+            if (configData?.Ranges == null || configData.Ranges.Count == 0) return null;
+
+            // Processar os intervalos personalizados
+            var intervalos = new List<NutrienteConfig.IntervaloInfo>();
+            string? classificacao = null;
+            string? cor = null;
+
+            foreach (var range in configData.Ranges)
+            {
+                if (range.Count < 3) continue;
+
+                double? min = null;
+                double? max = null;
+                string? rangeCor = null;
+                string? rangeClassificacao = null;
+
+                // Parse min
+                if (range[0] != null)
+                {
+                    if (range[0] is System.Text.Json.JsonElement jsonMin)
+                        min = jsonMin.ValueKind == System.Text.Json.JsonValueKind.Number ? jsonMin.GetDouble() : null;
+                    else if (double.TryParse(range[0].ToString(), out double parsedMin))
+                        min = parsedMin;
+                }
+
+                // Parse max
+                if (range[1] != null)
+                {
+                    if (range[1] is System.Text.Json.JsonElement jsonMax)
+                        max = jsonMax.ValueKind == System.Text.Json.JsonValueKind.Number ? jsonMax.GetDouble() : null;
+                    else if (double.TryParse(range[1].ToString(), out double parsedMax))
+                        max = parsedMax;
+                }
+
+                // Parse cor
+                if (range[2] != null)
+                {
+                    rangeCor = range[2] is System.Text.Json.JsonElement jsonCor 
+                        ? jsonCor.GetString() 
+                        : range[2].ToString();
+                }
+
+                // Parse classificação (opcional, posição 3)
+                if (range.Count > 3 && range[3] != null)
+                {
+                    rangeClassificacao = range[3] is System.Text.Json.JsonElement jsonClass 
+                        ? jsonClass.GetString() 
+                        : range[3].ToString();
+                }
+
+                intervalos.Add(new NutrienteConfig.IntervaloInfo
+                {
+                    Min = min,
+                    Max = max,
+                    Cor = rangeCor ?? "#CCCCCC",
+                    Classificacao = rangeClassificacao ?? $"Faixa {min}-{max}"
+                });
+
+                // Verificar se o valor está neste intervalo
+                bool dentroDoIntervalo = (min == null || valor >= min) && (max == null || valor < max);
+                if (dentroDoIntervalo && classificacao == null)
+                {
+                    classificacao = rangeClassificacao ?? $"Faixa {min}-{max}";
+                    cor = rangeCor;
+                }
+            }
+
+            // Se o valor não está em nenhum intervalo personalizado, retornar null
+            // para que o sistema use a configuração global do NutrienteConfig
+            if (classificacao == null)
+            {
+                return null;
+            }
+
+            return new
+            {
+                valor = valor,
+                classificacao = classificacao,
+                cor = cor ?? "#CCCCCC",
+                intervalos = intervalos,
+                configPersonalizada = true
+            };
         }
 
         public async Task<string?> SalvarRelatorio(RelatorioDTO arquivo, Guid userId)
@@ -97,7 +202,14 @@ namespace api.coleta.Services
 
             var relatorioDto = RelatorioMapDto.MapRelatorio(relatorio);
             
-            // Processar classificações dos nutrientes para cada objeto
+            // Carregar configurações personalizadas do usuário ANTES de processar nutrientes
+            // Assim evitamos consultar a lógica padrão/dependente para atributos que já têm config personalizada
+            var configsPersonalizadasList = _nutrientConfigRepository.ListarNutrientConfigsComFallback(userId);
+            var configsPersonalizadas = configsPersonalizadasList
+                .Where(c => !string.IsNullOrEmpty(c.NutrientName))
+                .ToDictionary(c => c.NutrientName!, c => c);
+            
+            // Processar classificações dos nutrientes para cada objeto (otimizado)
             var classificacoesPorObjeto = new List<object>();
             if (!string.IsNullOrEmpty(relatorio.JsonRelatorio))
             {
@@ -106,7 +218,9 @@ namespace api.coleta.Services
                 var pontos = jsonData;
                 if (pontos.ValueKind == System.Text.Json.JsonValueKind.Array)
                 {
-                    // Primeiro, calcular médias de CTC e Argila para todos os objetos
+                    // Processar TODOS os atributos disponíveis no JSON (sem filtro)
+                    
+                    // Calcular médias de CTC e Argila (necessário para dependências)
                     double sumCtc = 0, sumArgila = 0;
                     int countCtc = 0, countArgila = 0;
                     
@@ -114,21 +228,20 @@ namespace api.coleta.Services
                     {
                         if (ponto.ValueKind == System.Text.Json.JsonValueKind.Object)
                         {
-                            foreach (var prop in ponto.EnumerateObject())
+                            if (ponto.TryGetProperty("CTC", out var ctcProp) && ctcProp.ValueKind == System.Text.Json.JsonValueKind.Number)
                             {
-                                if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetDouble(out double val))
-                                {
-                                    if (prop.Name == "CTC")
-                                    {
-                                        sumCtc += val;
-                                        countCtc++;
-                                    }
-                                    else if (prop.Name == "Argila" || prop.Name == "Mat. Org.")
-                                    {
-                                        sumArgila += val;
-                                        countArgila++;
-                                    }
-                                }
+                                sumCtc += ctcProp.GetDouble();
+                                countCtc++;
+                            }
+                            if (ponto.TryGetProperty("Argila", out var argilaProp) && argilaProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                            {
+                                sumArgila += argilaProp.GetDouble();
+                                countArgila++;
+                            }
+                            else if (ponto.TryGetProperty("Mat. Org.", out var matOrgProp) && matOrgProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                            {
+                                sumArgila += matOrgProp.GetDouble();
+                                countArgila++;
                             }
                         }
                     }
@@ -136,41 +249,54 @@ namespace api.coleta.Services
                     double mediaCtc = countCtc > 0 ? sumCtc / countCtc : 0;
                     double mediaArgila = countArgila > 0 ? sumArgila / countArgila : 0;
                     
-                    // Processar cada objeto individualmente
+                    // Processar cada objeto individualmente (limitado aos primeiros 20 para performance)
+                    int objetosProcessados = 0;
+                    int maxObjetos = 20;
+                    
                     foreach (var ponto in pontos.EnumerateArray())
                     {
+                        if (objetosProcessados >= maxObjetos) break;
+                        
                         if (ponto.ValueKind == System.Text.Json.JsonValueKind.Object)
                         {
                             int? objetoId = null;
+                            if (ponto.TryGetProperty("ID", out var idProp) && idProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                            {
+                                objetoId = idProp.GetInt32();
+                            }
+                            
+                            if (!objetoId.HasValue) continue;
+                            
                             var nutrientesClassificados = new Dictionary<string, object>();
                             
-                            foreach (var prop in ponto.EnumerateObject())
+                            // Processar TODOS os atributos do objeto JSON
+                            foreach (var propriedade in ponto.EnumerateObject())
                             {
-                                string atributo = prop.Name;
+                                string atributo = propriedade.Name;
+                                var prop = propriedade.Value;
                                 
-                                // Capturar ID do objeto
-                                if (atributo == "ID")
+                                // Pular ID e prof.
+                                if (atributo == "ID" || atributo == "prof.") continue;
+                                
+                                if (prop.ValueKind != System.Text.Json.JsonValueKind.Number) continue;
+                                if (!prop.TryGetDouble(out double valor)) continue;
+                                
+                                // PRIMEIRO: Verificar se existe configuração personalizada para este atributo
+                                var resultPersonalizado = ClassificarComConfigPersonalizada(atributo, valor, configsPersonalizadas);
+                                if (resultPersonalizado != null)
                                 {
-                                    if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out int id))
-                                    {
-                                        objetoId = id;
-                                    }
-                                    continue;
+                                    // Usar configuração personalizada - ignora lógica padrão/dependente
+                                    nutrientesClassificados[atributo] = resultPersonalizado;
+                                    continue; // Pular para o próximo atributo
                                 }
                                 
-                                // Processar apenas atributos numéricos
-                                if (prop.Value.ValueKind != System.Text.Json.JsonValueKind.Number)
-                                    continue;
-                                    
-                                if (!prop.Value.TryGetDouble(out double valor))
-                                    continue;
-                                
+                                // SEGUNDO: Usar lógica padrão (config default ou dependente)
                                 // Determinar referência e valor de referência
                                 string? referencia = null;
                                 double valorReferencia = 0;
                                 
                                 if (atributo.Contains("Ca") || atributo.Contains("Mg") || atributo.Contains("K") || 
-                                    atributo.Contains("Al") || atributo.Contains("H+Al") || atributo == "Mg/CTC" || atributo == "Ca + Mg")
+                                    atributo.Contains("Al") || atributo.Contains("H+Al") || atributo == "Mg/CTC" || atributo == "Ca + Mg" || atributo == "Ca+Mg")
                                 {
                                     referencia = "CTC";
                                     valorReferencia = mediaCtc;
@@ -189,18 +315,19 @@ namespace api.coleta.Services
                                         valor = valor,
                                         classificacao = result.Classificacao,
                                         cor = result.Cor,
-                                        intervalos = result.Intervalos
+                                        intervalos = result.Intervalos // Retornar todos os intervalos possíveis
                                     };
                                 }
                             }
                             
-                            if (objetoId.HasValue)
+                            if (nutrientesClassificados.Count > 0)
                             {
                                 classificacoesPorObjeto.Add(new
                                 {
                                     id = objetoId.Value,
                                     nutrientes = nutrientesClassificados
                                 });
+                                objetosProcessados++;
                             }
                         }
                     }
