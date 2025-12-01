@@ -192,9 +192,16 @@ namespace api.coleta.Services
             return true;
         }
 
-        public async Task<RelatorioCompletoOutputDTO?> GetRelatorioCompletoAsync(Guid relatorioId, Guid userId)
+        public async Task<RelatorioCompletoOutputDTO?> GetRelatorioCompletoAsync(Guid relatorioOuColetaId, Guid userId)
         {
-            var relatorio = await _relatorioRepository.ObterPorRelatorioId(relatorioId, userId);
+            // Tentar buscar primeiro por RelatorioId, depois por ColetaId
+            var relatorio = await _relatorioRepository.ObterPorRelatorioId(relatorioOuColetaId, userId);
+            if (relatorio == null)
+            {
+                // Fallback: buscar por ColetaId (comportamento antigo)
+                relatorio = await _relatorioRepository.ObterPorId(relatorioOuColetaId, userId);
+            }
+            
             if (relatorio == null)
             {
                 return null;
@@ -249,14 +256,9 @@ namespace api.coleta.Services
                     double mediaCtc = countCtc > 0 ? sumCtc / countCtc : 0;
                     double mediaArgila = countArgila > 0 ? sumArgila / countArgila : 0;
                     
-                    // Processar cada objeto individualmente (limitado aos primeiros 20 para performance)
-                    int objetosProcessados = 0;
-                    int maxObjetos = 20;
-                    
+                    // Processar cada objeto individualmente
                     foreach (var ponto in pontos.EnumerateArray())
                     {
-                        if (objetosProcessados >= maxObjetos) break;
-                        
                         if (ponto.ValueKind == System.Text.Json.JsonValueKind.Object)
                         {
                             int? objetoId = null;
@@ -327,7 +329,6 @@ namespace api.coleta.Services
                                     id = objetoId.Value,
                                     nutrientes = nutrientesClassificados
                                 });
-                                objetosProcessados++;
                             }
                         }
                     }

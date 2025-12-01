@@ -49,7 +49,8 @@ namespace api.coleta.Controllers
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var relatorio = await _relatorioService.GetRelario(id, userId);
+                // Usar GetRelatorioCompletoAsync para incluir classificações com configurações personalizadas
+                var relatorio = await _relatorioService.GetRelatorioCompletoAsync(id, userId);
 
                 return Ok(relatorio);
 
