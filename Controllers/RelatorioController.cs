@@ -96,5 +96,29 @@ namespace api.coleta.Controllers
 
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
+
+        /// <summary>
+        /// Obtém o resumo dos indicadores para gráficos do talhão.
+        /// Retorna indicadores de acidez, saturação, equilíbrio de bases e participação na CTC.
+        /// </summary>
+        /// <param name="id">ID do relatório ou da coleta</param>
+        /// <returns>Resumo do talhão com todos os indicadores para gráficos</returns>
+        [HttpGet]
+        [Route("{id}/indicadores-graficos")]
+        public async Task<IActionResult> GetIndicadoresGraficos([FromRoute] Guid id)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            if (userId != null)
+            {
+                var resumo = await _relatorioService.GetResumoAcidezSoloAsync(id, userId);
+                if (resumo == null)
+                {
+                    return NotFound(new { message = "Relatório não encontrado ou sem dados de análise." });
+                }
+                return Ok(resumo);
+            }
+            return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+        }
     }
 }

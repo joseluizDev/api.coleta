@@ -443,6 +443,9 @@ namespace api.coleta.Services
                 };
             }
             
+            // Calcular estatísticas de todos os atributos para gráficos mobile
+            var estatisticasAtributos = CalcularEstatisticasAtributos(relatorio.JsonRelatorio, configsPersonalizadas);
+            
             return new RelatorioCompletoOutputDTO
             {
                 Id = relatorioDto.Id,
@@ -462,7 +465,385 @@ namespace api.coleta.Services
                 JsonRelatorio = relatorioDto.JsonRelatorio,
                 IsRelatorio = relatorioDto.IsRelatorio,
                 DadosColeta = dadosColeta,
-                NutrientesClassificados = classificacoesPorObjeto
+                NutrientesClassificados = classificacoesPorObjeto,
+                EstatisticasAtributos = estatisticasAtributos
+            };
+        }
+
+        /// <summary>
+        /// Obtém o resumo dos indicadores para gráficos do talhão
+        /// Retorna indicadores de acidez, saturação, equilíbrio de bases e participação na CTC
+        /// </summary>
+        public async Task<ResumoTalhaoDTO?> GetResumoAcidezSoloAsync(Guid relatorioOuColetaId, Guid userId)
+        {
+            // Tentar buscar primeiro por RelatorioId, depois por ColetaId
+            var relatorio = await _relatorioRepository.ObterPorRelatorioId(relatorioOuColetaId, userId);
+            if (relatorio == null)
+            {
+                // Fallback: buscar por ColetaId (comportamento antigo)
+                relatorio = await _relatorioRepository.ObterPorId(relatorioOuColetaId, userId);
+            }
+            
+            if (relatorio == null || string.IsNullOrEmpty(relatorio.JsonRelatorio))
+            {
+                return null;
+            }
+
+            var resumo = new ResumoTalhaoDTO
+            {
+                RelatorioId = relatorio.Id,
+                ColetaId = relatorio.ColetaId,
+                NomeTalhao = relatorio.Coleta?.Talhao?.Nome ?? string.Empty,
+                NomeFazenda = relatorio.Coleta?.Fazenda?.Nome ?? string.Empty,
+                NomeSafra = relatorio.Coleta?.Safra?.Observacao ?? string.Empty
+            };
+
+            // Carregar configurações personalizadas do usuário
+            var configsPersonalizadasList = _nutrientConfigRepository.ListarNutrientConfigsComFallback(userId);
+            var configsPersonalizadas = configsPersonalizadasList
+                .Where(c => !string.IsNullOrEmpty(c.NutrientName))
+                .ToDictionary(c => c.NutrientName!, c => c);
+
+            // Processar o JSON para calcular médias
+            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var jsonData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(relatorio.JsonRelatorio, options);
+            
+            if (jsonData.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                return resumo;
+            }
+
+            // Dicionário para armazenar todos os valores de cada atributo
+            var valoresPorAtributo = new Dictionary<string, List<double>>();
+            
+            // Variáveis para acumular valores dos indicadores principais
+            double sumPH = 0, sumM = 0, sumV = 0;
+            int countPH = 0, countM = 0, countV = 0;
+            double sumCaMg = 0, sumCaK = 0, sumMgK = 0;
+            int countCaMg = 0, countCaK = 0, countMgK = 0;
+            double sumCaCTC = 0, sumMgCTC = 0, sumKCTC = 0, sumHAlCTC = 0, sumAlCTC = 0;
+            int countCaCTC = 0, countMgCTC = 0, countKCTC = 0, countHAlCTC = 0, countAlCTC = 0;
+            
+            // Variáveis para calcular CTC e Argila médias (referências para classificação)
+            double sumCTCRef = 0, sumArgilaRef = 0;
+            int countCTCRef = 0, countArgilaRef = 0;
+            var chavesCTCRef = new[] { "CTC", "CTC a pH 7 (T)", "CTC (T)" };
+            var chavesArgilaRef = new[] { "Argila", "Argila (%)", "Mat. Org.", "Matéria Orgânica" };
+            
+            int totalPontos = 0;
+
+            // Chaves possíveis para cada indicador
+            var chavesPH = new[] { "pH", "pH (CaCl2)", "pH CaCl2", "pH (H2O)", "pH H2O" };
+            var chavesM = new[] { "m%", "m", "Saturação por Alumínio", "saturação por Alumínio - m% (Al)" };
+            var chavesV = new[] { "V%", "V", "Saturação por bases", "saturação por bases  - V%" };
+            var chavesCaMg = new[] { "Ca/Mg", "Relação Ca/Mg", "Relação de Ca/Mg" };
+            var chavesCaK = new[] { "Ca/K", "Relação Ca/K", "Relação de Ca/K" };
+            var chavesMgK = new[] { "Mg/K", "Relação Mg/K", "Relação de Mg/K" };
+            var chavesCaCTC = new[] { "Ca/CTC (%)", "Ca/CTC", "Participação de Ca/CTC (%)" };
+            var chavesMgCTC = new[] { "Mg/CTC (%)", "Mg/CTC", "Participação de Mg/CTC (%)" };
+            var chavesKCTC = new[] { "K/CTC (%)", "K/CTC", "Participação de K/CTC (%)" };
+            var chavesHAlCTC = new[] { "H+Al/CTC (%)", "H+Al/CTC", "Participação de H+Al/CTC (%)" };
+            var chavesAlCTC = new[] { "Al/CTC (%)", "Al/CTC", "Participação de Al/CTC (%)" };
+
+            // Atributos a ignorar na coleta de estatísticas
+            var atributosIgnorados = new HashSet<string> { "ID", "id", "prof.", "profundidade", "Profundidade" };
+
+            foreach (var ponto in jsonData.EnumerateArray())
+            {
+                if (ponto.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                totalPontos++;
+
+                // Coletar TODOS os valores numéricos de cada atributo para estatísticas
+                foreach (var propriedade in ponto.EnumerateObject())
+                {
+                    string nomeAtributo = propriedade.Name;
+                    
+                    // Ignorar atributos não relevantes
+                    if (atributosIgnorados.Contains(nomeAtributo)) continue;
+                    
+                    if (propriedade.Value.ValueKind == System.Text.Json.JsonValueKind.Number &&
+                        propriedade.Value.TryGetDouble(out double valor))
+                    {
+                        if (!valoresPorAtributo.ContainsKey(nomeAtributo))
+                        {
+                            valoresPorAtributo[nomeAtributo] = new List<double>();
+                        }
+                        valoresPorAtributo[nomeAtributo].Add(valor);
+                        
+                        // Acumular CTC para referência
+                        if (chavesCTCRef.Contains(nomeAtributo))
+                        {
+                            sumCTCRef += valor;
+                            countCTCRef++;
+                        }
+                        // Acumular Argila para referência
+                        if (chavesArgilaRef.Contains(nomeAtributo))
+                        {
+                            sumArgilaRef += valor;
+                            countArgilaRef++;
+                        }
+                    }
+                }
+
+                // Buscar indicadores principais
+                BuscarEAcumularValor(ponto, chavesPH, ref sumPH, ref countPH);
+                BuscarEAcumularValor(ponto, chavesM, ref sumM, ref countM);
+                BuscarEAcumularValor(ponto, chavesV, ref sumV, ref countV);
+                BuscarEAcumularValor(ponto, chavesCaMg, ref sumCaMg, ref countCaMg);
+                BuscarEAcumularValor(ponto, chavesCaK, ref sumCaK, ref countCaK);
+                BuscarEAcumularValor(ponto, chavesMgK, ref sumMgK, ref countMgK);
+                BuscarEAcumularValor(ponto, chavesCaCTC, ref sumCaCTC, ref countCaCTC);
+                BuscarEAcumularValor(ponto, chavesMgCTC, ref sumMgCTC, ref countMgCTC);
+                BuscarEAcumularValor(ponto, chavesKCTC, ref sumKCTC, ref countKCTC);
+                BuscarEAcumularValor(ponto, chavesHAlCTC, ref sumHAlCTC, ref countHAlCTC);
+                BuscarEAcumularValor(ponto, chavesAlCTC, ref sumAlCTC, ref countAlCTC);
+            }
+
+            resumo.TotalPontos = totalPontos;
+
+            // Calcular médias de referência
+            double mediaCTCRef = countCTCRef > 0 ? sumCTCRef / countCTCRef : 0;
+            double mediaArgilaRef = countArgilaRef > 0 ? sumArgilaRef / countArgilaRef : 0;
+
+            // Calcular estatísticas para cada atributo
+            foreach (var kvp in valoresPorAtributo)
+            {
+                var nomeAtributo = kvp.Key;
+                var valores = kvp.Value;
+                
+                if (valores.Count == 0) continue;
+
+                var estatistica = CalcularEstatisticaAtributo(nomeAtributo, valores, configsPersonalizadas, mediaCTCRef, mediaArgilaRef);
+                resumo.EstatisticasAtributos[nomeAtributo] = estatistica;
+            }
+
+            // Calcular indicadores principais
+            // 1. Acidez - pH
+            resumo.IndicadoresGraficos.Acidez.pH = CalcularIndicador("pH", sumPH, countPH, configsPersonalizadas);
+
+            // 2. Saturação
+            resumo.IndicadoresGraficos.Saturacao.SaturacaoAluminio = CalcularIndicador("m%", sumM, countM, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Saturacao.SaturacaoBases = CalcularIndicador("V%", sumV, countV, configsPersonalizadas);
+
+            // 3. Equilíbrio de Bases
+            resumo.IndicadoresGraficos.EquilibrioBases.CaMg = CalcularIndicador("Ca/Mg", sumCaMg, countCaMg, configsPersonalizadas);
+            resumo.IndicadoresGraficos.EquilibrioBases.CaK = CalcularIndicador("Ca/K", sumCaK, countCaK, configsPersonalizadas);
+            resumo.IndicadoresGraficos.EquilibrioBases.MgK = CalcularIndicador("Mg/K", sumMgK, countMgK, configsPersonalizadas);
+
+            // 4. Participação na CTC
+            resumo.IndicadoresGraficos.ParticipacaoCTC.CaCTC = CalcularIndicador("Ca/CTC (%)", sumCaCTC, countCaCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.MgCTC = CalcularIndicador("Mg/CTC (%)", sumMgCTC, countMgCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.KCTC = CalcularIndicador("K/CTC (%)", sumKCTC, countKCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.HAlCTC = CalcularIndicador("H+Al/CTC (%)", sumHAlCTC, countHAlCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.AlCTC = CalcularIndicador("Al/CTC (%)", sumAlCTC, countAlCTC, configsPersonalizadas);
+
+            return resumo;
+        }
+
+        /// <summary>
+        /// Calcula estatísticas completas de um atributo (para histograma e análise estatística)
+        /// </summary>
+        private EstatisticaAtributoDTO CalcularEstatisticaAtributo(string nomeAtributo, List<double> valores, Dictionary<string, NutrientConfig> configsPersonalizadas, double mediaCTC, double mediaArgila)
+        {
+            var minimo = valores.Min();
+            var maximo = valores.Max();
+            var media = valores.Average();
+
+            // Obter classificação e cor baseada na média
+            string classificacao = "Não classificado";
+            string cor = "#CCCCCC";
+
+            var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
+            if (resultPersonalizado != null)
+            {
+                var resultObj = (dynamic)resultPersonalizado;
+                classificacao = resultObj.classificacao?.ToString() ?? "Não classificado";
+                cor = resultObj.cor?.ToString() ?? "#CCCCCC";
+            }
+            else
+            {
+                // Determinar referência e valor de referência baseado no atributo
+                string? referencia = null;
+                double valorReferencia = 0;
+                
+                // Atributos que dependem de CTC
+                var atributosCTC = new[] { "Ca", "Mg", "K", "Al", "H+Al", "Ca+Mg", "Ca + Mg", "Cálcio", "Magnésio", "Potássio", "Alumínio" };
+                // Atributos que dependem de Argila
+                var atributosArgila = new[] { "PMELICH 1", "P Mehlich", "Fósforo", "P" };
+                
+                if (atributosCTC.Any(a => nomeAtributo.Contains(a, StringComparison.OrdinalIgnoreCase)))
+                {
+                    referencia = "CTC";
+                    valorReferencia = mediaCTC;
+                }
+                else if (atributosArgila.Any(a => nomeAtributo.Contains(a, StringComparison.OrdinalIgnoreCase)))
+                {
+                    referencia = "Argila";
+                    valorReferencia = mediaArgila;
+                }
+                
+                var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, valorReferencia, referencia);
+                if (classResult != null && !string.IsNullOrEmpty(classResult.Classificacao))
+                {
+                    classificacao = classResult.Classificacao;
+                    cor = classResult.Cor ?? "#CCCCCC";
+                }
+            }
+
+            return new EstatisticaAtributoDTO
+            {
+                Nome = nomeAtributo,
+                Valores = valores,
+                Minimo = Math.Round(minimo, 2),
+                Media = Math.Round(media, 2),
+                Maximo = Math.Round(maximo, 2),
+                Classificacao = classificacao,
+                Cor = cor,
+                QuantidadePontos = valores.Count
+            };
+        }
+
+        /// <summary>
+        /// Calcula estatísticas de todos os atributos do JSON do relatório
+        /// </summary>
+        private Dictionary<string, EstatisticaAtributoDTO> CalcularEstatisticasAtributos(string? jsonRelatorio, Dictionary<string, NutrientConfig> configsPersonalizadas)
+        {
+            var resultado = new Dictionary<string, EstatisticaAtributoDTO>();
+            
+            if (string.IsNullOrEmpty(jsonRelatorio))
+            {
+                return resultado;
+            }
+
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var jsonData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(jsonRelatorio, options);
+                
+                if (jsonData.ValueKind != System.Text.Json.JsonValueKind.Array)
+                {
+                    return resultado;
+                }
+
+                // Atributos a ignorar
+                var atributosIgnorados = new HashSet<string> { "ID", "id", "prof.", "profundidade", "Profundidade" };
+                
+                // Dicionário para coletar valores por atributo
+                var valoresPorAtributo = new Dictionary<string, List<double>>();
+                
+                // Variáveis para calcular CTC e Argila médias (referências para classificação)
+                double sumCTC = 0, sumArgila = 0;
+                int countCTC = 0, countArgila = 0;
+                var chavesCTC = new[] { "CTC", "CTC a pH 7 (T)", "CTC (T)" };
+                var chavesArgila = new[] { "Argila", "Argila (%)", "Mat. Org.", "Matéria Orgânica" };
+
+                foreach (var ponto in jsonData.EnumerateArray())
+                {
+                    if (ponto.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+
+                    foreach (var propriedade in ponto.EnumerateObject())
+                    {
+                        string nomeAtributo = propriedade.Name;
+                        
+                        if (atributosIgnorados.Contains(nomeAtributo)) continue;
+                        
+                        if (propriedade.Value.ValueKind == System.Text.Json.JsonValueKind.Number &&
+                            propriedade.Value.TryGetDouble(out double valor))
+                        {
+                            if (!valoresPorAtributo.ContainsKey(nomeAtributo))
+                            {
+                                valoresPorAtributo[nomeAtributo] = new List<double>();
+                            }
+                            valoresPorAtributo[nomeAtributo].Add(valor);
+                            
+                            // Acumular CTC
+                            if (chavesCTC.Contains(nomeAtributo))
+                            {
+                                sumCTC += valor;
+                                countCTC++;
+                            }
+                            // Acumular Argila
+                            if (chavesArgila.Contains(nomeAtributo))
+                            {
+                                sumArgila += valor;
+                                countArgila++;
+                            }
+                        }
+                    }
+                }
+
+                // Calcular médias de referência
+                double mediaCTC = countCTC > 0 ? sumCTC / countCTC : 0;
+                double mediaArgila = countArgila > 0 ? sumArgila / countArgila : 0;
+
+                // Calcular estatísticas para cada atributo
+                foreach (var kvp in valoresPorAtributo)
+                {
+                    if (kvp.Value.Count == 0) continue;
+                    resultado[kvp.Key] = CalcularEstatisticaAtributo(kvp.Key, kvp.Value, configsPersonalizadas, mediaCTC, mediaArgila);
+                }
+            }
+            catch
+            {
+                // Silently ignore parsing errors
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Busca valor em um ponto JSON usando múltiplas chaves possíveis e acumula
+        /// </summary>
+        private void BuscarEAcumularValor(System.Text.Json.JsonElement ponto, string[] chaves, ref double soma, ref int contador)
+        {
+            foreach (var chave in chaves)
+            {
+                if (ponto.TryGetProperty(chave, out var prop) && 
+                    prop.ValueKind == System.Text.Json.JsonValueKind.Number &&
+                    prop.TryGetDouble(out double valor))
+                {
+                    soma += valor;
+                    contador++;
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calcula o indicador com média, classificação e cor
+        /// </summary>
+        private IndicadorDTO CalcularIndicador(string nomeAtributo, double soma, int contador, Dictionary<string, NutrientConfig> configsPersonalizadas)
+        {
+            if (contador == 0)
+            {
+                return new IndicadorDTO
+                {
+                    ValorMedio = 0,
+                    Classificacao = "Sem dados",
+                    Cor = "#CCCCCC"
+                };
+            }
+
+            double media = soma / contador;
+            var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
+            
+            if (resultPersonalizado != null)
+            {
+                var resultObj = (dynamic)resultPersonalizado;
+                return new IndicadorDTO
+                {
+                    ValorMedio = Math.Round(media, 1),
+                    Classificacao = resultObj.classificacao?.ToString() ?? "Não classificado",
+                    Cor = resultObj.cor?.ToString() ?? "#CCCCCC"
+                };
+            }
+
+            var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, 0, null);
+            return new IndicadorDTO
+            {
+                ValorMedio = Math.Round(media, 1),
+                Classificacao = classResult?.Classificacao ?? "Não classificado",
+                Cor = classResult?.Cor ?? "#CCCCCC"
             };
         }
     }
