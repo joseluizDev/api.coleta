@@ -524,6 +524,16 @@ namespace api.coleta.Services
             double sumCaCTC = 0, sumMgCTC = 0, sumKCTC = 0, sumHAlCTC = 0, sumAlCTC = 0;
             int countCaCTC = 0, countMgCTC = 0, countKCTC = 0, countHAlCTC = 0, countAlCTC = 0;
             
+            // Variáveis para Macronutrientes
+            double sumCa = 0, sumMg = 0, sumK = 0, sumCaMgMacro = 0, sumHAl = 0, sumAl = 0;
+            int countCa = 0, countMg = 0, countK = 0, countCaMgMacro = 0, countHAl = 0, countAl = 0;
+            double sumP = 0, sumCTCMacro = 0, sumSB = 0, sumMO = 0;
+            int countP = 0, countCTCMacro = 0, countSB = 0, countMO = 0;
+            
+            // Variáveis para Micronutrientes
+            double sumFe = 0, sumCu = 0, sumMn = 0, sumB = 0, sumZn = 0, sumS = 0;
+            int countFe = 0, countCu = 0, countMn = 0, countB = 0, countZn = 0, countS = 0;
+            
             // Variáveis para calcular CTC e Argila médias (referências para classificação)
             double sumCTCRef = 0, sumArgilaRef = 0;
             int countCTCRef = 0, countArgilaRef = 0;
@@ -532,8 +542,8 @@ namespace api.coleta.Services
             
             int totalPontos = 0;
 
-            // Chaves possíveis para cada indicador
-            var chavesPH = new[] { "pH", "pH (CaCl2)", "pH CaCl2", "pH (H2O)", "pH H2O" };
+            // Chaves possíveis para cada indicador (ordem de prioridade)
+            var chavesPH = new[] { "pH (CaCl2)", "pH CaCl2", "pH", "pH (H2O)", "pH H2O" };
             var chavesM = new[] { "m%", "m", "Saturação por Alumínio", "saturação por Alumínio - m% (Al)" };
             var chavesV = new[] { "V%", "V", "Saturação por bases", "saturação por bases  - V%" };
             var chavesCaMg = new[] { "Ca/Mg", "Relação Ca/Mg", "Relação de Ca/Mg" };
@@ -544,6 +554,26 @@ namespace api.coleta.Services
             var chavesKCTC = new[] { "K/CTC (%)", "K/CTC", "Participação de K/CTC (%)" };
             var chavesHAlCTC = new[] { "H+Al/CTC (%)", "H+Al/CTC", "Participação de H+Al/CTC (%)" };
             var chavesAlCTC = new[] { "Al/CTC (%)", "Al/CTC", "Participação de Al/CTC (%)" };
+            
+            // Chaves para Macronutrientes
+            var chavesCa = new[] { "Ca", "Cálcio", "Cálcio - Ca (cmolc/dm³)" };
+            var chavesMg = new[] { "Mg", "Magnésio", "Magnésio - Mg (cmolc/dm³)" };
+            var chavesK = new[] { "K", "Potássio", "Potássio - K (cmolc/dm³)" };
+            var chavesCaMgMacro = new[] { "Ca+Mg", "Ca + Mg", "Ca+Mg (cmolc/dm³)" };
+            var chavesHAl = new[] { "H+Al", "H + Al", "Acidez Potencial (H+Al) (cmolc/dm³)" };
+            var chavesAl = new[] { "Al", "Alumínio", "Alumínio - Al (cmolc/dm³)" };
+            var chavesP = new[] { "PMELICH 1", "P", "Fósforo", "Fósforo - P Mehlich-1 (mg/dm³)" };
+            var chavesCTCMacro = new[] { "CTC", "CTC a pH 7 (T)", "CTC (T)" };
+            var chavesSB = new[] { "SB", "Soma de bases", "SB (cmolc/dm³)" };
+            var chavesMO = new[] { "Mat. Org.", "MO", "Matéria Orgânica", "Matéria Orgânica - MO (g/dm³)" };
+            
+            // Chaves para Micronutrientes
+            var chavesFe = new[] { "Fe", "Ferro", "Ferro - Fe (mg/dm³)" };
+            var chavesCu = new[] { "Cu", "Cobre", "Cobre - Cu (mg/dm³)" };
+            var chavesMn = new[] { "Mn", "Manganês", "Manganês - Mn (mg/dm³)" };
+            var chavesB = new[] { "B", "Boro", "Boro - B (mg/dm³)" };
+            var chavesZn = new[] { "Zn", "Zinco", "Zinco - Zn (mg/dm³)" };
+            var chavesS = new[] { "S", "Enxofre", "Enxofre - S (mg/dm³)", "S-SO4" };
 
             // Atributos a ignorar na coleta de estatísticas
             var atributosIgnorados = new HashSet<string> { "ID", "id", "prof.", "profundidade", "Profundidade" };
@@ -597,6 +627,26 @@ namespace api.coleta.Services
                 BuscarEAcumularValor(ponto, chavesKCTC, ref sumKCTC, ref countKCTC);
                 BuscarEAcumularValor(ponto, chavesHAlCTC, ref sumHAlCTC, ref countHAlCTC);
                 BuscarEAcumularValor(ponto, chavesAlCTC, ref sumAlCTC, ref countAlCTC);
+                
+                // Macronutrientes
+                BuscarEAcumularValor(ponto, chavesCa, ref sumCa, ref countCa);
+                BuscarEAcumularValor(ponto, chavesMg, ref sumMg, ref countMg);
+                BuscarEAcumularValor(ponto, chavesK, ref sumK, ref countK);
+                BuscarEAcumularValor(ponto, chavesCaMgMacro, ref sumCaMgMacro, ref countCaMgMacro);
+                BuscarEAcumularValor(ponto, chavesHAl, ref sumHAl, ref countHAl);
+                BuscarEAcumularValor(ponto, chavesAl, ref sumAl, ref countAl);
+                BuscarEAcumularValor(ponto, chavesP, ref sumP, ref countP);
+                BuscarEAcumularValor(ponto, chavesCTCMacro, ref sumCTCMacro, ref countCTCMacro);
+                BuscarEAcumularValor(ponto, chavesSB, ref sumSB, ref countSB);
+                BuscarEAcumularValor(ponto, chavesMO, ref sumMO, ref countMO);
+                
+                // Micronutrientes
+                BuscarEAcumularValor(ponto, chavesFe, ref sumFe, ref countFe);
+                BuscarEAcumularValor(ponto, chavesCu, ref sumCu, ref countCu);
+                BuscarEAcumularValor(ponto, chavesMn, ref sumMn, ref countMn);
+                BuscarEAcumularValor(ponto, chavesB, ref sumB, ref countB);
+                BuscarEAcumularValor(ponto, chavesZn, ref sumZn, ref countZn);
+                BuscarEAcumularValor(ponto, chavesS, ref sumS, ref countS);
             }
 
             resumo.TotalPontos = totalPontos;
@@ -637,6 +687,41 @@ namespace api.coleta.Services
             resumo.IndicadoresGraficos.ParticipacaoCTC.HAlCTC = CalcularIndicador("H+Al/CTC (%)", sumHAlCTC, countHAlCTC, configsPersonalizadas);
             resumo.IndicadoresGraficos.ParticipacaoCTC.AlCTC = CalcularIndicador("Al/CTC (%)", sumAlCTC, countAlCTC, configsPersonalizadas);
 
+            // 5. Macronutrientes (com referência CTC ou Argila)
+            resumo.IndicadoresGraficos.Macronutrientes.Ca = CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.Mg = CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.K = CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.CaMg = CalcularIndicadorComReferencia("Ca+Mg", sumCaMgMacro, countCaMgMacro, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.HAl = CalcularIndicadorComReferencia("H+Al", sumHAl, countHAl, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.Al = CalcularIndicadorComReferencia("Al", sumAl, countAl, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.Fosforo = CalcularIndicadorComReferencia("PMELICH 1", sumP, countP, configsPersonalizadas, mediaArgilaRef, "Argila");
+            resumo.IndicadoresGraficos.Macronutrientes.CTC = CalcularIndicador("CTC", sumCTCMacro, countCTCMacro, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Macronutrientes.SB = CalcularIndicador("SB", sumSB, countSB, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Macronutrientes.MateriaOrganica = CalcularIndicador("Mat. Org.", sumMO, countMO, configsPersonalizadas);
+
+            // 6. Micronutrientes
+            resumo.IndicadoresGraficos.Micronutrientes.Fe = CalcularIndicador("Fe", sumFe, countFe, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Cu = CalcularIndicador("Cu", sumCu, countCu, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Mn = CalcularIndicador("Mn", sumMn, countMn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.B = CalcularIndicador("B", sumB, countB, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Zn = CalcularIndicador("Zn", sumZn, countZn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.S = CalcularIndicador("S", sumS, countS, configsPersonalizadas);
+
+            // 7. Resumo Visual (para o gráfico de barras horizontal - Interpretação Visual da Análise de Solo)
+            resumo.IndicadoresGraficos.ResumoVisual.M = CalcularIndicador("m%", sumM, countM, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Al = CalcularIndicadorComReferencia("Al", sumAl, countAl, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.V = CalcularIndicador("V%", sumV, countV, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.CTC = CalcularIndicador("CTC", sumCTCMacro, countCTCMacro, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Fe = CalcularIndicador("Fe", sumFe, countFe, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Cu = CalcularIndicador("Cu", sumCu, countCu, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Mn = CalcularIndicador("Mn", sumMn, countMn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.B = CalcularIndicador("B", sumB, countB, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Zn = CalcularIndicador("Zn", sumZn, countZn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.S = CalcularIndicador("S", sumS, countS, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Mg = CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.Ca = CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.K = CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
+
             return resumo;
         }
 
@@ -652,6 +737,7 @@ namespace api.coleta.Services
             // Obter classificação e cor baseada na média
             string classificacao = "Não classificado";
             string cor = "#CCCCCC";
+            IntervaloClassificacaoDTO? intervaloAdequado = null;
 
             var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
             if (resultPersonalizado != null)
@@ -659,6 +745,34 @@ namespace api.coleta.Services
                 var resultObj = (dynamic)resultPersonalizado;
                 classificacao = resultObj.classificacao?.ToString() ?? "Não classificado";
                 cor = resultObj.cor?.ToString() ?? "#CCCCCC";
+                
+                // Tentar obter intervalo adequado da config personalizada
+                if (configsPersonalizadas.TryGetValue(nomeAtributo, out var config))
+                {
+                    var configData = config.GetConfigData();
+                    if (configData?.Ranges != null)
+                    {
+                        // Ranges: [[min, max, color, classification], ...]
+                        foreach (var range in configData.Ranges)
+                        {
+                            if (range.Count >= 4)
+                            {
+                                var classif = range[3]?.ToString();
+                                if (classif == "Adequado")
+                                {
+                                    double.TryParse(range[0]?.ToString(), out double min);
+                                    double.TryParse(range[1]?.ToString(), out double max);
+                                    intervaloAdequado = new IntervaloClassificacaoDTO
+                                    {
+                                        Min = min,
+                                        Max = max > 0 ? max : null
+                                    };
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
             }
             else
             {
@@ -687,6 +801,18 @@ namespace api.coleta.Services
                 {
                     classificacao = classResult.Classificacao;
                     cor = classResult.Cor ?? "#CCCCCC";
+                    
+                    // Buscar intervalo adequado nos intervalos retornados
+                    var intervalo = classResult.Intervalos?.FirstOrDefault(i => 
+                        i.Classificacao == "Adequado");
+                    if (intervalo != null)
+                    {
+                        intervaloAdequado = new IntervaloClassificacaoDTO
+                        {
+                            Min = intervalo.Min,
+                            Max = intervalo.Max
+                        };
+                    }
                 }
             }
 
@@ -699,7 +825,8 @@ namespace api.coleta.Services
                 Maximo = Math.Round(maximo, 2),
                 Classificacao = classificacao,
                 Cor = cor,
-                QuantidadePontos = valores.Count
+                QuantidadePontos = valores.Count,
+                IntervaloAdequado = intervaloAdequado
             };
         }
 
@@ -820,30 +947,174 @@ namespace api.coleta.Services
                 {
                     ValorMedio = 0,
                     Classificacao = "Sem dados",
-                    Cor = "#CCCCCC"
+                    Cor = "#CCCCCC",
+                    IntervaloAdequado = null
                 };
             }
 
             double media = soma / contador;
+            IntervaloClassificacaoDTO? intervaloAdequado = null;
+            
             var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
             
             if (resultPersonalizado != null)
             {
                 var resultObj = (dynamic)resultPersonalizado;
+                
+                // Tentar obter intervalo adequado da config personalizada
+                if (configsPersonalizadas.TryGetValue(nomeAtributo, out var config))
+                {
+                    var configData = config.GetConfigData();
+                    if (configData?.Ranges != null)
+                    {
+                        foreach (var range in configData.Ranges)
+                        {
+                            if (range.Count >= 4)
+                            {
+                                var classif = range[3]?.ToString();
+                                if (classif == "Adequado")
+                                {
+                                    double.TryParse(range[0]?.ToString(), out double min);
+                                    double.TryParse(range[1]?.ToString(), out double max);
+                                    intervaloAdequado = new IntervaloClassificacaoDTO
+                                    {
+                                        Min = min,
+                                        Max = max > 0 ? max : null
+                                    };
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 return new IndicadorDTO
                 {
                     ValorMedio = Math.Round(media, 1),
                     Classificacao = resultObj.classificacao?.ToString() ?? "Não classificado",
-                    Cor = resultObj.cor?.ToString() ?? "#CCCCCC"
+                    Cor = resultObj.cor?.ToString() ?? "#CCCCCC",
+                    IntervaloAdequado = intervaloAdequado
                 };
             }
 
             var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, 0, null);
+            
+            // Buscar intervalo adequado nos intervalos retornados
+            if (classResult?.Intervalos != null)
+            {
+                var intervalo = classResult.Intervalos.FirstOrDefault(i => 
+                    i.Classificacao == "Adequado");
+                if (intervalo != null)
+                {
+                    intervaloAdequado = new IntervaloClassificacaoDTO
+                    {
+                        Min = intervalo.Min,
+                        Max = intervalo.Max
+                    };
+                }
+            }
+            
             return new IndicadorDTO
             {
                 ValorMedio = Math.Round(media, 1),
                 Classificacao = classResult?.Classificacao ?? "Não classificado",
-                Cor = classResult?.Cor ?? "#CCCCCC"
+                Cor = classResult?.Cor ?? "#CCCCCC",
+                IntervaloAdequado = intervaloAdequado
+            };
+        }
+
+        /// <summary>
+        /// Calcula um indicador com referência CTC ou Argila para classificação
+        /// </summary>
+        private IndicadorDTO CalcularIndicadorComReferencia(
+            string nomeAtributo, 
+            double soma, 
+            int contador, 
+            Dictionary<string, NutrientConfig> configsPersonalizadas,
+            double valorReferencia,
+            string tipoReferencia)
+        {
+            if (contador == 0)
+            {
+                return new IndicadorDTO
+                {
+                    ValorMedio = 0,
+                    Classificacao = "Sem dados",
+                    Cor = "#CCCCCC",
+                    IntervaloAdequado = null
+                };
+            }
+
+            double media = soma / contador;
+            IntervaloClassificacaoDTO? intervaloAdequado = null;
+            
+            // Tentar classificação personalizada primeiro
+            var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
+            
+            if (resultPersonalizado != null)
+            {
+                var resultObj = (dynamic)resultPersonalizado;
+                
+                // Tentar obter intervalo adequado da config personalizada
+                if (configsPersonalizadas.TryGetValue(nomeAtributo, out var config))
+                {
+                    var configData = config.GetConfigData();
+                    if (configData?.Ranges != null)
+                    {
+                        foreach (var range in configData.Ranges)
+                        {
+                            if (range.Count >= 4)
+                            {
+                                var classif = range[3]?.ToString();
+                                if (classif == "Adequado")
+                                {
+                                    double.TryParse(range[0]?.ToString(), out double min);
+                                    double.TryParse(range[1]?.ToString(), out double max);
+                                    intervaloAdequado = new IntervaloClassificacaoDTO
+                                    {
+                                        Min = min,
+                                        Max = max > 0 ? max : null
+                                    };
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return new IndicadorDTO
+                {
+                    ValorMedio = Math.Round(media, 2),
+                    Classificacao = resultObj.classificacao?.ToString() ?? "Não classificado",
+                    Cor = resultObj.cor?.ToString() ?? "#CCCCCC",
+                    IntervaloAdequado = intervaloAdequado
+                };
+            }
+
+            // Usar classificação padrão com referência CTC/Argila
+            var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, valorReferencia, tipoReferencia);
+            
+            // Buscar intervalo adequado nos intervalos retornados
+            if (classResult?.Intervalos != null)
+            {
+                var intervalo = classResult.Intervalos.FirstOrDefault(i => 
+                    i.Classificacao == "Adequado");
+                if (intervalo != null)
+                {
+                    intervaloAdequado = new IntervaloClassificacaoDTO
+                    {
+                        Min = intervalo.Min,
+                        Max = intervalo.Max
+                    };
+                }
+            }
+            
+            return new IndicadorDTO
+            {
+                ValorMedio = Math.Round(media, 2),
+                Classificacao = classResult?.Classificacao ?? "Não classificado",
+                Cor = classResult?.Cor ?? "#CCCCCC",
+                IntervaloAdequado = intervaloAdequado
             };
         }
     }

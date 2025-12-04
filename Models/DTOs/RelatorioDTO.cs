@@ -81,6 +81,15 @@ namespace api.coleta.Models.DTOs
     }
 
     /// <summary>
+    /// DTO para intervalo de classificação
+    /// </summary>
+    public class IntervaloClassificacaoDTO
+    {
+        public double? Min { get; set; }
+        public double? Max { get; set; }
+    }
+
+    /// <summary>
     /// DTO para indicador individual com valor médio, classificação e cor
     /// </summary>
     public class IndicadorDTO
@@ -88,6 +97,11 @@ namespace api.coleta.Models.DTOs
         public double ValorMedio { get; set; }
         public string Classificacao { get; set; } = string.Empty;
         public string Cor { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Intervalo de valor considerado "Adequado" para este atributo
+        /// </summary>
+        public IntervaloClassificacaoDTO? IntervaloAdequado { get; set; }
     }
 
     /// <summary>
@@ -134,6 +148,11 @@ namespace api.coleta.Models.DTOs
         /// Quantidade de pontos válidos
         /// </summary>
         public int QuantidadePontos { get; set; }
+        
+        /// <summary>
+        /// Intervalo de valor considerado "Adequado" para este atributo
+        /// </summary>
+        public IntervaloClassificacaoDTO? IntervaloAdequado { get; set; }
     }
 
     /// <summary>
@@ -193,6 +212,75 @@ namespace api.coleta.Models.DTOs
     }
 
     /// <summary>
+    /// DTO para macronutrientes (Ca, Mg, K, Ca+Mg, P, etc.)
+    /// </summary>
+    public class MacronutrientesDTO
+    {
+        public IndicadorDTO Ca { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Mg { get; set; } = new IndicadorDTO();
+        public IndicadorDTO K { get; set; } = new IndicadorDTO();
+        
+        [System.Text.Json.Serialization.JsonPropertyName("Ca+Mg")]
+        public IndicadorDTO CaMg { get; set; } = new IndicadorDTO();
+        
+        [System.Text.Json.Serialization.JsonPropertyName("H+Al")]
+        public IndicadorDTO HAl { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO Al { get; set; } = new IndicadorDTO();
+        
+        [System.Text.Json.Serialization.JsonPropertyName("P")]
+        public IndicadorDTO Fosforo { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO CTC { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO SB { get; set; } = new IndicadorDTO();
+        
+        [System.Text.Json.Serialization.JsonPropertyName("MO")]
+        public IndicadorDTO MateriaOrganica { get; set; } = new IndicadorDTO();
+    }
+
+    /// <summary>
+    /// DTO para micronutrientes (Fe, Cu, Mn, B, Zn, S)
+    /// </summary>
+    public class MicronutrientesDTO
+    {
+        public IndicadorDTO Fe { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Cu { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Mn { get; set; } = new IndicadorDTO();
+        public IndicadorDTO B { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Zn { get; set; } = new IndicadorDTO();
+        public IndicadorDTO S { get; set; } = new IndicadorDTO();
+    }
+
+    /// <summary>
+    /// DTO para resumo visual dos dados do solo (gráfico de barras horizontal)
+    /// Contém todos os atributos que aparecem no gráfico de interpretação visual
+    /// </summary>
+    public class ResumoVisualSoloDTO
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("m%")]
+        public IndicadorDTO M { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO Al { get; set; } = new IndicadorDTO();
+        
+        [System.Text.Json.Serialization.JsonPropertyName("V%")]
+        public IndicadorDTO V { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO CTC { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO Fe { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Cu { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Mn { get; set; } = new IndicadorDTO();
+        public IndicadorDTO B { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Zn { get; set; } = new IndicadorDTO();
+        public IndicadorDTO S { get; set; } = new IndicadorDTO();
+        
+        public IndicadorDTO Mg { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Ca { get; set; } = new IndicadorDTO();
+        public IndicadorDTO K { get; set; } = new IndicadorDTO();
+    }
+
+    /// <summary>
     /// DTO para todos os indicadores de gráficos
     /// </summary>
     public class IndicadoresGraficosDTO
@@ -201,6 +289,13 @@ namespace api.coleta.Models.DTOs
         public SaturacaoDTO Saturacao { get; set; } = new SaturacaoDTO();
         public EquilibrioBasesDTO EquilibrioBases { get; set; } = new EquilibrioBasesDTO();
         public ParticipacaoCTCDTO ParticipacaoCTC { get; set; } = new ParticipacaoCTCDTO();
+        public MacronutrientesDTO Macronutrientes { get; set; } = new MacronutrientesDTO();
+        public MicronutrientesDTO Micronutrientes { get; set; } = new MicronutrientesDTO();
+        
+        /// <summary>
+        /// Resumo visual para o gráfico de barras horizontal (Interpretação Visual da Análise de Solo)
+        /// </summary>
+        public ResumoVisualSoloDTO ResumoVisual { get; set; } = new ResumoVisualSoloDTO();
     }
 
     /// <summary>
