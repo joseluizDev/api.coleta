@@ -443,6 +443,7 @@ class  NutrienteConfig
         ["Ca/Mg"] = "Ca/Mg",
         ["Ca/K"] = "Ca/K",
         ["Mg/K"] = "Mg/K",
+        ["P MELICH 1"] = "Fósforo Mehlich ",
         ["PMELICH 1"] = "Fósforo Mehlich ",
         ["P Mehlich"] = "Fósforo Mehlich ",
         ["Fósforo"] = "Fósforo Mehlich ",
