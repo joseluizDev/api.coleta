@@ -920,7 +920,7 @@ class  NutrienteConfig
                     },
                     new Dictionary<string, object>
                     {
-                        ["intervalo_argila"] = new { min = 600.0, max = 350.0 },
+                        ["intervalo_argila"] = new { min = 600.0, max = 1000 },
                         ["Muito Baixo"] = new { min = (double?)null, max = 5.0 },
                         ["Baixo"] = new { min = 5.0, max = 8.0 },
                         ["Médio"] = new { min = 8.0, max = 12.0 },
