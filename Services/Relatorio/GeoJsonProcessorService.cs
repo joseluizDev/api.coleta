@@ -105,7 +105,11 @@ namespace api.coleta.Services.Relatorio
 
                     if (coords != null && coords.Count > 0 && coords[0].Count > 0)
                     {
-                        gridList.Add(new { cordenadas = coords[0] });
+                        // Extrair id das properties do hexágono
+                        var hexId = feature.TryGetProperty("properties", out var props) &&
+                                    props.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : zonas + 1;
+
+                        gridList.Add(new { id = hexId, cordenadas = coords[0] });
                         zonas++;
                     }
                 }
