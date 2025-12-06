@@ -1,10 +1,11 @@
 ﻿using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
+using api.coleta.Utils;
 using api.coleta.Utils.Maps;
 using api.minionStorage.Services;
-using static System.Net.Mime.MediaTypeNames;
-using api.coleta.Utils;
+using api.coleta.Services.Relatorio;
+using RelatorioEntity = api.coleta.Models.Entidades.Relatorio;
 
 namespace api.coleta.Services
 {
@@ -12,118 +13,29 @@ namespace api.coleta.Services
     {
         private readonly RelatorioRepository _relatorioRepository;
         private readonly IMinioStorage _minioStorage;
-        private readonly GeoJsonRepository _geoJsonRepository;
         private readonly NutrientConfigRepository _nutrientConfigRepository;
+        private readonly NutrientClassificationService _classificationService;
+        private readonly GeoJsonProcessorService _geoJsonProcessorService;
+        private readonly AttributeStatisticsService _statisticsService;
+        private readonly SoilIndicatorService _indicatorService;
 
-        public RelatorioService(RelatorioRepository relatorioRepository, IMinioStorage minioStorage, GeoJsonRepository geoJsonRepository, NutrientConfigRepository nutrientConfigRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
+        public RelatorioService(
+            RelatorioRepository relatorioRepository,
+            IMinioStorage minioStorage,
+            NutrientConfigRepository nutrientConfigRepository,
+            NutrientClassificationService classificationService,
+            GeoJsonProcessorService geoJsonProcessorService,
+            AttributeStatisticsService statisticsService,
+            SoilIndicatorService indicatorService,
+            IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
             _minioStorage = minioStorage;
-            _geoJsonRepository = geoJsonRepository;
             _nutrientConfigRepository = nutrientConfigRepository;
-        }
-
-        /// <summary>
-        /// Classifica um valor usando configuração personalizada.
-        /// Retorna null se não houver configuração personalizada para o atributo.
-        /// </summary>
-        private object? ClassificarComConfigPersonalizada(string atributo, double valor, Dictionary<string, NutrientConfig> configsPersonalizadas)
-        {
-            // Tentar buscar pelo nome exato do atributo
-            if (!configsPersonalizadas.TryGetValue(atributo, out var config))
-            {
-                // Tentar buscar pelo mapeamento de chaves curtas
-                if (NutrienteConfig.NutrientKeyMapping.TryGetValue(atributo, out var fullKey))
-                {
-                    configsPersonalizadas.TryGetValue(fullKey, out config);
-                }
-            }
-
-            if (config == null) return null;
-
-            var configData = config.GetConfigData();
-            if (configData?.Ranges == null || configData.Ranges.Count == 0) return null;
-
-            // Processar os intervalos personalizados
-            var intervalos = new List<NutrienteConfig.IntervaloInfo>();
-            string? classificacao = null;
-            string? cor = null;
-
-            foreach (var range in configData.Ranges)
-            {
-                if (range.Count < 3) continue;
-
-                double? min = null;
-                double? max = null;
-                string? rangeCor = null;
-                string? rangeClassificacao = null;
-
-                // Parse min
-                if (range[0] != null)
-                {
-                    if (range[0] is System.Text.Json.JsonElement jsonMin)
-                        min = jsonMin.ValueKind == System.Text.Json.JsonValueKind.Number ? jsonMin.GetDouble() : null;
-                    else if (double.TryParse(range[0].ToString(), out double parsedMin))
-                        min = parsedMin;
-                }
-
-                // Parse max
-                if (range[1] != null)
-                {
-                    if (range[1] is System.Text.Json.JsonElement jsonMax)
-                        max = jsonMax.ValueKind == System.Text.Json.JsonValueKind.Number ? jsonMax.GetDouble() : null;
-                    else if (double.TryParse(range[1].ToString(), out double parsedMax))
-                        max = parsedMax;
-                }
-
-                // Parse cor
-                if (range[2] != null)
-                {
-                    rangeCor = range[2] is System.Text.Json.JsonElement jsonCor 
-                        ? jsonCor.GetString() 
-                        : range[2].ToString();
-                }
-
-                // Parse classificação (opcional, posição 3)
-                if (range.Count > 3 && range[3] != null)
-                {
-                    rangeClassificacao = range[3] is System.Text.Json.JsonElement jsonClass 
-                        ? jsonClass.GetString() 
-                        : range[3].ToString();
-                }
-
-                intervalos.Add(new NutrienteConfig.IntervaloInfo
-                {
-                    Min = min,
-                    Max = max,
-                    Cor = rangeCor ?? "#CCCCCC",
-                    Classificacao = rangeClassificacao ?? $"Faixa {min}-{max}"
-                });
-
-                // Verificar se o valor está neste intervalo
-                bool dentroDoIntervalo = (min == null || valor >= min) && (max == null || valor < max);
-                if (dentroDoIntervalo && classificacao == null)
-                {
-                    classificacao = rangeClassificacao ?? $"Faixa {min}-{max}";
-                    cor = rangeCor;
-                }
-            }
-
-            // Se o valor não está em nenhum intervalo personalizado, retornar null
-            // para que o sistema use a configuração global do NutrienteConfig
-            if (classificacao == null)
-            {
-                return null;
-            }
-
-            return new
-            {
-                valor = valor,
-                classificacao = classificacao,
-                cor = cor ?? "#CCCCCC",
-                intervalos = intervalos,
-                configPersonalizada = true
-            };
+            _classificationService = classificationService;
+            _geoJsonProcessorService = geoJsonProcessorService;
+            _statisticsService = statisticsService;
+            _indicatorService = indicatorService;
         }
 
         public async Task<string?> SalvarRelatorio(RelatorioDTO arquivo, Guid userId)
@@ -140,7 +52,7 @@ namespace api.coleta.Services
 
             if (url != null)
             {
-                Relatorio map = RelatorioMapDto.MapRelatorio(arquivo);
+                RelatorioEntity map = RelatorioMapDto.MapRelatorio(arquivo);
                 map.LinkBackup = url;
                 map.UsuarioId = userId;
 
@@ -284,7 +196,7 @@ namespace api.coleta.Services
                                 if (!prop.TryGetDouble(out double valor)) continue;
                                 
                                 // PRIMEIRO: Verificar se existe configuração personalizada para este atributo
-                                var resultPersonalizado = ClassificarComConfigPersonalizada(atributo, valor, configsPersonalizadas);
+                                var resultPersonalizado = _classificationService.ClassificarComConfigPersonalizada(atributo, valor, configsPersonalizadas);
                                 if (resultPersonalizado != null)
                                 {
                                     // Usar configuração personalizada - ignora lógica padrão/dependente
@@ -343,78 +255,8 @@ namespace api.coleta.Services
                 var coleta = relatorio.Coleta;
                 var talhaoJson = coleta.Talhao;
                 
-                // Buscar geojson pelo ID da coleta
-                var geojson = _geoJsonRepository.ObterPorId(coleta.GeojsonID);
-                
-                // Processar GeoJSON para extrair grid e pontos
-                object? geoJsonProcessado = null;
-                int zonas = 0;
-                
-                if (geojson != null && !string.IsNullOrEmpty(geojson.Pontos))
-                {
-                    try
-                    {
-                        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                        var pontos = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(geojson.Pontos, options);
-                        
-                        var gridList = new List<object>();
-                        var pointsList = new List<object>();
-                        
-                        // Extrair pontos
-                        if (pontos.TryGetProperty("points", out var pointsElement))
-                        {
-                            foreach (var point in pointsElement.EnumerateArray())
-                            {
-                                if (point.TryGetProperty("geometry", out var geometry) &&
-                                    geometry.TryGetProperty("coordinates", out var coordinates) &&
-                                    point.TryGetProperty("properties", out var properties))
-                                {
-                                    pointsList.Add(new
-                                    {
-                                        dados = new
-                                        {
-                                            id = properties.TryGetProperty("id", out var id) ? id.GetInt32() : 1,
-                                            hexagonId = properties.TryGetProperty("hexagonId", out var hexId) ? hexId.GetInt32() : 1,
-                                            coletado = properties.TryGetProperty("coletado", out var coletado) ? coletado.GetBoolean() : false
-                                        },
-                                        cordenadas = new[] { coordinates[0].GetDouble(), coordinates[1].GetDouble() }
-                                    });
-                                }
-                            }
-                        }
-                        
-                        // Extrair grid (polígonos)
-                        if (pontos.TryGetProperty("features", out var featuresElement))
-                        {
-                            foreach (var feature in featuresElement.EnumerateArray())
-                            {
-                                if (feature.TryGetProperty("geometry", out var geometry) &&
-                                    geometry.TryGetProperty("type", out var geoType) &&
-                                    geoType.GetString() == "Polygon" &&
-                                    geometry.TryGetProperty("coordinates", out var coordinates))
-                                {
-                                    try
-                                    {
-                                        var coords = System.Text.Json.JsonSerializer.Deserialize<List<List<double[]>>>(coordinates.GetRawText(), options);
-                                        if (coords != null && coords.Count > 0 && coords[0].Count > 0)
-                                        {
-                                            gridList.Add(new { cordenadas = coords[0] });
-                                            zonas++;
-                                        }
-                                    }
-                                    catch { }
-                                }
-                            }
-                        }
-                        
-                        geoJsonProcessado = new
-                        {
-                            grid = gridList,
-                            points = pointsList
-                        };
-                    }
-                    catch { }
-                }
+                // Processar GeoJSON para extrair grid e pontos usando o serviço especializado
+                var geoJsonProcessado = _geoJsonProcessorService.ProcessarGeoJson(coleta.GeojsonID, out int zonas);
                 
                 dadosColeta = new ColetaDadosDTO
                 {
@@ -444,7 +286,7 @@ namespace api.coleta.Services
             }
             
             // Calcular estatísticas de todos os atributos para gráficos mobile
-            var estatisticasAtributos = CalcularEstatisticasAtributos(relatorio.JsonRelatorio, configsPersonalizadas);
+            var estatisticasAtributos = _statisticsService.CalcularEstatisticasAtributos(relatorio.JsonRelatorio, configsPersonalizadas);
             
             return new RelatorioCompletoOutputDTO
             {
@@ -616,37 +458,37 @@ namespace api.coleta.Services
                 }
 
                 // Buscar indicadores principais
-                BuscarEAcumularValor(ponto, chavesPH, ref sumPH, ref countPH);
-                BuscarEAcumularValor(ponto, chavesM, ref sumM, ref countM);
-                BuscarEAcumularValor(ponto, chavesV, ref sumV, ref countV);
-                BuscarEAcumularValor(ponto, chavesCaMg, ref sumCaMg, ref countCaMg);
-                BuscarEAcumularValor(ponto, chavesCaK, ref sumCaK, ref countCaK);
-                BuscarEAcumularValor(ponto, chavesMgK, ref sumMgK, ref countMgK);
-                BuscarEAcumularValor(ponto, chavesCaCTC, ref sumCaCTC, ref countCaCTC);
-                BuscarEAcumularValor(ponto, chavesMgCTC, ref sumMgCTC, ref countMgCTC);
-                BuscarEAcumularValor(ponto, chavesKCTC, ref sumKCTC, ref countKCTC);
-                BuscarEAcumularValor(ponto, chavesHAlCTC, ref sumHAlCTC, ref countHAlCTC);
-                BuscarEAcumularValor(ponto, chavesAlCTC, ref sumAlCTC, ref countAlCTC);
-                
+                _indicatorService.BuscarEAcumularValor(ponto, chavesPH, ref sumPH, ref countPH);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesM, ref sumM, ref countM);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesV, ref sumV, ref countV);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCaMg, ref sumCaMg, ref countCaMg);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCaK, ref sumCaK, ref countCaK);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesMgK, ref sumMgK, ref countMgK);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCaCTC, ref sumCaCTC, ref countCaCTC);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesMgCTC, ref sumMgCTC, ref countMgCTC);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesKCTC, ref sumKCTC, ref countKCTC);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesHAlCTC, ref sumHAlCTC, ref countHAlCTC);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesAlCTC, ref sumAlCTC, ref countAlCTC);
+
                 // Macronutrientes
-                BuscarEAcumularValor(ponto, chavesCa, ref sumCa, ref countCa);
-                BuscarEAcumularValor(ponto, chavesMg, ref sumMg, ref countMg);
-                BuscarEAcumularValor(ponto, chavesK, ref sumK, ref countK);
-                BuscarEAcumularValor(ponto, chavesCaMgMacro, ref sumCaMgMacro, ref countCaMgMacro);
-                BuscarEAcumularValor(ponto, chavesHAl, ref sumHAl, ref countHAl);
-                BuscarEAcumularValor(ponto, chavesAl, ref sumAl, ref countAl);
-                BuscarEAcumularValor(ponto, chavesP, ref sumP, ref countP);
-                BuscarEAcumularValor(ponto, chavesCTCMacro, ref sumCTCMacro, ref countCTCMacro);
-                BuscarEAcumularValor(ponto, chavesSB, ref sumSB, ref countSB);
-                BuscarEAcumularValor(ponto, chavesMO, ref sumMO, ref countMO);
-                
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCa, ref sumCa, ref countCa);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesMg, ref sumMg, ref countMg);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesK, ref sumK, ref countK);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCaMgMacro, ref sumCaMgMacro, ref countCaMgMacro);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesHAl, ref sumHAl, ref countHAl);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesAl, ref sumAl, ref countAl);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesP, ref sumP, ref countP);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCTCMacro, ref sumCTCMacro, ref countCTCMacro);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesSB, ref sumSB, ref countSB);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesMO, ref sumMO, ref countMO);
+
                 // Micronutrientes
-                BuscarEAcumularValor(ponto, chavesFe, ref sumFe, ref countFe);
-                BuscarEAcumularValor(ponto, chavesCu, ref sumCu, ref countCu);
-                BuscarEAcumularValor(ponto, chavesMn, ref sumMn, ref countMn);
-                BuscarEAcumularValor(ponto, chavesB, ref sumB, ref countB);
-                BuscarEAcumularValor(ponto, chavesZn, ref sumZn, ref countZn);
-                BuscarEAcumularValor(ponto, chavesS, ref sumS, ref countS);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesFe, ref sumFe, ref countFe);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesCu, ref sumCu, ref countCu);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesMn, ref sumMn, ref countMn);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesB, ref sumB, ref countB);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesZn, ref sumZn, ref countZn);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesS, ref sumS, ref countS);
             }
 
             resumo.TotalPontos = totalPontos;
@@ -660,462 +502,69 @@ namespace api.coleta.Services
             {
                 var nomeAtributo = kvp.Key;
                 var valores = kvp.Value;
-                
+
                 if (valores.Count == 0) continue;
 
-                var estatistica = CalcularEstatisticaAtributo(nomeAtributo, valores, configsPersonalizadas, mediaCTCRef, mediaArgilaRef);
+                var estatistica = _statisticsService.CalcularEstatisticaAtributo(nomeAtributo, valores, configsPersonalizadas, mediaCTCRef, mediaArgilaRef);
                 resumo.EstatisticasAtributos[nomeAtributo] = estatistica;
             }
 
             // Calcular indicadores principais
             // 1. Acidez - pH
-            resumo.IndicadoresGraficos.Acidez.pH = CalcularIndicador("pH", sumPH, countPH, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Acidez.pH = _indicatorService.CalcularIndicador("pH", sumPH, countPH, configsPersonalizadas);
 
             // 2. Saturação
-            resumo.IndicadoresGraficos.Saturacao.SaturacaoAluminio = CalcularIndicador("m%", sumM, countM, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Saturacao.SaturacaoBases = CalcularIndicador("V%", sumV, countV, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Saturacao.SaturacaoAluminio = _indicatorService.CalcularIndicador("m%", sumM, countM, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Saturacao.SaturacaoBases = _indicatorService.CalcularIndicador("V%", sumV, countV, configsPersonalizadas);
 
             // 3. Equilíbrio de Bases
-            resumo.IndicadoresGraficos.EquilibrioBases.CaMg = CalcularIndicador("Ca/Mg", sumCaMg, countCaMg, configsPersonalizadas);
-            resumo.IndicadoresGraficos.EquilibrioBases.CaK = CalcularIndicador("Ca/K", sumCaK, countCaK, configsPersonalizadas);
-            resumo.IndicadoresGraficos.EquilibrioBases.MgK = CalcularIndicador("Mg/K", sumMgK, countMgK, configsPersonalizadas);
+            resumo.IndicadoresGraficos.EquilibrioBases.CaMg = _indicatorService.CalcularIndicador("Ca/Mg", sumCaMg, countCaMg, configsPersonalizadas);
+            resumo.IndicadoresGraficos.EquilibrioBases.CaK = _indicatorService.CalcularIndicador("Ca/K", sumCaK, countCaK, configsPersonalizadas);
+            resumo.IndicadoresGraficos.EquilibrioBases.MgK = _indicatorService.CalcularIndicador("Mg/K", sumMgK, countMgK, configsPersonalizadas);
 
             // 4. Participação na CTC
-            resumo.IndicadoresGraficos.ParticipacaoCTC.CaCTC = CalcularIndicador("Ca/CTC (%)", sumCaCTC, countCaCTC, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ParticipacaoCTC.MgCTC = CalcularIndicador("Mg/CTC (%)", sumMgCTC, countMgCTC, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ParticipacaoCTC.KCTC = CalcularIndicador("K/CTC (%)", sumKCTC, countKCTC, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ParticipacaoCTC.HAlCTC = CalcularIndicador("H+Al/CTC (%)", sumHAlCTC, countHAlCTC, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ParticipacaoCTC.AlCTC = CalcularIndicador("Al/CTC (%)", sumAlCTC, countAlCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.CaCTC = _indicatorService.CalcularIndicador("Ca/CTC (%)", sumCaCTC, countCaCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.MgCTC = _indicatorService.CalcularIndicador("Mg/CTC (%)", sumMgCTC, countMgCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.KCTC = _indicatorService.CalcularIndicador("K/CTC (%)", sumKCTC, countKCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.HAlCTC = _indicatorService.CalcularIndicador("H+Al/CTC (%)", sumHAlCTC, countHAlCTC, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ParticipacaoCTC.AlCTC = _indicatorService.CalcularIndicador("Al/CTC (%)", sumAlCTC, countAlCTC, configsPersonalizadas);
 
             // 5. Macronutrientes (com referência CTC ou Argila)
-            resumo.IndicadoresGraficos.Macronutrientes.Ca = CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.Macronutrientes.Mg = CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.Macronutrientes.K = CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.Macronutrientes.CaMg = CalcularIndicadorComReferencia("Ca+Mg", sumCaMgMacro, countCaMgMacro, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.Macronutrientes.HAl = CalcularIndicadorComReferencia("H+Al", sumHAl, countHAl, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.Macronutrientes.Al = CalcularIndicadorComReferencia("Al", sumAl, countAl, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.Macronutrientes.Fosforo = CalcularIndicadorComReferencia("PMELICH 1", sumP, countP, configsPersonalizadas, mediaArgilaRef, "Argila");
-            resumo.IndicadoresGraficos.Macronutrientes.CTC = CalcularIndicador("CTC", sumCTCMacro, countCTCMacro, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Macronutrientes.SB = CalcularIndicador("SB", sumSB, countSB, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Macronutrientes.MateriaOrganica = CalcularIndicador("Mat. Org.", sumMO, countMO, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Macronutrientes.Ca = _indicatorService.CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.Mg = _indicatorService.CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.K = _indicatorService.CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.CaMg = _indicatorService.CalcularIndicadorComReferencia("Ca+Mg", sumCaMgMacro, countCaMgMacro, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.HAl = _indicatorService.CalcularIndicadorComReferencia("H+Al", sumHAl, countHAl, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.Al = _indicatorService.CalcularIndicadorComReferencia("Al", sumAl, countAl, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.Macronutrientes.Fosforo = _indicatorService.CalcularIndicadorComReferencia("PMELICH 1", sumP, countP, configsPersonalizadas, mediaArgilaRef, "Argila");
+            resumo.IndicadoresGraficos.Macronutrientes.CTC = _indicatorService.CalcularIndicador("CTC", sumCTCMacro, countCTCMacro, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Macronutrientes.SB = _indicatorService.CalcularIndicador("SB", sumSB, countSB, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Macronutrientes.MateriaOrganica = _indicatorService.CalcularIndicador("Mat. Org.", sumMO, countMO, configsPersonalizadas);
 
             // 6. Micronutrientes
-            resumo.IndicadoresGraficos.Micronutrientes.Fe = CalcularIndicador("Fe", sumFe, countFe, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Micronutrientes.Cu = CalcularIndicador("Cu", sumCu, countCu, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Micronutrientes.Mn = CalcularIndicador("Mn", sumMn, countMn, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Micronutrientes.B = CalcularIndicador("B", sumB, countB, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Micronutrientes.Zn = CalcularIndicador("Zn", sumZn, countZn, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Micronutrientes.S = CalcularIndicador("S", sumS, countS, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Fe = _indicatorService.CalcularIndicador("Fe", sumFe, countFe, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Cu = _indicatorService.CalcularIndicador("Cu", sumCu, countCu, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Mn = _indicatorService.CalcularIndicador("Mn", sumMn, countMn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.B = _indicatorService.CalcularIndicador("B", sumB, countB, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.Zn = _indicatorService.CalcularIndicador("Zn", sumZn, countZn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Micronutrientes.S = _indicatorService.CalcularIndicador("S", sumS, countS, configsPersonalizadas);
 
             // 7. Resumo Visual (para o gráfico de barras horizontal - Interpretação Visual da Análise de Solo)
-            resumo.IndicadoresGraficos.ResumoVisual.M = CalcularIndicador("m%", sumM, countM, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.Al = CalcularIndicadorComReferencia("Al", sumAl, countAl, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.ResumoVisual.V = CalcularIndicador("V%", sumV, countV, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.CTC = CalcularIndicador("CTC", sumCTCMacro, countCTCMacro, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.Fe = CalcularIndicador("Fe", sumFe, countFe, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.Cu = CalcularIndicador("Cu", sumCu, countCu, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.Mn = CalcularIndicador("Mn", sumMn, countMn, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.B = CalcularIndicador("B", sumB, countB, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.Zn = CalcularIndicador("Zn", sumZn, countZn, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.S = CalcularIndicador("S", sumS, countS, configsPersonalizadas);
-            resumo.IndicadoresGraficos.ResumoVisual.Mg = CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.ResumoVisual.Ca = CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
-            resumo.IndicadoresGraficos.ResumoVisual.K = CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.M = _indicatorService.CalcularIndicador("m%", sumM, countM, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Al = _indicatorService.CalcularIndicadorComReferencia("Al", sumAl, countAl, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.V = _indicatorService.CalcularIndicador("V%", sumV, countV, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.CTC = _indicatorService.CalcularIndicador("CTC", sumCTCMacro, countCTCMacro, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Fe = _indicatorService.CalcularIndicador("Fe", sumFe, countFe, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Cu = _indicatorService.CalcularIndicador("Cu", sumCu, countCu, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Mn = _indicatorService.CalcularIndicador("Mn", sumMn, countMn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.B = _indicatorService.CalcularIndicador("B", sumB, countB, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Zn = _indicatorService.CalcularIndicador("Zn", sumZn, countZn, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.S = _indicatorService.CalcularIndicador("S", sumS, countS, configsPersonalizadas);
+            resumo.IndicadoresGraficos.ResumoVisual.Mg = _indicatorService.CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.Ca = _indicatorService.CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
+            resumo.IndicadoresGraficos.ResumoVisual.K = _indicatorService.CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
 
             return resumo;
-        }
-
-        /// <summary>
-        /// Calcula estatísticas completas de um atributo (para histograma e análise estatística)
-        /// </summary>
-        private EstatisticaAtributoDTO CalcularEstatisticaAtributo(string nomeAtributo, List<double> valores, Dictionary<string, NutrientConfig> configsPersonalizadas, double mediaCTC, double mediaArgila)
-        {
-            var minimo = valores.Min();
-            var maximo = valores.Max();
-            var media = valores.Average();
-
-            // Obter classificação e cor baseada na média
-            string classificacao = "Não classificado";
-            string cor = "#CCCCCC";
-            IntervaloClassificacaoDTO? intervaloAdequado = null;
-
-            var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
-            if (resultPersonalizado != null)
-            {
-                var resultObj = (dynamic)resultPersonalizado;
-                classificacao = resultObj.classificacao?.ToString() ?? "Não classificado";
-                cor = resultObj.cor?.ToString() ?? "#CCCCCC";
-                
-                // Tentar obter intervalo adequado da config personalizada
-                if (configsPersonalizadas.TryGetValue(nomeAtributo, out var config))
-                {
-                    var configData = config.GetConfigData();
-                    if (configData?.Ranges != null)
-                    {
-                        // Ranges: [[min, max, color, classification], ...]
-                        foreach (var range in configData.Ranges)
-                        {
-                            if (range.Count >= 4)
-                            {
-                                var classif = range[3]?.ToString();
-                                if (classif == "Adequado")
-                                {
-                                    double.TryParse(range[0]?.ToString(), out double min);
-                                    double.TryParse(range[1]?.ToString(), out double max);
-                                    intervaloAdequado = new IntervaloClassificacaoDTO
-                                    {
-                                        Min = min,
-                                        Max = max > 0 ? max : null
-                                    };
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Determinar referência e valor de referência baseado no atributo
-                string? referencia = null;
-                double valorReferencia = 0;
-                
-                // Atributos que dependem de CTC
-                var atributosCTC = new[] { "Ca", "Mg", "K", "Al", "H+Al", "Ca+Mg", "Ca + Mg", "Cálcio", "Magnésio", "Potássio", "Alumínio" };
-                // Atributos que dependem de Argila
-                var atributosArgila = new[] { "PMELICH 1", "P Mehlich", "Fósforo", "P" };
-                
-                if (atributosCTC.Any(a => nomeAtributo.Contains(a, StringComparison.OrdinalIgnoreCase)))
-                {
-                    referencia = "CTC";
-                    valorReferencia = mediaCTC;
-                }
-                else if (atributosArgila.Any(a => nomeAtributo.Contains(a, StringComparison.OrdinalIgnoreCase)))
-                {
-                    referencia = "Argila";
-                    valorReferencia = mediaArgila;
-                }
-                
-                var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, valorReferencia, referencia);
-                if (classResult != null && !string.IsNullOrEmpty(classResult.Classificacao))
-                {
-                    classificacao = classResult.Classificacao;
-                    cor = classResult.Cor ?? "#CCCCCC";
-                    
-                    // Buscar intervalo adequado nos intervalos retornados
-                    var intervalo = classResult.Intervalos?.FirstOrDefault(i => 
-                        i.Classificacao == "Adequado");
-                    if (intervalo != null)
-                    {
-                        intervaloAdequado = new IntervaloClassificacaoDTO
-                        {
-                            Min = intervalo.Min,
-                            Max = intervalo.Max
-                        };
-                    }
-                }
-            }
-
-            return new EstatisticaAtributoDTO
-            {
-                Nome = nomeAtributo,
-                Valores = valores,
-                Minimo = Math.Round(minimo, 2),
-                Media = Math.Round(media, 2),
-                Maximo = Math.Round(maximo, 2),
-                Classificacao = classificacao,
-                Cor = cor,
-                QuantidadePontos = valores.Count,
-                IntervaloAdequado = intervaloAdequado
-            };
-        }
-
-        /// <summary>
-        /// Calcula estatísticas de todos os atributos do JSON do relatório
-        /// </summary>
-        private Dictionary<string, EstatisticaAtributoDTO> CalcularEstatisticasAtributos(string? jsonRelatorio, Dictionary<string, NutrientConfig> configsPersonalizadas)
-        {
-            var resultado = new Dictionary<string, EstatisticaAtributoDTO>();
-            
-            if (string.IsNullOrEmpty(jsonRelatorio))
-            {
-                return resultado;
-            }
-
-            try
-            {
-                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var jsonData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(jsonRelatorio, options);
-                
-                if (jsonData.ValueKind != System.Text.Json.JsonValueKind.Array)
-                {
-                    return resultado;
-                }
-
-                // Atributos a ignorar
-                var atributosIgnorados = new HashSet<string> { "ID", "id", "prof.", "profundidade", "Profundidade" };
-                
-                // Dicionário para coletar valores por atributo
-                var valoresPorAtributo = new Dictionary<string, List<double>>();
-                
-                // Variáveis para calcular CTC e Argila médias (referências para classificação)
-                double sumCTC = 0, sumArgila = 0;
-                int countCTC = 0, countArgila = 0;
-                var chavesCTC = new[] { "CTC", "CTC a pH 7 (T)", "CTC (T)" };
-                var chavesArgila = new[] { "Argila", "Argila (%)", "Mat. Org.", "Matéria Orgânica" };
-
-                foreach (var ponto in jsonData.EnumerateArray())
-                {
-                    if (ponto.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
-
-                    foreach (var propriedade in ponto.EnumerateObject())
-                    {
-                        string nomeAtributo = propriedade.Name;
-                        
-                        if (atributosIgnorados.Contains(nomeAtributo)) continue;
-                        
-                        if (propriedade.Value.ValueKind == System.Text.Json.JsonValueKind.Number &&
-                            propriedade.Value.TryGetDouble(out double valor))
-                        {
-                            if (!valoresPorAtributo.ContainsKey(nomeAtributo))
-                            {
-                                valoresPorAtributo[nomeAtributo] = new List<double>();
-                            }
-                            valoresPorAtributo[nomeAtributo].Add(valor);
-                            
-                            // Acumular CTC
-                            if (chavesCTC.Contains(nomeAtributo))
-                            {
-                                sumCTC += valor;
-                                countCTC++;
-                            }
-                            // Acumular Argila
-                            if (chavesArgila.Contains(nomeAtributo))
-                            {
-                                sumArgila += valor;
-                                countArgila++;
-                            }
-                        }
-                    }
-                }
-
-                // Calcular médias de referência
-                double mediaCTC = countCTC > 0 ? sumCTC / countCTC : 0;
-                double mediaArgila = countArgila > 0 ? sumArgila / countArgila : 0;
-
-                // Calcular estatísticas para cada atributo
-                foreach (var kvp in valoresPorAtributo)
-                {
-                    if (kvp.Value.Count == 0) continue;
-                    resultado[kvp.Key] = CalcularEstatisticaAtributo(kvp.Key, kvp.Value, configsPersonalizadas, mediaCTC, mediaArgila);
-                }
-            }
-            catch
-            {
-                // Silently ignore parsing errors
-            }
-
-            return resultado;
-        }
-
-        /// <summary>
-        /// Busca valor em um ponto JSON usando múltiplas chaves possíveis e acumula
-        /// </summary>
-        private void BuscarEAcumularValor(System.Text.Json.JsonElement ponto, string[] chaves, ref double soma, ref int contador)
-        {
-            foreach (var chave in chaves)
-            {
-                if (ponto.TryGetProperty(chave, out var prop) && 
-                    prop.ValueKind == System.Text.Json.JsonValueKind.Number &&
-                    prop.TryGetDouble(out double valor))
-                {
-                    soma += valor;
-                    contador++;
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Calcula o indicador com média, classificação e cor
-        /// </summary>
-        private IndicadorDTO CalcularIndicador(string nomeAtributo, double soma, int contador, Dictionary<string, NutrientConfig> configsPersonalizadas)
-        {
-            if (contador == 0)
-            {
-                return new IndicadorDTO
-                {
-                    ValorMedio = 0,
-                    Classificacao = "Sem dados",
-                    Cor = "#CCCCCC",
-                    IntervaloAdequado = null
-                };
-            }
-
-            double media = soma / contador;
-            IntervaloClassificacaoDTO? intervaloAdequado = null;
-            
-            var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
-            
-            if (resultPersonalizado != null)
-            {
-                var resultObj = (dynamic)resultPersonalizado;
-                
-                // Tentar obter intervalo adequado da config personalizada
-                if (configsPersonalizadas.TryGetValue(nomeAtributo, out var config))
-                {
-                    var configData = config.GetConfigData();
-                    if (configData?.Ranges != null)
-                    {
-                        foreach (var range in configData.Ranges)
-                        {
-                            if (range.Count >= 4)
-                            {
-                                var classif = range[3]?.ToString();
-                                if (classif == "Adequado")
-                                {
-                                    double.TryParse(range[0]?.ToString(), out double min);
-                                    double.TryParse(range[1]?.ToString(), out double max);
-                                    intervaloAdequado = new IntervaloClassificacaoDTO
-                                    {
-                                        Min = min,
-                                        Max = max > 0 ? max : null
-                                    };
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                return new IndicadorDTO
-                {
-                    ValorMedio = Math.Round(media, 1),
-                    Classificacao = resultObj.classificacao?.ToString() ?? "Não classificado",
-                    Cor = resultObj.cor?.ToString() ?? "#CCCCCC",
-                    IntervaloAdequado = intervaloAdequado
-                };
-            }
-
-            var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, 0, null);
-            
-            // Buscar intervalo adequado nos intervalos retornados
-            if (classResult?.Intervalos != null)
-            {
-                var intervalo = classResult.Intervalos.FirstOrDefault(i => 
-                    i.Classificacao == "Adequado");
-                if (intervalo != null)
-                {
-                    intervaloAdequado = new IntervaloClassificacaoDTO
-                    {
-                        Min = intervalo.Min,
-                        Max = intervalo.Max
-                    };
-                }
-            }
-            
-            return new IndicadorDTO
-            {
-                ValorMedio = Math.Round(media, 1),
-                Classificacao = classResult?.Classificacao ?? "Não classificado",
-                Cor = classResult?.Cor ?? "#CCCCCC",
-                IntervaloAdequado = intervaloAdequado
-            };
-        }
-
-        /// <summary>
-        /// Calcula um indicador com referência CTC ou Argila para classificação
-        /// </summary>
-        private IndicadorDTO CalcularIndicadorComReferencia(
-            string nomeAtributo, 
-            double soma, 
-            int contador, 
-            Dictionary<string, NutrientConfig> configsPersonalizadas,
-            double valorReferencia,
-            string tipoReferencia)
-        {
-            if (contador == 0)
-            {
-                return new IndicadorDTO
-                {
-                    ValorMedio = 0,
-                    Classificacao = "Sem dados",
-                    Cor = "#CCCCCC",
-                    IntervaloAdequado = null
-                };
-            }
-
-            double media = soma / contador;
-            IntervaloClassificacaoDTO? intervaloAdequado = null;
-            
-            // Tentar classificação personalizada primeiro
-            var resultPersonalizado = ClassificarComConfigPersonalizada(nomeAtributo, media, configsPersonalizadas);
-            
-            if (resultPersonalizado != null)
-            {
-                var resultObj = (dynamic)resultPersonalizado;
-                
-                // Tentar obter intervalo adequado da config personalizada
-                if (configsPersonalizadas.TryGetValue(nomeAtributo, out var config))
-                {
-                    var configData = config.GetConfigData();
-                    if (configData?.Ranges != null)
-                    {
-                        foreach (var range in configData.Ranges)
-                        {
-                            if (range.Count >= 4)
-                            {
-                                var classif = range[3]?.ToString();
-                                if (classif == "Adequado")
-                                {
-                                    double.TryParse(range[0]?.ToString(), out double min);
-                                    double.TryParse(range[1]?.ToString(), out double max);
-                                    intervaloAdequado = new IntervaloClassificacaoDTO
-                                    {
-                                        Min = min,
-                                        Max = max > 0 ? max : null
-                                    };
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                return new IndicadorDTO
-                {
-                    ValorMedio = Math.Round(media, 2),
-                    Classificacao = resultObj.classificacao?.ToString() ?? "Não classificado",
-                    Cor = resultObj.cor?.ToString() ?? "#CCCCCC",
-                    IntervaloAdequado = intervaloAdequado
-                };
-            }
-
-            // Usar classificação padrão com referência CTC/Argila
-            var classResult = NutrienteConfig.GetNutrientClassification(nomeAtributo, media, valorReferencia, tipoReferencia);
-            
-            // Buscar intervalo adequado nos intervalos retornados
-            if (classResult?.Intervalos != null)
-            {
-                var intervalo = classResult.Intervalos.FirstOrDefault(i => 
-                    i.Classificacao == "Adequado");
-                if (intervalo != null)
-                {
-                    intervaloAdequado = new IntervaloClassificacaoDTO
-                    {
-                        Min = intervalo.Min,
-                        Max = intervalo.Max
-                    };
-                }
-            }
-            
-            return new IndicadorDTO
-            {
-                ValorMedio = Math.Round(media, 2),
-                Classificacao = classResult?.Classificacao ?? "Não classificado",
-                Cor = classResult?.Cor ?? "#CCCCCC",
-                IntervaloAdequado = intervaloAdequado
-            };
         }
     }
 }

@@ -159,6 +159,13 @@ builder.Services.AddScoped<GeoJsonRepository>();
 builder.Services.AddScoped<GeoJsonService>();
 
 builder.Services.AddScoped<RelatorioRepository>();
+
+// Services extraídos do RelatorioService para melhor separação de responsabilidades
+builder.Services.AddScoped<api.coleta.Services.Relatorio.NutrientClassificationService>();
+builder.Services.AddScoped<api.coleta.Services.Relatorio.GeoJsonProcessorService>();
+builder.Services.AddScoped<api.coleta.Services.Relatorio.AttributeStatisticsService>();
+builder.Services.AddScoped<api.coleta.Services.Relatorio.SoilIndicatorService>();
+
 builder.Services.AddScoped<RelatorioService>();
 
 builder.Services.AddScoped<RecomendacaoRepository>();

@@ -1,6 +1,7 @@
 using api.coleta.Models.DTOs;
 using api.coleta.Repositories;
 using api.coleta.Services;
+using api.coleta.Services.Relatorio;
 using api.coleta.Tests.Fakes;
 using api.coleta.Tests.Helpers;
 using api.coleta.Data;
@@ -20,7 +21,22 @@ public class RelatorioServiceTests
         var geoJsonRepository = new GeoJsonRepository(context);
         var nutrientConfigRepository = new NutrientConfigRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
-        return new RelatorioService(repository, minioStorage, geoJsonRepository, nutrientConfigRepository, unitOfWork);
+
+        // Criar os novos services extraídos
+        var classificationService = new NutrientClassificationService();
+        var geoJsonProcessorService = new GeoJsonProcessorService(geoJsonRepository);
+        var statisticsService = new AttributeStatisticsService(classificationService);
+        var indicatorService = new SoilIndicatorService(classificationService);
+
+        return new RelatorioService(
+            repository,
+            minioStorage,
+            nutrientConfigRepository,
+            classificationService,
+            geoJsonProcessorService,
+            statisticsService,
+            indicatorService,
+            unitOfWork);
     }
 
     [Fact]
