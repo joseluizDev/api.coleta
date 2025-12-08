@@ -112,7 +112,12 @@ namespace api.coleta.Services.Relatorio
                             : 0;   
 
                         gridList.Add(new { id = hexId, cordenadas = coords[0] });
-                        zonas++;
+                        
+                        // Contar apenas zonas com ID válido (maior que 0)
+                        if (hexId > 0)
+                        {
+                            zonas++;
+                        }
                     }
                 }
                 catch

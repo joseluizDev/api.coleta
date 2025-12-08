@@ -423,7 +423,19 @@ namespace api.coleta.Services
             foreach (var ponto in jsonData.EnumerateArray())
             {
                 if (ponto.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
-                totalPontos++;
+                
+                // Verificar se o ponto tem ID válido (maior que 0) antes de contar
+                int? pontoId = null;
+                if (ponto.TryGetProperty("ID", out var idProp) && idProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    pontoId = idProp.GetInt32();
+                }
+                
+                // Contar apenas pontos com ID válido (maior que 0)
+                if (pontoId.HasValue && pontoId.Value > 0)
+                {
+                    totalPontos++;
+                }
 
                 // Coletar TODOS os valores numéricos de cada atributo para estatísticas
                 foreach (var propriedade in ponto.EnumerateObject())
