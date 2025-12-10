@@ -449,28 +449,63 @@ namespace api.coleta.Services
                         if (pontos.TryGetProperty("points", out JsonElement pointsElement))
                         {
                             var pointsList = new List<object>();
+                            int autoId = 1;
                             foreach (var point in pointsElement.EnumerateArray())
                             {
-
-                                if (point.TryGetProperty("geometry", out JsonElement geometry) &&
-                                    geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
-                                    point.TryGetProperty("properties", out JsonElement properties))
+                                try
                                 {
-                                    var pointData = new
+                                    if (point.TryGetProperty("geometry", out JsonElement geometry) &&
+                                        geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
+                                        point.TryGetProperty("properties", out JsonElement properties))
                                     {
-                                        dados = new
+                                        // Handle id that can be int or string
+                                        object idValue = autoId;
+                                        if (properties.TryGetProperty("id", out JsonElement idElement))
                                         {
-                                            id = properties.TryGetProperty("id", out JsonElement id) ? id.GetInt32() : 1,
-                                            hexagonId = properties.TryGetProperty("hexagonId", out JsonElement hexId) ? hexId.GetInt32() : 1,
-                                            coletado = properties.TryGetProperty("coletado", out JsonElement coletado) ? coletado.GetBoolean() : false
-                                        },
-                                        cordenadas = new double[]
-                                        {
-                                            coordinates[0].GetDouble(),
-                                            coordinates[1].GetDouble()
+                                            if (idElement.ValueKind == JsonValueKind.Number)
+                                            {
+                                                idValue = idElement.GetInt32();
+                                            }
+                                            else if (idElement.ValueKind == JsonValueKind.String)
+                                            {
+                                                idValue = idElement.GetString() ?? autoId.ToString();
+                                            }
                                         }
-                                    };
-                                    pointsList.Add(pointData);
+
+                                        // Handle hexagonId that can be int or missing (for manual points)
+                                        int hexagonIdValue = 0;
+                                        if (properties.TryGetProperty("hexagonId", out JsonElement hexIdElement) &&
+                                            hexIdElement.ValueKind == JsonValueKind.Number)
+                                        {
+                                            hexagonIdValue = hexIdElement.GetInt32();
+                                        }
+
+                                        var pointData = new
+                                        {
+                                            dados = new
+                                            {
+                                                id = idValue,
+                                                hexagonId = hexagonIdValue,
+                                                coletado = properties.TryGetProperty("coletado", out JsonElement coletado) &&
+                                                           coletado.ValueKind == JsonValueKind.True,
+                                                type = properties.TryGetProperty("type", out JsonElement typeElement) ?
+                                                       typeElement.GetString() : "point",
+                                                name = properties.TryGetProperty("name", out JsonElement nameElement) ?
+                                                       nameElement.GetString() : null
+                                            },
+                                            cordenadas = new double[]
+                                            {
+                                                coordinates[0].GetDouble(),
+                                                coordinates[1].GetDouble()
+                                            }
+                                        };
+                                        pointsList.Add(pointData);
+                                        autoId++;
+                                    }
+                                }
+                                catch
+                                {
+                                    // Skip malformed points
                                 }
                             }
                             geoJsonData.points.AddRange(pointsList);
