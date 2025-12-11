@@ -5,6 +5,19 @@ class  NutrienteConfig
     {
         ["soja"] = new Dictionary<string, object>
         {
+            ["Argila"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 150, classificacao = "Muito Baixo" },
+                    new { min = 150, max = 350, classificacao = "Baixo" },
+                    new { min = 350, max = 550, classificacao = "Médio" },
+                    new { min = 550, max = 650, classificacao = "Adequado" },
+                    new { min = 650, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação e cor próprias."
+            },
             ["pH"] = new
             {
                 intervalos = new object[]
@@ -123,9 +136,9 @@ class  NutrienteConfig
                 {
                     new { min = (double?)null, max = 15, classificacao = "Muito Baixo" },
                     new { min = 15, max = 25, classificacao = "Baixo" },
-                    new { min = 25, max = 35, classificacao = "Médio" },
-                    new { min = 35, max = 50, classificacao = "Adequado" },
-                    new { min = 50, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = 25, max = 29, classificacao = "Médio" },
+                    new { min = 29, max = 35, classificacao = "Adequado" },
+                    new { min = 35, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação e cor próprias."
@@ -161,10 +174,10 @@ class  NutrienteConfig
                 intervalos = new object[]
                 {
                     new { min = (double?)null, max = 4, classificacao = "Muito Baixo" },
-                    new { min = 4, max = 10, classificacao = "Baixo" },
-                    new { min = 10, max = 15, classificacao = "Médio" },
-                    new { min = 15, max = 20, classificacao = "Adequado" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = 4, max = 6, classificacao = "Baixo" },
+                    new { min = 6, max = 7, classificacao = "Médio" },
+                    new { min = 7, max = 9, classificacao = "Adequado" },
+                    new { min = 9, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação e cor próprias."
@@ -306,8 +319,8 @@ class  NutrienteConfig
                     new { min = (double?)null, max = 0.25, classificacao = "Muito Baixo" },
                     new { min = 0.25, max = 0.4, classificacao = "Baixo" },
                     new { min = 0.4, max = 0.6, classificacao = "Médio" },
-                    new { min = 0.6, max = 0.8, classificacao = "Adequado" },
-                    new { min = 0.8, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = 0.6, max = 1.0, classificacao = "Adequado" },
+                    new { min = 1.0, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação e cor próprias."
@@ -316,10 +329,10 @@ class  NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 0.2, classificacao = "Muito Baixo" },
-                    new { min = 0.2, max = 0.3, classificacao = "Baixo" },
-                    new { min = 0.3, max = 0.5, classificacao = "Médio" },
-                    new { min = 0.5, max = 1.0, classificacao = "Adequado" },
+                    new { min = (double?)null, max = 0.20, classificacao = "Muito Baixo" },
+                    new { min = 0.20, max = 0.35, classificacao = "Baixo" },
+                    new { min = 0.35, max = 0.74, classificacao = "Médio" },
+                    new { min = 0.74, max = 1.0, classificacao = "Adequado" },
                     new { min = 1.0, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
@@ -331,9 +344,9 @@ class  NutrienteConfig
                 {
                     new { min = (double?)null, max = 0.6, classificacao = "Muito Baixo" },
                     new { min = 0.6, max = 0.8, classificacao = "Baixo" },
-                    new { min = 0.8, max = 1.2, classificacao = "Médio" },
-                    new { min = 1.2, max = 5.0, classificacao = "Adequado" },
-                    new { min = 5.0, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = 0.8, max = 1.5, classificacao = "Médio" },
+                    new { min = 1.5, max = 3.0, classificacao = "Adequado" },
+                    new { min = 3.0, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação e cor próprias."
@@ -342,10 +355,10 @@ class  NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 1.0, classificacao = "Muito Baixo" },
-                    new { min = 1.0, max = 2.0, classificacao = "Baixo" },
-                    new { min = 2.0, max = 5.0, classificacao = "Médio" },
-                    new { min = 5.0, max = 20.0, classificacao = "Adequado" },
+                    new { min = (double?)null, max = 2.0, classificacao = "Muito Baixo" },
+                    new { min = 2.0, max = 5.0, classificacao = "Baixo" },
+                    new { min = 5.0, max = 10.0, classificacao = "Médio" },
+                    new { min = 10.0, max = 20.0, classificacao = "Adequado" },
                     new { min = 20.0, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
@@ -408,7 +421,8 @@ class  NutrienteConfig
     };
 
     public static readonly Dictionary<string, string> NutrientKeyMapping = new Dictionary<string, string>
-    {
+    {   
+        ["Argila"] = "Argila",
         ["pH"] = "pH",
         ["pH (CaCl2)"] = "pH",
         ["pH CaCl2"] = "pH",
