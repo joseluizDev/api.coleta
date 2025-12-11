@@ -1,23 +1,10 @@
 #nullable disable
-class  NutrienteConfig
+class NutrienteConfig
 {
     public static readonly Dictionary<string, object> DefaultNutrienteConfig = new Dictionary<string, object>
     {
         ["soja"] = new Dictionary<string, object>
         {
-            ["Argila"] = new
-            {
-                intervalos = new object[]
-                {
-                    new { min = (double?)null, max = 150, classificacao = "Muito Baixo" },
-                    new { min = 150, max = 350, classificacao = "Baixo" },
-                    new { min = 350, max = 550, classificacao = "Médio" },
-                    new { min = 550, max = 650, classificacao = "Adequado" },
-                    new { min = 650, max = (double?)null, classificacao = "Muito Alto" }
-                },
-                dependencia = (object)null,
-                descricao = "Classificação e cor próprias."
-            },
             ["pH"] = new
             {
                 intervalos = new object[]
@@ -27,6 +14,19 @@ class  NutrienteConfig
                     new { min = 4.9, max = 5.4, classificacao = "Médio" },
                     new { min = 5.4, max = 6.0, classificacao = "Adequado" },
                     new { min = 6.0, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação e cor próprias."
+            },
+            ["Argila"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 150, classificacao = "Muito Baixo" },
+                    new { min = 150, max = 350, classificacao = "Baixo" },
+                    new { min = 350, max = 550, classificacao = "Médio" },
+                    new { min = 550, max = 650, classificacao = "Adequado" },
+                    new { min = 650, max = (double?)null, classificacao = "Muito Alto" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação e cor próprias."
@@ -421,7 +421,7 @@ class  NutrienteConfig
     };
 
     public static readonly Dictionary<string, string> NutrientKeyMapping = new Dictionary<string, string>
-    {   
+    {
         ["Argila"] = "Argila",
         ["pH"] = "pH",
         ["pH (CaCl2)"] = "pH",
@@ -1010,7 +1010,7 @@ class  NutrienteConfig
             ValorMedio = averageValue,
             Intervalos = new List<IntervaloInfo>()
         };
-        
+
         // Usar cache para intervalos se dispon\u00edvel
         string cacheKey = $"{fullAttribute}_{reference}_{referenceValue}";
         List<IntervaloInfo> intervalosCache = null;
@@ -1063,17 +1063,17 @@ class  NutrienteConfig
                                 foreach (System.Collections.Generic.Dictionary<string, object> interval in intervalos)
                                 {
                                     dynamic intervaloRef = interval[reference == "CTC" ? "intervalo_ctc" : "intervalo_argila"];
-                                    
+
                                     double? minRef = null;
                                     double? maxRef = null;
-                                    
-                                    try { if (intervaloRef.min != null) minRef = (double?)intervaloRef.min; } catch {}
-                                    try { if (intervaloRef.max != null) maxRef = (double?)intervaloRef.max; } catch {}
-                                    
+
+                                    try { if (intervaloRef.min != null) minRef = (double?)intervaloRef.min; } catch { }
+                                    try { if (intervaloRef.max != null) maxRef = (double?)intervaloRef.max; } catch { }
+
                                     // Check if reference value falls in this interval range
                                     bool referenciaCorreta = (minRef == null || referenceValue >= minRef) &&
                                                            (maxRef == null || referenceValue < maxRef);
-                                    
+
                                     if (referenciaCorreta)
                                     {
                                         // Collect all levels in this interval
@@ -1133,7 +1133,7 @@ class  NutrienteConfig
                 }
             }
         }
-        
+
         // Armazenar em cache para reutiliza\u00e7\u00e3o
         if (result.Intervalos.Count > 0)
         {
@@ -1145,7 +1145,7 @@ class  NutrienteConfig
                 }
             }
         }
-        
+
         return result;
     }
 }
