@@ -153,6 +153,10 @@ namespace api.coleta.Repositories
         public List<Coleta> ListarVisualizarMapaMobile(Guid userId)
         {
             return Context.Coletas
+                .Include(c => c.Safra)
+                .Include(c => c.Talhao)
+                .Include(c => c.UsuarioResp)
+                .Include(c => c.Geojson)
                 .Where(x => x.UsuarioRespID == userId || x.UsuarioID == userId)
                 .Where(x => !Context.Relatorios.Any(r => r.ColetaId == x.Id))
                 .ToList();
