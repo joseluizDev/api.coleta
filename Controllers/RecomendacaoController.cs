@@ -157,5 +157,38 @@ namespace api.coleta.Controllers
 
             return Ok(new { message = "Recomendação deletada com sucesso." });
         }
+
+        /// <summary>
+        /// Deletar uma recomendação pelo ID do relatório e nome da coluna
+        /// </summary>
+        /// <param name="relatorioId">ID do relatório</param>
+        /// <param name="nomeColuna">Nome da coluna</param>
+        /// <returns>Confirmação de exclusão</returns>
+        /// <response code="200">Recomendação deletada com sucesso</response>
+        /// <response code="400">Requisição inválida</response>
+        /// <response code="404">Recomendação não encontrada</response>
+        [HttpDelete("relatorio/{relatorioId}/coluna/{nomeColuna}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeletarPorRelatorioEColuna([FromRoute] Guid relatorioId, [FromRoute] string nomeColuna)
+        {
+            var token = ObterIDDoToken();
+            Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
+            
+            if (userId == Guid.Empty)
+            {
+                return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
+            }
+
+            var deletada = await _recomendacaoService.DeletarPorRelatorioEColunaAsync(relatorioId, nomeColuna, userId);
+            
+            if (!deletada)
+            {
+                return NotFound(new { message = "Recomendação não encontrada para esta coluna." });
+            }
+
+            return Ok(new { message = "Recomendação deletada com sucesso." });
+        }
     }
 }

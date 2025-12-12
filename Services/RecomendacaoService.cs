@@ -147,5 +147,28 @@ namespace api.coleta.Services
 
             return true;
         }
+
+        public async Task<bool> DeletarPorRelatorioEColunaAsync(Guid relatorioId, string nomeColuna, Guid userId)
+        {
+            // Verificar se o relatório pertence ao usuário
+            var relatorio = await _recomendacaoRepository.ObterRelatorioPorIdSeguro(relatorioId, userId);
+            if (relatorio == null)
+            {
+                _notificador.Notificar(new Notificacao("Relatório não encontrado ou você não tem permissão."));
+                return false;
+            }
+
+            var recomendacao = await _recomendacaoRepository.ObterPorRelatorioEColuna(relatorioId, nomeColuna);
+            if (recomendacao == null)
+            {
+                _notificador.Notificar(new Notificacao("Recomendação não encontrada para esta coluna."));
+                return false;
+            }
+
+            _recomendacaoRepository.Deletar(recomendacao);
+            UnitOfWork.Commit();
+
+            return true;
+        }
     }
 }

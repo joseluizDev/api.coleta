@@ -51,5 +51,11 @@ namespace api.coleta.Repositories
             return Context.Relatorios
                 .FirstOrDefaultAsync(x => x.Id == relatorioId && x.UsuarioId == userId);
         }
+
+        public Task<Recomendacao?> ObterPorRelatorioEColuna(Guid relatorioId, string nomeColuna)
+        {
+            return Context.Recomendacoes
+                .FirstOrDefaultAsync(x => x.RelatorioId == relatorioId && x.NomeColuna.Equals(nomeColuna, StringComparison.Ordinal));
+        }
     }
 }
