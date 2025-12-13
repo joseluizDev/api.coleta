@@ -165,7 +165,8 @@ namespace api.coleta.Repositories
         public Coleta? ObterVisualizarMapaPorId(Guid id, Guid userId)
         {
             return Context.Coletas
-                .Where(x => x.Id == id && x.UsuarioRespID == userId).FirstOrDefault();
+                .Where(x => x.Id == id && (x.UsuarioRespID == userId || x.UsuarioID == userId))
+                .FirstOrDefault();
         }
     }
 }
