@@ -115,15 +115,17 @@ namespace api.coleta.Controllers.Mobile
                 var usuario = _usuarioRepository.ObterPorId(userId.Value);
                 if (usuario == null) return NotFound("Usuário não encontrado.");
 
-                // 3. Verificar se o usuário tem um admin
-                if (usuario.adminId == null) return BadRequest("Usuário não possui um administrador associado.");
+                // 3. Determinar o ID do administrador (se usuário tem adminId, usa o admin; senão o próprio usuário é o admin)
+                Guid targetAdminId = usuario.adminId ?? userId.Value;
 
-                // 4. Pegar o usuário admin
-                var usuarioAdmin = _usuarioRepository.ObterPorId(usuario.adminId.Value);
+                // 4. Pegar o usuário admin (pode ser o próprio usuário se ele for o admin)
+                var usuarioAdmin = usuario.adminId.HasValue
+                    ? _usuarioRepository.ObterPorId(usuario.adminId.Value)
+                    : usuario;
                 if (usuarioAdmin == null) return NotFound("Administrador não encontrado.");
 
                 // 5. Buscar a fazenda para obter o ClienteID
-                var fazenda = _fazendaService.BuscarFazendaPorId(usuarioAdmin.Id, request.FazendaID);
+                var fazenda = _fazendaService.BuscarFazendaPorId(targetAdminId, request.FazendaID);
                 if (fazenda == null) return NotFound("Fazenda não encontrada.");
 
                 // 6. Criar o talhão para o usuário admin
