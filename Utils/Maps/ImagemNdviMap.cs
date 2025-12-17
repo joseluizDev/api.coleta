@@ -19,16 +19,9 @@ namespace api.coleta.Utils.Maps
                 Id = imagem.Id,
                 LinkImagem = imagem.LinkImagem,
                 DataImagem = imagem.DataImagem,
-                TipoImagem = imagem.TipoImagem,
-                // Campos NDVI
                 PercentualNuvens = imagem.PercentualNuvens,
                 NdviMax = imagem.NdviMax,
                 NdviMin = imagem.NdviMin,
-                // Campos Altimetria
-                AltimetriaMin = imagem.AltimetriaMin,
-                AltimetriaMax = imagem.AltimetriaMax,
-                AltimetriaVariacao = imagem.AltimetriaVariacao,
-                // IDs
                 TalhaoId = imagem.TalhaoId,
                 FazendaId = imagem.FazendaId,
                 DataInclusao = imagem.DataInclusao

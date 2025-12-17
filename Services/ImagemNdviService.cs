@@ -34,10 +34,7 @@ namespace api.coleta.Services
             var file = dto.Arquivo;
             string fileExtension = Path.GetExtension(file.FileName).TrimStart('.');
             string contentType = file.ContentType;
-
-            // Pasta diferente para cada tipo de imagem
-            string tipoImagem = string.IsNullOrEmpty(dto.TipoImagem) ? "ndvi" : dto.TipoImagem.ToLower();
-            string objectName = $"{tipoImagem}/{talhao.FazendaID}/{dto.TalhaoId}/{Guid.NewGuid()}.{fileExtension}";
+            string objectName = $"ndvi/{talhao.FazendaID}/{dto.TalhaoId}/{Guid.NewGuid()}.{fileExtension}";
 
             using var stream = file.OpenReadStream();
             string url = await _minioStorage.UploadFileAsync(bucketName, objectName, stream, contentType);
@@ -47,16 +44,9 @@ namespace api.coleta.Services
             {
                 LinkImagem = url,
                 DataImagem = dto.DataImagem,
-                TipoImagem = tipoImagem,
-                // Campos NDVI
                 PercentualNuvens = dto.PercentualNuvens,
                 NdviMax = dto.NdviMax,
                 NdviMin = dto.NdviMin,
-                // Campos Altimetria
-                AltimetriaMin = dto.AltimetriaMin,
-                AltimetriaMax = dto.AltimetriaMax,
-                AltimetriaVariacao = dto.AltimetriaVariacao,
-                // IDs
                 TalhaoId = dto.TalhaoId,
                 FazendaId = talhao.FazendaID,
                 UsuarioId = usuarioId
@@ -70,16 +60,9 @@ namespace api.coleta.Services
                 Id = entidade.Id,
                 LinkImagem = entidade.LinkImagem,
                 DataImagem = entidade.DataImagem,
-                TipoImagem = entidade.TipoImagem,
-                // Campos NDVI
                 PercentualNuvens = entidade.PercentualNuvens,
                 NdviMax = entidade.NdviMax,
                 NdviMin = entidade.NdviMin,
-                // Campos Altimetria
-                AltimetriaMin = entidade.AltimetriaMin,
-                AltimetriaMax = entidade.AltimetriaMax,
-                AltimetriaVariacao = entidade.AltimetriaVariacao,
-                // IDs
                 TalhaoId = entidade.TalhaoId,
                 FazendaId = entidade.FazendaId,
                 DataInclusao = entidade.DataInclusao

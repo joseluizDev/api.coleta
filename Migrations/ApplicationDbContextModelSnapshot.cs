@@ -77,7 +77,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioID");
 
-                    b.ToTable("Clientes");
+                    b.ToTable("Clientes", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Coleta", b =>
@@ -139,7 +139,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioRespID");
 
-                    b.ToTable("Coletas");
+                    b.ToTable("Coletas", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.ConfiguracaoPadrao", b =>
@@ -166,7 +166,7 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ConfiguracaoPadraos");
+                    b.ToTable("ConfiguracaoPadraos", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.ConfiguracaoPersonalizada", b =>
@@ -201,7 +201,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("ConfiguracaoPersonalizadas");
+                    b.ToTable("ConfiguracaoPersonalizadas", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Geojson", b =>
@@ -223,7 +223,7 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Geojson");
+                    b.ToTable("Geojson", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.ImagemNdvi", b =>
@@ -231,15 +231,6 @@ namespace api.coleta.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
-
-                    b.Property<double?>("AltimetriaMax")
-                        .HasColumnType("double");
-
-                    b.Property<double?>("AltimetriaMin")
-                        .HasColumnType("double");
-
-                    b.Property<double?>("AltimetriaVariacao")
-                        .HasColumnType("double");
 
                     b.Property<DateTime>("DataImagem")
                         .HasColumnType("datetime(6)");
@@ -265,10 +256,6 @@ namespace api.coleta.Migrations
                     b.Property<Guid>("TalhaoId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("TipoImagem")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("char(36)");
 
@@ -280,7 +267,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("ImagensNdvi");
+                    b.ToTable("ImagensNdvi", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.MColeta", b =>
@@ -319,7 +306,7 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MColetas");
+                    b.ToTable("MColetas", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.MensagemAgendada", b =>
@@ -369,7 +356,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("MensagensAgendadas");
+                    b.ToTable("MensagensAgendadas", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Minerais", b =>
@@ -388,7 +375,7 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Minerais");
+                    b.ToTable("Minerais", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.NutrientConfig", b =>
@@ -415,7 +402,7 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("NutrientConfigs");
+                    b.ToTable("NutrientConfigs", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.PontoColetado", b =>
@@ -450,16 +437,13 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PontoColetados");
+                    b.ToTable("PontoColetados", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Recomendacao", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("ColetaId")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime>("DataInclusao")
@@ -478,11 +462,9 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ColetaId");
-
                     b.HasIndex("RelatorioId");
 
-                    b.ToTable("Recomendacoes");
+                    b.ToTable("Recomendacoes", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
@@ -514,7 +496,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("Relatorios");
+                    b.ToTable("Relatorios", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Safra", b =>
@@ -553,7 +535,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioID");
 
-                    b.ToTable("Safras");
+                    b.ToTable("Safras", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Talhao", b =>
@@ -582,7 +564,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioID");
 
-                    b.ToTable("Talhoes");
+                    b.ToTable("Talhoes", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.TalhaoJson", b =>
@@ -618,7 +600,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("TalhaoID");
 
-                    b.ToTable("TalhaoJson");
+                    b.ToTable("TalhaoJson", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Usuario", b =>
@@ -668,7 +650,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("adminId");
 
-                    b.ToTable("Usuarios");
+                    b.ToTable("Usuarios", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.VinculoClienteFazenda", b =>
@@ -695,7 +677,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("FazendaId");
 
-                    b.ToTable("VinculoClienteFazendas");
+                    b.ToTable("VinculoClienteFazendas", (string)null);
                 });
 
             modelBuilder.Entity("api.fazenda.Models.Entidades.Fazenda", b =>
@@ -736,7 +718,7 @@ namespace api.coleta.Migrations
 
                     b.HasIndex("UsuarioID");
 
-                    b.ToTable("Fazendas");
+                    b.ToTable("Fazendas", (string)null);
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Cliente", b =>
@@ -852,17 +834,11 @@ namespace api.coleta.Migrations
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Recomendacao", b =>
                 {
-                    b.HasOne("api.coleta.Models.Entidades.Coleta", "Coleta")
-                        .WithMany()
-                        .HasForeignKey("ColetaId");
-
                     b.HasOne("api.coleta.Models.Entidades.Relatorio", "Relatorio")
                         .WithMany()
                         .HasForeignKey("RelatorioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Coleta");
 
                     b.Navigation("Relatorio");
                 });
