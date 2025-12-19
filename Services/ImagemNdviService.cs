@@ -31,11 +31,14 @@ namespace api.coleta.Services
             var talhao = await _context.Talhoes.FindAsync(dto.TalhaoId);
             if (talhao == null) throw new KeyNotFoundException("TalhaoId inválido: talhão não encontrado.");
 
-            string bucketName = "coleta"; // Pode externalizar
+            // Determinar o tipo de imagem (ndvi ou altimetria)
+            string tipoImagem = dto.TipoImagem?.ToLower() ?? "ndvi";
+
+            string bucketName = "coleta";
             var file = dto.Arquivo;
             string fileExtension = Path.GetExtension(file.FileName).TrimStart('.');
             string contentType = file.ContentType;
-            string objectName = $"ndvi/{talhao.FazendaID}/{dto.TalhaoId}/{Guid.NewGuid()}.{fileExtension}";
+            string objectName = $"{tipoImagem}/{talhao.FazendaID}/{dto.TalhaoId}/{Guid.NewGuid()}.{fileExtension}";
 
             using var stream = file.OpenReadStream();
             string url = await _minioStorage.UploadFileAsync(bucketName, objectName, stream, contentType);
@@ -45,9 +48,16 @@ namespace api.coleta.Services
             {
                 LinkImagem = url,
                 DataImagem = dto.DataImagem,
+                TipoImagem = tipoImagem,
+                // Campos NDVI
                 PercentualNuvens = dto.PercentualNuvens,
                 NdviMax = dto.NdviMax,
                 NdviMin = dto.NdviMin,
+                // Campos Altimetria
+                AltimetriaMin = dto.AltimetriaMin,
+                AltimetriaMax = dto.AltimetriaMax,
+                AltimetriaVariacao = dto.AltimetriaVariacao,
+                // IDs
                 TalhaoId = dto.TalhaoId,
                 FazendaId = talhao.FazendaID,
                 UsuarioId = usuarioId
@@ -61,9 +71,13 @@ namespace api.coleta.Services
                 Id = entidade.Id,
                 LinkImagem = entidade.LinkImagem,
                 DataImagem = entidade.DataImagem,
+                TipoImagem = entidade.TipoImagem,
                 PercentualNuvens = entidade.PercentualNuvens,
                 NdviMax = entidade.NdviMax,
                 NdviMin = entidade.NdviMin,
+                AltimetriaMin = entidade.AltimetriaMin,
+                AltimetriaMax = entidade.AltimetriaMax,
+                AltimetriaVariacao = entidade.AltimetriaVariacao,
                 TalhaoId = entidade.TalhaoId,
                 FazendaId = entidade.FazendaId,
                 DataInclusao = entidade.DataInclusao
