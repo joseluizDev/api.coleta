@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using api.coleta.Data;
 using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
@@ -28,7 +29,7 @@ namespace api.coleta.Services
 
             // Buscar Talhao para obter FazendaId
             var talhao = await _context.Talhoes.FindAsync(dto.TalhaoId);
-            if (talhao == null) throw new Exception("TalhaoId inválido: talhão não encontrado.");
+            if (talhao == null) throw new KeyNotFoundException("TalhaoId inválido: talhão não encontrado.");
 
             string bucketName = "coleta"; // Pode externalizar
             var file = dto.Arquivo;
