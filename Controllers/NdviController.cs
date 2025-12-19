@@ -24,14 +24,30 @@ namespace api.ndvi.Controllers
         [HttpPost("upload")]
         public async Task<IActionResult> Upload([FromForm] ImagemNdviUploadDTO dto)
         {
-            var token = ObterIDDoToken();
-            var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
-            if (userIdNullable == null) return BadRequest(new { message = "Token inválido" });
-            Guid userId = (Guid)userIdNullable;
-            Console.WriteLine(dto);
-            var resultado = await _imagemNdviService.SalvarImagemAsync(dto, userId);
-            if (resultado == null) return BadRequest(new { message = "Erro ao salvar imagem NDVI" });
-            return Ok(resultado);
+            try
+            {
+                var token = ObterIDDoToken();
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null) return BadRequest(new { message = "Token inválido" });
+                Guid userId = (Guid)userIdNullable;
+
+                Console.WriteLine($"[NDVI Upload] TalhaoId: {dto.TalhaoId}, TipoImagem: {dto.TipoImagem}, Arquivo: {dto.Arquivo?.FileName}");
+
+                var resultado = await _imagemNdviService.SalvarImagemAsync(dto, userId);
+                if (resultado == null) return BadRequest(new { message = "Erro ao salvar imagem - arquivo vazio ou upload falhou" });
+
+                return Ok(resultado);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[NDVI Upload] Erro: {ex.Message}");
+                Console.WriteLine($"[NDVI Upload] Stack: {ex.StackTrace}");
+                return StatusCode(500, new { message = "Erro interno ao processar upload", error = ex.Message });
+            }
         }
 
         [HttpGet("{talhaoId}")]
