@@ -64,7 +64,8 @@ namespace api.coleta.Migrations
                 name: "TipoImagem",
                 table: "ImagensNdvi",
                 type: "longtext",
-                nullable: false)
+                nullable: false,
+                defaultValue: "ndvi")
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
