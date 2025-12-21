@@ -57,6 +57,11 @@ namespace api.coleta.Services
                 AltimetriaMin = dto.AltimetriaMin,
                 AltimetriaMax = dto.AltimetriaMax,
                 AltimetriaVariacao = dto.AltimetriaVariacao,
+                // Campos Mapa de Colheita
+                DataImagemColheita = dto.DataImagemColheita,
+                ColheitaMin = dto.ColheitaMin,
+                ColheitaMax = dto.ColheitaMax,
+                ColheitaMedia = dto.ColheitaMedia,
                 // IDs
                 TalhaoId = dto.TalhaoId,
                 FazendaId = talhao.FazendaID,
@@ -78,6 +83,10 @@ namespace api.coleta.Services
                 AltimetriaMin = entidade.AltimetriaMin,
                 AltimetriaMax = entidade.AltimetriaMax,
                 AltimetriaVariacao = entidade.AltimetriaVariacao,
+                DataImagemColheita = entidade.DataImagemColheita,
+                ColheitaMin = entidade.ColheitaMin,
+                ColheitaMax = entidade.ColheitaMax,
+                ColheitaMedia = entidade.ColheitaMedia,
                 TalhaoId = entidade.TalhaoId,
                 FazendaId = entidade.FazendaId,
                 DataInclusao = entidade.DataInclusao
