@@ -33,6 +33,20 @@ namespace api.ndvi.Controllers
 
                 Console.WriteLine($"[NDVI Upload] TalhaoId: {dto.TalhaoId}, TipoImagem: {dto.TipoImagem}, Arquivo: {dto.Arquivo?.FileName}");
 
+                // Log detalhado para debug de campos específicos por tipo
+                if (dto.TipoImagem?.ToLower() == "colheita")
+                {
+                    Console.WriteLine($"[Colheita] DataImagemColheita: {dto.DataImagemColheita}, Min: {dto.ColheitaMin}, Max: {dto.ColheitaMax}, Media: {dto.ColheitaMedia}");
+                }
+                else if (dto.TipoImagem?.ToLower() == "altimetria")
+                {
+                    Console.WriteLine($"[Altimetria] Min: {dto.AltimetriaMin}, Max: {dto.AltimetriaMax}, Variacao: {dto.AltimetriaVariacao}");
+                }
+                else
+                {
+                    Console.WriteLine($"[NDVI] PercentualNuvens: {dto.PercentualNuvens}, Min: {dto.NdviMin}, Max: {dto.NdviMax}");
+                }
+
                 var resultado = await _imagemNdviService.SalvarImagemAsync(dto, userId);
                 if (resultado == null) return BadRequest(new { message = "Erro ao salvar imagem - arquivo vazio ou upload falhou" });
 
