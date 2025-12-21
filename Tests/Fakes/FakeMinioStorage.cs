@@ -26,4 +26,12 @@ public class FakeMinioStorage : IMinioStorage
     {
         return Task.FromResult($"https://fake-minio/{bucketName}/{objectName}");
     }
+
+    public List<(string Bucket, string ObjectName)> Deletions { get; } = [];
+
+    public Task<bool> DeleteFileAsync(string bucketName, string objectName)
+    {
+        Deletions.Add((bucketName, objectName));
+        return Task.FromResult(true);
+    }
 }

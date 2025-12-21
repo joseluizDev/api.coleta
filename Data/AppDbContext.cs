@@ -49,4 +49,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
     public DbSet<Recomendacao> Recomendacoes { get; set; }
     public DbSet<Contato> Contatos { get; set; }
+    public DbSet<Imagem> Imagens { get; set; }
 }

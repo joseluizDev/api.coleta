@@ -78,5 +78,20 @@ namespace api.minionStorage.Services
             string url = $"https://apis-minio.w4dxlp.easypanel.host/{bucketName}/{objectName}";
             return Task.FromResult(url);
         }
+
+        public async Task<bool> DeleteFileAsync(string bucketName, string objectName)
+        {
+            try
+            {
+                await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+                    .WithBucket(bucketName)
+                    .WithObject(objectName));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Erro ao deletar o arquivo: {ex.Message}", ex);
+            }
+        }
     }
 }
