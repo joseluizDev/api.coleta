@@ -56,5 +56,26 @@ namespace api.ndvi.Controllers
             var imagens = await _imagemNdviService.GetByTalhaoIdAsync(talhaoId);
             return Ok(imagens);
         }
+
+        [HttpDelete("image/{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                var token = ObterIDDoToken();
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null) return BadRequest(new { message = "Token inválido" });
+
+                var resultado = await _imagemNdviService.DeletarImagemAsync(id);
+                if (!resultado) return NotFound(new { message = "Imagem não encontrada" });
+
+                return Ok(new { message = "Imagem deletada com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[NDVI Delete] Erro: {ex.Message}");
+                return StatusCode(500, new { message = "Erro ao deletar imagem", error = ex.Message });
+            }
+        }
     }
 }

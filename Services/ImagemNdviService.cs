@@ -89,5 +89,39 @@ namespace api.coleta.Services
             var imagens = await _context.ImagensNdvi.Where(i => i.TalhaoId == talhaoId).ToListAsync();
             return imagens.ToOutputDtoList();
         }
+
+        public async Task<bool> DeletarImagemAsync(Guid imagemId)
+        {
+            var imagem = await _context.ImagensNdvi.FindAsync(imagemId);
+            if (imagem == null) return false;
+
+            // Extrair objectName da URL
+            // URL formato: https://apis-minio.w4dxlp.easypanel.host/coleta/ndvi/fazendaId/talhaoId/guid.ext
+            if (!string.IsNullOrEmpty(imagem.LinkImagem))
+            {
+                try
+                {
+                    var uri = new Uri(imagem.LinkImagem);
+                    // Path seria: /coleta/ndvi/fazendaId/talhaoId/guid.ext
+                    // Precisamos remover o primeiro segmento (bucket) para obter o objectName
+                    var pathSegments = uri.AbsolutePath.TrimStart('/').Split('/', 2);
+                    if (pathSegments.Length >= 2)
+                    {
+                        string bucketName = pathSegments[0]; // "coleta"
+                        string objectName = pathSegments[1]; // "ndvi/fazendaId/talhaoId/guid.ext"
+                        await _minioStorage.DeleteFileAsync(bucketName, objectName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[NDVI Delete] Erro ao deletar arquivo do MinIO: {ex.Message}");
+                    // Continua para deletar do banco mesmo se falhar no MinIO
+                }
+            }
+
+            _context.ImagensNdvi.Remove(imagem);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
