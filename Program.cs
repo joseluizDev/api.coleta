@@ -182,6 +182,10 @@ builder.Services.AddScoped<NutrientConfigService>();
 builder.Services.AddScoped<MensagemAgendadaRepository>();
 builder.Services.AddScoped<MensagemAgendadaService>();
 
+builder.Services.AddScoped<ContatoRepository>();
+builder.Services.AddScoped<api.coleta.Interfaces.IZeptomailService, ZeptomailService>();
+builder.Services.AddScoped<ContatoService>();
+
 builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 string corsPolicyName = "AllowAnyOrigin";

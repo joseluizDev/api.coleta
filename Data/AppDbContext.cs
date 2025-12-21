@@ -48,4 +48,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<NutrientConfig> NutrientConfigs { get; set; }
     public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
     public DbSet<Recomendacao> Recomendacoes { get; set; }
+    public DbSet<Contato> Contatos { get; set; }
 }
