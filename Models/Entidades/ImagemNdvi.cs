@@ -27,6 +27,10 @@ namespace api.coleta.Models.Entidades
         public double? ColheitaMax { get; set; }
         public double? ColheitaMedia { get; set; }
 
+        // Legenda da imagem (JSON com array de items: [{cor, label, min, max}])
+        // Usada para NDVI, Altimetria e Mapa de Colheita
+        public string? Legenda { get; set; }
+
         public Guid TalhaoId { get; set; }
         public Guid FazendaId { get; set; }
         public Guid UsuarioId { get; set; }

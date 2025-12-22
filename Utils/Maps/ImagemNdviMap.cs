@@ -33,6 +33,8 @@ namespace api.coleta.Utils.Maps
                 ColheitaMin = imagem.ColheitaMin,
                 ColheitaMax = imagem.ColheitaMax,
                 ColheitaMedia = imagem.ColheitaMedia,
+                // Legenda (JSON)
+                Legenda = imagem.Legenda,
                 // IDs
                 TalhaoId = imagem.TalhaoId,
                 FazendaId = imagem.FazendaId,

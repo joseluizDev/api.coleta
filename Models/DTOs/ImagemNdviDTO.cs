@@ -24,6 +24,10 @@ namespace api.coleta.Models.DTOs
         public double? ColheitaMin { get; set; }
         public double? ColheitaMax { get; set; }
         public double? ColheitaMedia { get; set; }
+
+        // Legenda da imagem (JSON string com array de items)
+        // Formato: [{"cor": "#388e3c", "label": "Vegetação Densa", "min": 0.7, "max": 1.0}]
+        public string? Legenda { get; set; }
     }
 
     public class ImagemNdviOutputDTO
@@ -53,5 +57,9 @@ namespace api.coleta.Models.DTOs
         public double? ColheitaMin { get; set; }
         public double? ColheitaMax { get; set; }
         public double? ColheitaMedia { get; set; }
+
+        // Legenda da imagem (JSON string com array de items)
+        // Formato: [{"cor": "#388e3c", "label": "Vegetação Densa", "min": 0.7, "max": 1.0}]
+        public string? Legenda { get; set; }
     }
 }

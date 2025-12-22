@@ -62,6 +62,8 @@ namespace api.coleta.Services
                 ColheitaMin = dto.ColheitaMin,
                 ColheitaMax = dto.ColheitaMax,
                 ColheitaMedia = dto.ColheitaMedia,
+                // Legenda (JSON)
+                Legenda = dto.Legenda,
                 // IDs
                 TalhaoId = dto.TalhaoId,
                 FazendaId = talhao.FazendaID,
@@ -87,6 +89,7 @@ namespace api.coleta.Services
                 ColheitaMin = entidade.ColheitaMin,
                 ColheitaMax = entidade.ColheitaMax,
                 ColheitaMedia = entidade.ColheitaMedia,
+                Legenda = entidade.Legenda,
                 TalhaoId = entidade.TalhaoId,
                 FazendaId = entidade.FazendaId,
                 DataInclusao = entidade.DataInclusao
