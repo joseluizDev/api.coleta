@@ -229,6 +229,7 @@ builder.Services.AddAuthentication("Bearer")
 builder.Services.AddMvc().AddJsonOptions(opts =>
 {
     opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
 var app = builder.Build();
