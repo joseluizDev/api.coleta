@@ -268,6 +268,42 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 
 var app = builder.Build();
 
+// Aplicar migrations automaticamente se configurado
+var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS_ON_STARTUP")?.ToLower() == "true";
+
+if (applyMigrations)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var pendingMigrations = db.Database.GetPendingMigrations().ToList();
+
+        if (pendingMigrations.Any())
+        {
+            logger.LogInformation("Aplicando {Count} migration(s) pendente(s): {Migrations}",
+                pendingMigrations.Count,
+                string.Join(", ", pendingMigrations));
+
+            db.Database.Migrate();
+
+            logger.LogInformation("Migrations aplicadas com sucesso!");
+        }
+        else
+        {
+            logger.LogInformation("Banco de dados já está atualizado. Nenhuma migration pendente.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Erro ao aplicar migrations. A aplicação continuará, mas o banco pode estar desatualizado.");
+        // Em produção, você pode querer lançar a exceção para impedir o startup
+        // throw;
+    }
+}
+
 app.UseCors(corsPolicyName);
 
 app.UseSwagger();
