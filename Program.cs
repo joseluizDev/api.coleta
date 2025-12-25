@@ -28,6 +28,15 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Inject environment variables into configuration for services that use IConfiguration
+builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Jwt:SecretKey"] = Environment.GetEnvironmentVariable("JWT_SECRET_KEY"),
+    ["Jwt:Issuer"] = Environment.GetEnvironmentVariable("JWT_ISSUER"),
+    ["Jwt:Audience"] = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
+
+});
+
 
 
 builder.Services.AddSwaggerGen(c =>
