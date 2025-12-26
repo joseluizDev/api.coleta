@@ -7,12 +7,22 @@ namespace api.coleta.Services
     public class OneSignalService : IOneSignalService
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
+        private readonly string _apiKey;
+        private readonly string _appId;
+        private readonly string _apiUrl;
 
-        public OneSignalService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public OneSignalService(IHttpClientFactory httpClientFactory)
         {
             _httpClientFactory = httpClientFactory;
-            _configuration = configuration;
+
+            _apiKey = Environment.GetEnvironmentVariable("ONESIGNAL_API_KEY")
+                ?? throw new InvalidOperationException("ONESIGNAL_API_KEY não configurado no .env");
+
+            _appId = Environment.GetEnvironmentVariable("ONESIGNAL_APP_ID")
+                ?? throw new InvalidOperationException("ONESIGNAL_APP_ID não configurado no .env");
+
+            _apiUrl = Environment.GetEnvironmentVariable("ONESIGNAL_API_URL")
+                ?? throw new InvalidOperationException("ONESIGNAL_API_URL não configurado no .env");
         }
 
         public async Task<bool> EnviarNotificacaoAsync(string fcmToken, string titulo, string mensagem)
@@ -24,20 +34,12 @@ namespace api.coleta.Services
                     return false;
                 }
 
-                var apiKey = _configuration["OneSignal:ApiKey"];
-                var appId = _configuration["OneSignal:AppId"];
-
-                if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(appId))
-                {
-                    throw new InvalidOperationException("OneSignal API Key ou App ID não configurados.");
-                }
-
                 var client = _httpClientFactory.CreateClient();
-                client.DefaultRequestHeaders.Add("Authorization", $"Basic {apiKey}");
+                client.DefaultRequestHeaders.Add("Authorization", $"Basic {_apiKey}");
 
                 var payload = new
                 {
-                    app_id = appId,
+                    app_id = _appId,
                     include_player_ids = new[] { fcmToken },
                     target_channel = "push",
                     contents = new { en = mensagem },
@@ -47,7 +49,7 @@ namespace api.coleta.Services
                 var jsonContent = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync("https://api.onesignal.com/notifications?c=push", content);
+                var response = await client.PostAsync(_apiUrl, content);
 
                 if (response.IsSuccessStatusCode)
                 {

@@ -9,22 +9,35 @@ namespace api.coleta.Services
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _apiKey;
-        private const string ZEPTOMAIL_URL = "https://api.zeptomail.com/v1.1/email";
-        private const string FROM_EMAIL = "noreply@agrosyste.com.br";
-        private const string WHATSAPP_LINK = "https://wa.me/5599984989759";
-        private readonly string[] ADMIN_EMAILS = new[]
-        {
-            "hpratesandrade@gmail.com",
-            "gabybezerra10@gmail.com",
-            "esteticistasabrina2@gmail.com",
-            "luizzzz1996@gmail.com"
-        };
+        private readonly string _apiUrl;
+        private readonly string _fromEmail;
+        private readonly string _whatsappLink;
+        private readonly string _companyLogoUrl;
+        private readonly string[] _adminEmails;
 
-        public ZeptomailService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public ZeptomailService(IHttpClientFactory httpClientFactory)
         {
             _httpClientFactory = httpClientFactory;
-            _apiKey = configuration["Zeptomail:ApiKey"]
-                ?? throw new InvalidOperationException("Zeptomail API Key não configurada.");
+
+            _apiKey = Environment.GetEnvironmentVariable("ZEPTOMAIL_API_KEY")
+                ?? throw new InvalidOperationException("ZEPTOMAIL_API_KEY não configurado no .env");
+
+            _apiUrl = Environment.GetEnvironmentVariable("ZEPTOMAIL_API_URL")
+                ?? throw new InvalidOperationException("ZEPTOMAIL_API_URL não configurado no .env");
+
+            _fromEmail = Environment.GetEnvironmentVariable("ZEPTOMAIL_FROM_EMAIL")
+                ?? throw new InvalidOperationException("ZEPTOMAIL_FROM_EMAIL não configurado no .env");
+
+            _whatsappLink = Environment.GetEnvironmentVariable("COMPANY_WHATSAPP_LINK")
+                ?? throw new InvalidOperationException("COMPANY_WHATSAPP_LINK não configurado no .env");
+
+            _companyLogoUrl = Environment.GetEnvironmentVariable("COMPANY_LOGO_URL")
+                ?? throw new InvalidOperationException("COMPANY_LOGO_URL não configurado no .env");
+
+            var adminEmailsEnv = Environment.GetEnvironmentVariable("ADMIN_EMAILS")
+                ?? throw new InvalidOperationException("ADMIN_EMAILS não configurado no .env");
+
+            _adminEmails = adminEmailsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
         public async Task<bool> EnviarEmailConfirmacaoAsync(string nomeUsuario, string emailUsuario)
@@ -50,7 +63,7 @@ namespace api.coleta.Services
                 var htmlBody = BuildNotificacaoTemplate(contato);
                 var subject = $"Novo Contato: {contato.NomeCompleto}";
 
-                var tasks = ADMIN_EMAILS.Select(adminEmail =>
+                var tasks = _adminEmails.Select(adminEmail =>
                     EnviarEmailAsync(adminEmail, "Administrador", subject, htmlBody)
                 );
 
@@ -98,7 +111,7 @@ namespace api.coleta.Services
           <!-- Conteúdo -->
           <tr>
             <td style=""padding:28px; color:#333333; font-size:15px; line-height:1.6;"">
-              <img src=""https://www.agrosyste.com/assets/logo.png""
+              <img src=""{_companyLogoUrl}""
                    alt=""AgroSyste""
                    width=""80""
                    style=""display:block; margin:0 auto; opacity:0.95;"">
@@ -123,7 +136,7 @@ namespace api.coleta.Services
                     <table cellpadding=""0"" cellspacing=""0"">
                       <tr>
                         <td style=""background-color:#25D366; border-radius:4px; text-align:center;"">
-                          <a href=""{WHATSAPP_LINK}""
+                          <a href=""{_whatsappLink}""
                              style=""display:inline-block; padding:14px 32px; color:#ffffff; text-decoration:none; font-size:15px; font-weight:bold;"">
                             Falar no WhatsApp
                           </a>
@@ -278,7 +291,7 @@ namespace api.coleta.Services
 
                 var payload = new
                 {
-                    from = new { address = FROM_EMAIL },
+                    from = new { address = _fromEmail },
                     to = new[]
                     {
                         new
@@ -297,7 +310,7 @@ namespace api.coleta.Services
                 var jsonContent = JsonSerializer.Serialize(payload);
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync(ZEPTOMAIL_URL, content);
+                var response = await client.PostAsync(_apiUrl, content);
 
                 if (response.IsSuccessStatusCode)
                 {

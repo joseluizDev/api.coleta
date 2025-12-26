@@ -28,6 +28,15 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Inject environment variables into configuration for services that use IConfiguration
+builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Jwt:SecretKey"] = Environment.GetEnvironmentVariable("JWT_SECRET_KEY"),
+    ["Jwt:Issuer"] = Environment.GetEnvironmentVariable("JWT_ISSUER"),
+    ["Jwt:Audience"] = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
+
+});
+
 
 
 builder.Services.AddSwaggerGen(c =>
@@ -84,14 +93,23 @@ builder.Services.AddScoped<ApplicationDbContext>();
 builder.Services.AddOutputCache();
 
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Build connection string from environment variables only
+var dbServer = Environment.GetEnvironmentVariable("DB_SERVER")
+    ?? throw new InvalidOperationException("DB_SERVER não configurado no .env");
+var dbPort = Environment.GetEnvironmentVariable("DB_PORT")
+    ?? throw new InvalidOperationException("DB_PORT não configurado no .env");
+var dbName = Environment.GetEnvironmentVariable("DB_NAME")
+    ?? throw new InvalidOperationException("DB_NAME não configurado no .env");
+var dbUser = Environment.GetEnvironmentVariable("DB_USER")
+    ?? throw new InvalidOperationException("DB_USER não configurado no .env");
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD")
+    ?? throw new InvalidOperationException("DB_PASSWORD não configurado no .env");
+
+var connectionString = $"server={dbServer};port={dbPort};database={dbName};user={dbUser};password={dbPassword};";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var versao = ServerVersion.AutoDetect(connectionString);
-
     options.UseMySql(connectionString, versao);
 });
 
@@ -99,7 +117,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.Configure<GoogleApiSettings>(options =>
 {
-    options.ApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? "";
+    options.ApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY")
+        ?? throw new InvalidOperationException("GOOGLE_API_KEY não configurado no .env");
 });
 
 
@@ -199,13 +218,37 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configure MinIO from environment variables only
+var minioEndpoint = Environment.GetEnvironmentVariable("MINIO_ENDPOINT")
+    ?? throw new InvalidOperationException("MINIO_ENDPOINT não configurado no .env");
+
+var minioAccessKey = Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY")
+    ?? throw new InvalidOperationException("MINIO_ACCESS_KEY não configurado no .env");
+
+var minioSecretKey = Environment.GetEnvironmentVariable("MINIO_SECRET_KEY")
+    ?? throw new InvalidOperationException("MINIO_SECRET_KEY não configurado no .env");
+
+var minioPublicUrl = Environment.GetEnvironmentVariable("MINIO_PUBLIC_URL")
+    ?? throw new InvalidOperationException("MINIO_PUBLIC_URL não configurado no .env");
+
 builder.Services.AddSingleton<IMinioStorage>(provider =>
     new MinioStorage(
-        endpoint: builder.Configuration["Minio:Endpoint"],
-        accessKey: builder.Configuration["Minio:AccessKey"],
-        secretKey: builder.Configuration["Minio:SecretKey"]
+        endpoint: minioEndpoint,
+        accessKey: minioAccessKey,
+        secretKey: minioSecretKey,
+        publicUrl: minioPublicUrl
     )
 );
+
+// Configure JWT from environment variables only
+var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? throw new InvalidOperationException("JWT_SECRET_KEY não configurado no .env");
+
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? throw new InvalidOperationException("JWT_ISSUER não configurado no .env");
+
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? throw new InvalidOperationException("JWT_AUDIENCE não configurado no .env");
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>
@@ -214,12 +257,12 @@ builder.Services.AddAuthentication("Bearer")
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!)
+                Encoding.UTF8.GetBytes(jwtSecretKey)
             ),
             ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidIssuer = jwtIssuer,
             ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidAudience = jwtAudience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -233,6 +276,42 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 });
 
 var app = builder.Build();
+
+// Aplicar migrations automaticamente se configurado
+var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS_ON_STARTUP")?.ToLower() == "true";
+
+if (applyMigrations)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var pendingMigrations = db.Database.GetPendingMigrations().ToList();
+
+        if (pendingMigrations.Any())
+        {
+            logger.LogInformation("Aplicando {Count} migration(s) pendente(s): {Migrations}",
+                pendingMigrations.Count,
+                string.Join(", ", pendingMigrations));
+
+            db.Database.Migrate();
+
+            logger.LogInformation("Migrations aplicadas com sucesso!");
+        }
+        else
+        {
+            logger.LogInformation("Banco de dados já está atualizado. Nenhuma migration pendente.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Erro ao aplicar migrations. A aplicação continuará, mas o banco pode estar desatualizado.");
+        // Em produção, você pode querer lançar a exceção para impedir o startup
+        // throw;
+    }
+}
 
 app.UseCors(corsPolicyName);
 
