@@ -1,7 +1,7 @@
 ﻿using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
-using AutoMapper;
+using api.coleta.Utils.Maps;
 
 namespace api.coleta.Services
 {
@@ -11,8 +11,7 @@ namespace api.coleta.Services
 
         public ConfiguracaoPersonalizadaService(
             ConfiguracaoPersonalizadaRepository configuracaoPersonalizadaRepository,
-            IUnitOfWork unitOfWork,
-            IMapper mapper) : base(unitOfWork, mapper)
+            IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _configuracaoPersonalizadaRepository = configuracaoPersonalizadaRepository;
         }
@@ -20,7 +19,7 @@ namespace api.coleta.Services
         public List<ConfiguracaoPersonalizadaResponseDTO> ListarConfiguracoesPersonalizadas(Guid usuarioId)
         {
             var configuracoes = _configuracaoPersonalizadaRepository.ListarConfiguracoesPersonalizadasPorUsuario(usuarioId);
-            return _mapper.Map<List<ConfiguracaoPersonalizadaResponseDTO>>(configuracoes);
+            return configuracoes.ToResponseDtoList();
         }
 
         public ConfiguracaoPersonalizadaResponseDTO? BuscarConfiguracaoPersonalizadaPorId(Guid id, Guid usuarioId)
@@ -30,7 +29,7 @@ namespace api.coleta.Services
             {
                 return null;
             }
-            return _mapper.Map<ConfiguracaoPersonalizadaResponseDTO>(configuracao);
+            return configuracao.ToResponseDto();
         }
 
         public ConfiguracaoPersonalizadaResponseDTO SalvarConfiguracaoPersonalizada(ConfiguracaoPersonalizadaRequestDTO configuracaoDTO, Guid usuarioId)
@@ -47,7 +46,7 @@ namespace api.coleta.Services
             _configuracaoPersonalizadaRepository.SalvarConfiguracaoPersonalizada(configuracao);
             UnitOfWork.Commit();
 
-            return _mapper.Map<ConfiguracaoPersonalizadaResponseDTO>(configuracao);
+            return configuracao.ToResponseDto()!;
         }
 
         public ConfiguracaoPersonalizadaResponseDTO? AtualizarConfiguracaoPersonalizada(Guid id, ConfiguracaoPersonalizadaRequestDTO configuracaoDTO, Guid usuarioId)
@@ -66,7 +65,7 @@ namespace api.coleta.Services
             _configuracaoPersonalizadaRepository.AtualizarConfiguracaoPersonalizada(configuracaoExistente);
             UnitOfWork.Commit();
 
-            return _mapper.Map<ConfiguracaoPersonalizadaResponseDTO>(configuracaoExistente);
+            return configuracaoExistente.ToResponseDto();
         }
 
         public bool DeletarConfiguracaoPersonalizada(Guid id, Guid usuarioId)

@@ -21,6 +21,12 @@ public class ApplicationDbContext : DbContext
             .ForEach(p => p.SetColumnType("decimal(12,4)"));
 
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Cliente>()
+        .Property(c => c.Documento)
+        .HasMaxLength(14);
+
+   
     }
 
     public DbSet<MColeta> MColetas { get; set; }
@@ -38,4 +44,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<Minerais> Minerais { get; set; }
     public DbSet<Relatorio> Relatorios { get; set; }
     public DbSet<PontoColetado> PontoColetados { get; set; }
+    public DbSet<ImagemNdvi> ImagensNdvi { get; set; }
+    public DbSet<NutrientConfig> NutrientConfigs { get; set; }
+    public DbSet<MensagemAgendada> MensagensAgendadas { get; set; }
+    public DbSet<Recomendacao> Recomendacoes { get; set; }
+    public DbSet<Contato> Contatos { get; set; }
+    public DbSet<Imagem> Imagens { get; set; }
 }

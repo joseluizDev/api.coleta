@@ -27,11 +27,6 @@ namespace api.coleta.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("CPF")
-                        .IsRequired()
-                        .HasMaxLength(14)
-                        .HasColumnType("varchar(14)");
-
                     b.Property<string>("Cep")
                         .IsRequired()
                         .HasMaxLength(8)
@@ -44,6 +39,11 @@ namespace api.coleta.Migrations
 
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Documento")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("varchar(14)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -67,8 +67,8 @@ namespace api.coleta.Migrations
 
                     b.Property<string>("Telefone")
                         .IsRequired()
-                        .HasMaxLength(11)
-                        .HasColumnType("varchar(11)");
+                        .HasMaxLength(14)
+                        .HasColumnType("varchar(14)");
 
                     b.Property<Guid>("UsuarioID")
                         .HasColumnType("char(36)");
@@ -89,6 +89,9 @@ namespace api.coleta.Migrations
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid?>("FazendaID")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid>("GeojsonID")
                         .HasColumnType("char(36)");
 
@@ -102,6 +105,9 @@ namespace api.coleta.Migrations
 
                     b.Property<int>("Profundidade")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("SafraID")
+                        .HasColumnType("char(36)");
 
                     b.Property<Guid>("TalhaoID")
                         .HasColumnType("char(36)");
@@ -121,7 +127,11 @@ namespace api.coleta.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("FazendaID");
+
                     b.HasIndex("GeojsonID");
+
+                    b.HasIndex("SafraID");
 
                     b.HasIndex("TalhaoID");
 
@@ -194,6 +204,49 @@ namespace api.coleta.Migrations
                     b.ToTable("ConfiguracaoPersonalizadas");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.Contato", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Cidade")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("DataEnvioEmail")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("EmailAdminsEnviado")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("EmailUsuarioEnviado")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("NomeCompleto")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("NumeroTelefone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Contatos");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Geojson", b =>
                 {
                     b.Property<Guid>("Id")
@@ -214,6 +267,123 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Geojson");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Imagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("BucketName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NomeOriginal")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ObjectName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long?>("TamanhoBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Imagens");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.ImagemNdvi", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<double?>("AltimetriaMax")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AltimetriaMin")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AltimetriaVariacao")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("ColheitaMax")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("ColheitaMedia")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("ColheitaMin")
+                        .HasColumnType("double");
+
+                    b.Property<DateTime>("DataImagem")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DataImagemColheita")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("FazendaId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Legenda")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("LinkImagem")
+                        .HasColumnType("longtext");
+
+                    b.Property<double?>("NdviMax")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("NdviMin")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("PercentualNuvens")
+                        .HasColumnType("double");
+
+                    b.Property<Guid>("TalhaoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("TipoImagem")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FazendaId");
+
+                    b.HasIndex("TalhaoId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("ImagensNdvi");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.MColeta", b =>
@@ -255,6 +425,56 @@ namespace api.coleta.Migrations
                     b.ToTable("MColetas");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.MensagemAgendada", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("DataHoraEnviada")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataHoraEnvio")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("FuncionarioId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("MensagemErro")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TentativasEnvio")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FuncionarioId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("MensagensAgendadas");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Minerais", b =>
                 {
                     b.Property<Guid>("Id")
@@ -272,6 +492,33 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Minerais");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.NutrientConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ConfigData")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsGlobal")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("NutrientName")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NutrientConfigs");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.PontoColetado", b =>
@@ -307,6 +554,38 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PontoColetados");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Recomendacao", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ColetaId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NomeColuna")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("RelatorioId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("UnidadeMedida")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ColetaId");
+
+                    b.HasIndex("RelatorioId");
+
+                    b.ToTable("Recomendacoes");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
@@ -465,6 +744,10 @@ namespace api.coleta.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("FcmToken")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
                     b.Property<string>("NomeCompleto")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
@@ -572,11 +855,19 @@ namespace api.coleta.Migrations
 
             modelBuilder.Entity("api.coleta.Models.Entidades.Coleta", b =>
                 {
+                    b.HasOne("api.fazenda.Models.Entidades.Fazenda", "Fazenda")
+                        .WithMany()
+                        .HasForeignKey("FazendaID");
+
                     b.HasOne("api.coleta.Models.Entidades.Geojson", "Geojson")
                         .WithMany()
                         .HasForeignKey("GeojsonID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("api.coleta.Models.Entidades.Safra", "Safra")
+                        .WithMany()
+                        .HasForeignKey("SafraID");
 
                     b.HasOne("api.coleta.Models.Entidades.TalhaoJson", "Talhao")
                         .WithMany()
@@ -596,7 +887,11 @@ namespace api.coleta.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Fazenda");
+
                     b.Navigation("Geojson");
+
+                    b.Navigation("Safra");
 
                     b.Navigation("Talhao");
 
@@ -616,10 +911,80 @@ namespace api.coleta.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
+            modelBuilder.Entity("api.coleta.Models.Entidades.Imagem", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.ImagemNdvi", b =>
+                {
+                    b.HasOne("api.fazenda.Models.Entidades.Fazenda", "Fazenda")
+                        .WithMany()
+                        .HasForeignKey("FazendaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("api.coleta.Models.Entidades.Talhao", "Talhao")
+                        .WithMany()
+                        .HasForeignKey("TalhaoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Fazenda");
+
+                    b.Navigation("Talhao");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.MensagemAgendada", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Funcionario")
+                        .WithMany()
+                        .HasForeignKey("FuncionarioId");
+
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId");
+
+                    b.Navigation("Funcionario");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Recomendacao", b =>
                 {
                     b.HasOne("api.coleta.Models.Entidades.Coleta", "Coleta")
                         .WithMany()
+                        .HasForeignKey("ColetaId");
+
+                    b.HasOne("api.coleta.Models.Entidades.Relatorio", "Relatorio")
+                        .WithMany()
+                        .HasForeignKey("RelatorioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Coleta");
+
+                    b.Navigation("Relatorio");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Relatorio", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Coleta", "Coleta")
+                        .WithMany("Relatorios")
                         .HasForeignKey("ColetaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -745,6 +1110,11 @@ namespace api.coleta.Migrations
                     b.Navigation("Cliente");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Coleta", b =>
+                {
+                    b.Navigation("Relatorios");
                 });
 #pragma warning restore 612, 618
         }

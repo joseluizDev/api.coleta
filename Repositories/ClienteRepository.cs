@@ -66,9 +66,6 @@ namespace api.cliente.Repositories
             if (!string.IsNullOrWhiteSpace(query.Nome))
                 clientesQuery = clientesQuery.Where(c => c.Nome.Contains(query.Nome));
 
-            if (!string.IsNullOrWhiteSpace(query.CPF))
-                clientesQuery = clientesQuery.Where(c => c.CPF.Contains(query.CPF));
-
             if (!string.IsNullOrWhiteSpace(query.Email))
                 clientesQuery = clientesQuery.Where(c => c.Email.Contains(query.Email));
 

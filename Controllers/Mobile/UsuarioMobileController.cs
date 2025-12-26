@@ -80,6 +80,32 @@ namespace api.coleta.Controllers.Mobile
             }
         }
 
+        [HttpPost("refresh-token")]
+        public IActionResult RefreshToken()
+        {
+            try
+            {
+                var expiredToken = ObterIDDoToken();
+
+                if (string.IsNullOrWhiteSpace(expiredToken))
+                {
+                    return BadRequest("Token não fornecido.");
+                }
+
+                var newToken = _usuarioService.RefreshToken(expiredToken);
+                if (string.IsNullOrEmpty(newToken))
+                {
+                    return BadRequest("Não foi possível atualizar o token.");
+                }
+
+                return Ok(new { Token = newToken });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao atualizar o token: " + ex.Message);
+            }
+        }
+
         [HttpPut("atualizar")]
         public IActionResult AtualizarUsuario([FromBody] UsuarioResquestDTO usuario)
         {

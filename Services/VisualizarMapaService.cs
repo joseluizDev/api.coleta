@@ -1,4 +1,9 @@
-﻿using api.coleta.Models.DTOs;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using api.coleta.Models.DTOs;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Utils;
@@ -6,11 +11,10 @@ using api.coleta.Utils.Maps;
 using api.funcionario.Models.DTOs;
 using api.talhao.Models.DTOs;
 using api.talhao.Services;
-using AutoMapper;
 using api.cliente.Models.DTOs;
-using System.Text;
-using System.Text.Json;
-using System.Collections.Generic;
+using api.safra.Services;
+using api.safra.Models.DTOs;
+using api.coleta.Interfaces;
 
 namespace api.coleta.Services
 {
@@ -26,45 +30,189 @@ namespace api.coleta.Services
         private readonly GeoJsonRepository _geoJsonRepository;
         private readonly UsuarioService _usuarioService;
         private readonly TalhaoService _talhaoService;
+        private readonly SafraService _safraService;
         private readonly PontoColetadoRepository _pontoColetadoRepository;
+        private readonly IOneSignalService _oneSignalService;
+        private readonly Data.Repository.UsuarioRepository _usuarioRepository;
         public VisualizarMapaService(
             UsuarioService usuarioService,
             VisualizarMapaRepository visualizarMapaRepository,
             IUnitOfWork unitOfWork,
-            IMapper mapper,
             GeoJsonRepository geoJsonRepository,
             TalhaoService talhaoService,
-            PontoColetadoRepository pontoColetadoRepository)
-            : base(unitOfWork, mapper)
+            SafraService safraService,
+            PontoColetadoRepository pontoColetadoRepository,
+            IOneSignalService oneSignalService,
+            Data.Repository.UsuarioRepository usuarioRepository)
+            : base(unitOfWork)
         {
             _visualizarMapaRepository = visualizarMapaRepository;
             _geoJsonRepository = geoJsonRepository;
             _talhaoService = talhaoService;
             _usuarioService = usuarioService;
+            _safraService = safraService;
             _pontoColetadoRepository = pontoColetadoRepository;
+            _oneSignalService = oneSignalService;
+            _usuarioRepository = usuarioRepository;
         }
 
         public VisualizarMapOutputDto? Salvar(Guid userID, VisualizarMapInputDto visualizarMapa)
         {
-            Geojson montarJson = new Geojson
+            try
             {
-                Pontos = visualizarMapa.Geojson.ToString(),
-                Grid = "1"
-            };
-            Geojson? retorno = _geoJsonRepository.Adicionar(montarJson);
-            if (retorno != null)
-            {
+                // Validação do GeoJSON
+                if (visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Undefined ||
+                    visualizarMapa.Geojson.ValueKind == System.Text.Json.JsonValueKind.Null)
+                {
+                    throw new ArgumentException("GeoJSON é obrigatório e deve ser um objeto JSON válido.");
+                }
+
+                // Criar o objeto GeoJSON
+                Geojson montarJson = new Geojson
+                {
+                    Pontos = visualizarMapa.Geojson.ToString(),
+                    Grid = "1"
+                };
+
+                Console.WriteLine($"Tentando salvar GeoJSON com {montarJson.Pontos.Length} caracteres");
+
+                // Salvar GeoJSON
+                Geojson? retorno = _geoJsonRepository.Adicionar(montarJson);
+                if (retorno == null)
+                {
+                    throw new InvalidOperationException("Falha ao salvar o GeoJSON no banco de dados.");
+                }
+
+                Console.WriteLine($"GeoJSON salvo com ID: {retorno.Id}");
+
+                // Configurar o ID do GeoJSON no DTO
                 visualizarMapa.GeojsonId = retorno.Id;
+
+                // Mapear para entidade Coleta
                 var map = VisualizarDto.MapVisualizar(visualizarMapa);
                 map.UsuarioID = userID;
+
+                Console.WriteLine($"Mapeamento concluído. TalhaoID: {map.TalhaoID}, UsuarioRespID: {map.UsuarioRespID}, UsuarioID: {map.UsuarioID}");
+
+                // Salvar a coleta
                 _visualizarMapaRepository.SalvarVisualizarMapa(map);
+
+                Console.WriteLine("Coleta adicionada ao contexto, tentando commit...");
+
+                // Commit da transação
                 if (UnitOfWork.Commit())
                 {
-                    return _mapper.Map<VisualizarMapOutputDto>(map);
+                    Console.WriteLine("Commit realizado com sucesso");
+                    return map.ToVisualizarDto();
+                }
+                else
+                {
+                    throw new InvalidOperationException("Falha ao confirmar a transação no banco de dados.");
                 }
             }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"Erro de validação no enum: {ex.Message}");
+                throw new ArgumentException($"Erro de validação: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro inesperado no serviço Salvar: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
+            }
+        }
 
-            return null;
+        public VisualizarMapOutputDto? Atualizar(Guid userID, Guid id, VisualizarMapInputDto visualizarMapa)
+        {
+            try
+            {
+                // Buscar a coleta existente
+                var coletaExistente = _visualizarMapaRepository.BuscarVisualizarMapaPorId(userID, id);
+                if (coletaExistente == null)
+                {
+                    throw new ArgumentException("Visualização de mapa não encontrada ou não pertence ao usuário.");
+                }
+
+                // Validação do GeoJSON se foi informado
+                if (visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
+                    visualizarMapa.Geojson.ValueKind != System.Text.Json.JsonValueKind.Null)
+                {
+                    // Buscar o GeoJSON existente
+                    var geoJsonExistente = _geoJsonRepository.ObterPorId(coletaExistente.GeojsonID);
+                    if (geoJsonExistente != null)
+                    {
+                        // Atualizar o GeoJSON
+                        geoJsonExistente.Pontos = visualizarMapa.Geojson.ToString();
+                        _geoJsonRepository.Atualizar(geoJsonExistente);
+                    }
+                }
+
+                // Atualizar os campos da coleta
+                if (!string.IsNullOrEmpty(visualizarMapa.NomeColeta))
+                    coletaExistente.NomeColeta = visualizarMapa.NomeColeta;
+
+                if (visualizarMapa.TalhaoID != Guid.Empty)
+                    coletaExistente.TalhaoID = visualizarMapa.TalhaoID;
+
+                if (visualizarMapa.FuncionarioID != Guid.Empty)
+                    coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID;
+
+                if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
+                {
+                    if (Enum.TryParse<TipoColeta>(visualizarMapa.TipoColeta, out var tipoColeta))
+                        coletaExistente.TipoColeta = tipoColeta;
+                }
+
+                if (visualizarMapa.TipoAnalise != null && visualizarMapa.TipoAnalise.Any())
+                {
+                    var tiposAnaliseValidos = new List<TipoAnalise>();
+                    foreach (var tipo in visualizarMapa.TipoAnalise)
+                    {
+                        if (Enum.TryParse<TipoAnalise>(tipo, out var tipoAnalise))
+                            tiposAnaliseValidos.Add(tipoAnalise);
+                    }
+                    coletaExistente.TipoAnalise = tiposAnaliseValidos;
+                }
+
+                if (!string.IsNullOrEmpty(visualizarMapa.Profundidade))
+                {
+                    if (Enum.TryParse<Profundidade>(visualizarMapa.Profundidade, out var profundidade))
+                        coletaExistente.Profundidade = profundidade;
+                }
+
+                if (!string.IsNullOrEmpty(visualizarMapa.Observacao))
+                    coletaExistente.Observacao = visualizarMapa.Observacao;
+
+                Console.WriteLine($"Atualizando coleta com ID: {coletaExistente.Id}");
+
+                // Atualizar a coleta no repositório
+                _visualizarMapaRepository.AtualizarVisualizarMapa(coletaExistente);
+
+                Console.WriteLine("Coleta atualizada no contexto, tentando commit...");
+
+                // Commit da transação
+                if (UnitOfWork.Commit())
+                {
+                    Console.WriteLine("Commit da atualização realizado com sucesso");
+                    return coletaExistente.ToVisualizarDto();
+                }
+                else
+                {
+                    throw new InvalidOperationException("Falha ao confirmar a transação de atualização no banco de dados.");
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"Erro de validação na atualização: {ex.Message}");
+                throw new ArgumentException($"Erro de validação: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro inesperado no serviço Atualizar: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         public PagedResult<VisualizarMapOutputDto?> Listar(Guid userID, QueryVisualizarMap query)
@@ -80,22 +228,42 @@ namespace api.coleta.Services
                 };
             }
 
-            var mappedItems = _mapper.Map<List<VisualizarMapOutputDto?>>(visualizarMapa.Items);
+            var mappedItems = visualizarMapa.Items.ToVisualizarDtoNullableList();
 
             foreach (var coleta in mappedItems)
             {
                 if (coleta == null) continue;
 
+                // Carregar Talhão
                 var talhao = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
                 if (talhao != null)
                 {
-                    coleta.Talhao = _mapper.Map<Talhoes>(talhao);
+                    var talhaoDto = talhao.ToTalhoes();
+                    if (talhaoDto != null)
+                    {
+                        coleta.Talhao = talhaoDto;
+                    }
                 }
 
+                // Carregar Safra
+                if (coleta.SafraID.HasValue)
+                {
+                    var safra = _safraService.BuscarSafraPorId(null, coleta.SafraID.Value);
+                    if (safra != null)
+                    {
+                        coleta.Safra = safra.ToEntity();
+                    }
+                }
+
+                // Carregar Funcionário
                 var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
                 if (funcionario != null)
                 {
-                    coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
+                    var usuarioResp = funcionario.ToResponseDto();
+                    if (usuarioResp != null)
+                    {
+                        coleta.UsuarioResp = usuarioResp;
+                    }
                 }
             }
 
@@ -124,11 +292,34 @@ namespace api.coleta.Services
             var visualizarMapa = _visualizarMapaRepository.BuscarVisualizarMapaPorId(userId, id);
             if (visualizarMapa != null)
             {
-                var mappedItem = _mapper.Map<VisualizarMapOutputDto>(visualizarMapa);
+                var mappedItem = visualizarMapa.ToVisualizarDto();
+                if (mappedItem == null)
+                {
+                    return null;
+                }
                 var talhao = _talhaoService.BuscarTalhaoJsonPorId(mappedItem.TalhaoID);
                 if (talhao != null)
                 {
-                    mappedItem.Talhao = _mapper.Map<Talhoes>(talhao);
+                    var talhaoDto = talhao.ToTalhoes();
+                    if (talhaoDto != null)
+                    {
+                        mappedItem.Talhao = talhaoDto;
+                    }
+
+                    // Preencher FazendaID e ClienteID baseado no talhão relacionado (se existir)
+                    try
+                    {
+                        var talhaoRelacionado = _talhaoService.BuscarTalhaoPorTalhaoJson(mappedItem.TalhaoID);
+                        if (talhaoRelacionado != null)
+                        {
+                            mappedItem.FazendaID = talhaoRelacionado.FazendaID;
+                            mappedItem.ClienteID = talhaoRelacionado.ClienteID;
+                        }
+                    }
+                    catch
+                    {
+                        // ignore failures here - retornaremos sem os IDs quando não disponíveis
+                    }
                 }
 
                 var geojson = _geoJsonRepository.ObterPorId(mappedItem.GeoJsonID);
@@ -140,7 +331,11 @@ namespace api.coleta.Services
                 var funcionario = _usuarioService.BuscarUsuarioPorId(mappedItem.UsuarioRespID);
                 if (funcionario != null)
                 {
-                    mappedItem.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
+                    var usuarioResp = funcionario.ToResponseDto();
+                    if (usuarioResp != null)
+                    {
+                        mappedItem.UsuarioResp = usuarioResp;
+                    }
                 }
                 return mappedItem;
             }
@@ -155,7 +350,7 @@ namespace api.coleta.Services
                 return [];
             }
 
-            var mappedItems = _mapper.Map<List<VisualizarMapOutputDto?>>(visualizarMapa);
+            var mappedItems = visualizarMapa.ToVisualizarDtoNullableList();
 
             foreach (var coleta in mappedItems)
             {
@@ -164,19 +359,27 @@ namespace api.coleta.Services
                 var talhao = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
                 if (talhao != null)
                 {
-                    coleta.Talhao = _mapper.Map<Talhoes>(talhao);
+                    var talhaoDto = talhao.ToTalhoes();
+                    if (talhaoDto != null)
+                    {
+                        coleta.Talhao = talhaoDto;
+                    }
                 }
 
                 var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
                 if (funcionario != null)
                 {
-                    coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
+                    var usuarioResp = funcionario.ToResponseDto();
+                    if (usuarioResp != null)
+                    {
+                        coleta.UsuarioResp = usuarioResp;
+                    }
                 }
 
                 var geojson = _geoJsonRepository.ObterPorId(coleta.GeoJsonID);
                 if (geojson != null)
                 {
-                    coleta.Geojson = _mapper.Map<Geojson>(geojson);
+                    coleta.Geojson = geojson;
                 }
             }
 
@@ -191,7 +394,7 @@ namespace api.coleta.Services
                 return [];
             }
 
-            var mappedItems = _mapper.Map<List<VisualizarMapOutputDto>>(visualizarMapa);
+            var mappedItems = visualizarMapa.ToVisualizarDtoList();
             var result = new List<object>();
 
             foreach (var coleta in mappedItems)
@@ -202,19 +405,25 @@ namespace api.coleta.Services
                 var talhaoJson = _talhaoService.BuscarTalhaoJsonPorId(coleta.TalhaoID);
                 if (talhaoJson == null) continue;
 
-                coleta.Talhao = _mapper.Map<Talhoes>(talhaoJson);
+                var talhaoDto = talhaoJson.ToTalhoes();
+                if (talhaoDto == null) continue;
+
+                coleta.Talhao = talhaoDto;
 
 
                 var funcionario = _usuarioService.BuscarUsuarioPorId(coleta.UsuarioRespID);
                 if (funcionario == null) continue;
 
-                coleta.UsuarioResp = _mapper.Map<UsuarioResponseDTO>(funcionario);
+                var usuarioResp = funcionario.ToResponseDto();
+                if (usuarioResp == null) continue;
+
+                coleta.UsuarioResp = usuarioResp;
 
 
                 var geojson = _geoJsonRepository.ObterPorId(coleta.GeoJsonID);
                 if (geojson == null) continue;
 
-                coleta.Geojson = _mapper.Map<Geojson>(geojson);
+                coleta.Geojson = geojson;
 
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -225,6 +434,9 @@ namespace api.coleta.Services
                     grid = new List<object>(),
                     points = new List<object>()
                 };
+
+                // Contador de zonas (polígonos) identificadas
+                int zonas = 0;
 
 
                 if (!string.IsNullOrEmpty(coleta.Geojson.Pontos))
@@ -237,28 +449,63 @@ namespace api.coleta.Services
                         if (pontos.TryGetProperty("points", out JsonElement pointsElement))
                         {
                             var pointsList = new List<object>();
+                            int autoId = 1;
                             foreach (var point in pointsElement.EnumerateArray())
                             {
-
-                                if (point.TryGetProperty("geometry", out JsonElement geometry) &&
-                                    geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
-                                    point.TryGetProperty("properties", out JsonElement properties))
+                                try
                                 {
-                                    var pointData = new
+                                    if (point.TryGetProperty("geometry", out JsonElement geometry) &&
+                                        geometry.TryGetProperty("coordinates", out JsonElement coordinates) &&
+                                        point.TryGetProperty("properties", out JsonElement properties))
                                     {
-                                        dados = new
+                                        // Handle id that can be int or string
+                                        object idValue = autoId;
+                                        if (properties.TryGetProperty("id", out JsonElement idElement))
                                         {
-                                            id = properties.TryGetProperty("id", out JsonElement id) ? id.GetInt32() : 1,
-                                            hexagonId = properties.TryGetProperty("hexagonId", out JsonElement hexId) ? hexId.GetInt32() : 1,
-                                            coletado = properties.TryGetProperty("coletado", out JsonElement coletado) ? coletado.GetBoolean() : false
-                                        },
-                                        cordenadas = new double[]
-                                        {
-                                            coordinates[0].GetDouble(),
-                                            coordinates[1].GetDouble()
+                                            if (idElement.ValueKind == JsonValueKind.Number)
+                                            {
+                                                idValue = idElement.GetInt32();
+                                            }
+                                            else if (idElement.ValueKind == JsonValueKind.String)
+                                            {
+                                                idValue = idElement.GetString() ?? autoId.ToString();
+                                            }
                                         }
-                                    };
-                                    pointsList.Add(pointData);
+
+                                        // Handle hexagonId that can be int or missing (for manual points)
+                                        int hexagonIdValue = 0;
+                                        if (properties.TryGetProperty("hexagonId", out JsonElement hexIdElement) &&
+                                            hexIdElement.ValueKind == JsonValueKind.Number)
+                                        {
+                                            hexagonIdValue = hexIdElement.GetInt32();
+                                        }
+
+                                        var pointData = new
+                                        {
+                                            dados = new
+                                            {
+                                                id = idValue,
+                                                hexagonId = hexagonIdValue,
+                                                coletado = properties.TryGetProperty("coletado", out JsonElement coletado) &&
+                                                           coletado.ValueKind == JsonValueKind.True,
+                                                type = properties.TryGetProperty("type", out JsonElement typeElement) ?
+                                                       typeElement.GetString() : "point",
+                                                name = properties.TryGetProperty("name", out JsonElement nameElement) ?
+                                                       nameElement.GetString() : null
+                                            },
+                                            cordenadas = new double[]
+                                            {
+                                                coordinates[0].GetDouble(),
+                                                coordinates[1].GetDouble()
+                                            }
+                                        };
+                                        pointsList.Add(pointData);
+                                        autoId++;
+                                    }
+                                }
+                                catch
+                                {
+                                    // Skip malformed points
                                 }
                             }
                             geoJsonData.points.AddRange(pointsList);
@@ -300,6 +547,7 @@ namespace api.coleta.Services
                                                     cordenadas = coordinates[0]
                                                 };
                                                 geoJsonData.grid.Add(gridData);
+                                                zonas++;
                                             }
                                         }
                                         catch
@@ -329,6 +577,7 @@ namespace api.coleta.Services
                                                             cordenadas = coordinates[0]
                                                         };
                                                         geoJsonData.grid.Add(gridData);
+                                                        zonas++;
                                                     }
                                                 }
                                                 catch
@@ -344,6 +593,7 @@ namespace api.coleta.Services
                                                                 cordenadas = coordinates
                                                             };
                                                             geoJsonData.grid.Add(gridData);
+                                                            zonas++;
                                                         }
                                                     }
                                                     catch
@@ -384,6 +634,7 @@ namespace api.coleta.Services
                                                     cordenadas = coordsList
                                                 };
                                                 geoJsonData.grid.Add(gridData);
+                                                zonas++;
                                             }
                                         }
                                     }
@@ -465,6 +716,7 @@ namespace api.coleta.Services
                                         cordenadas = coordsList
                                     };
                                     geoJsonData.grid.Add(gridData);
+                                    zonas++;
                                 }
                                 else
                                 {
@@ -486,11 +738,21 @@ namespace api.coleta.Services
                     }
                 }
 
-
+                // Buscar cliente e fazenda para o talhão relacionado
+                var talhaoRelacionado = _talhaoService.BuscarTalhaoPorTalhaoJson(coleta.TalhaoID);
+                var clienteDto = talhaoRelacionado?.Cliente?.ToResponseDto();
+                var fazendaDto = talhaoRelacionado?.Fazenda?.ToResponseDto();
 
                 var item = new
                 {
                     id = coleta.Id,
+                    // Informações solicitadas
+                    cliente = clienteDto != null ? new { id = clienteDto.Id, nome = clienteDto.Nome } : null,
+                    fazenda = fazendaDto != null ? new { id = fazendaDto.Id, nome = fazendaDto.Nome } : null,
+                    areaHa = coleta.Talhao != null ? coleta.Talhao.Area : 0,
+                    talhaoNome = coleta.Talhao != null ? coleta.Talhao.Nome : null,
+                    nomeColeta = !string.IsNullOrWhiteSpace(coleta.NomeColeta) ? coleta.NomeColeta : (talhaoJson.Nome ?? ""),
+                    zonas = zonas,
                     talhao = coleta.Talhao != null ? new
                     {
                         id = coleta.Talhao.Id,
@@ -514,7 +776,7 @@ namespace api.coleta.Services
                     observacao = coleta.Observacao ?? "",
                     tipoColeta = coleta.TipoColeta,
                     tipoAnalise = coleta.TipoAnalise,
-                    profundidade = coleta.Profundidade
+                    profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade)
                 };
 
                 result.Add(item);
@@ -599,7 +861,7 @@ namespace api.coleta.Services
                     } : null,
                     dataUltimaColeta = dataUltimaColeta,
                     tipoColeta = coleta.TipoColeta.ToString(),
-                    profundidade = coleta.Profundidade.ToString(),
+                    profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()),
                     observacao = coleta.Observacao ?? "",
                     dataCriacao = coleta.DataInclusao,
                     geojson = geojson != null ? new
@@ -771,6 +1033,28 @@ namespace api.coleta.Services
 
                 _pontoColetadoRepository.Adicionar(pontoColetado);
                 UnitOfWork.Commit();
+
+                // Enviar notificação push para o usuário responsável pela coleta
+                var usuario = _usuarioRepository.ObterPorId(co.UsuarioRespID);
+                if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _oneSignalService.EnviarNotificacaoAsync(
+                                usuario.FcmToken,
+                                "Nova Coleta Registrada",
+                                $"Uma nova coleta foi salva para você! Nome: {co.NomeColeta ?? "Coleta"}"
+                            );
+                        }
+                        catch (Exception notifEx)
+                        {
+                            Console.WriteLine($"Erro ao enviar notificação: {notifEx.Message}");
+                        }
+                    });
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -779,6 +1063,52 @@ namespace api.coleta.Services
                 Console.WriteLine($"Erro ao atualizar o status de coleta: {ex.Message}");
                 return false;
             }
+        }
+
+        public async Task EnviarNotificacaoVisualizacaoMapaAsync(VisualizarMapOutputDto visualizarMapa)
+        {
+            try
+            {
+                if (visualizarMapa == null)
+                    return;
+
+                var usuario = _usuarioRepository.ObterPorId(visualizarMapa.UsuarioRespID);
+                if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                {
+                    await _oneSignalService.EnviarNotificacaoAsync(
+                        usuario.FcmToken,
+                        "Nova Visualização de Mapa",
+                        $"Uma nova visualização de mapa '{visualizarMapa.NomeColeta ?? "sem nome"}' foi criada para você!"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao enviar notificação de visualização de mapa: {ex.Message}");
+            }
+        }
+
+        private void EnviarNotificacaoNovaColeta(Guid userId, string nomeColeta)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var usuario = _usuarioRepository.ObterPorId(userId);
+                    if (usuario != null && !string.IsNullOrEmpty(usuario.FcmToken))
+                    {
+                        await _oneSignalService.EnviarNotificacaoAsync(
+                            usuario.FcmToken,
+                            "Nova Coleta",
+                            $"Uma nova coleta '{nomeColeta}' foi salva para você!"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao enviar notificação: {ex.Message}");
+                }
+            });
         }
     }
 }
