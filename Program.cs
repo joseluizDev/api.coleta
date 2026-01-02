@@ -210,9 +210,9 @@ builder.Services.AddScoped<ContatoService>();
 builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 // ===== LICENSING SYSTEM =====
-// EfiPay Configuration - Credenciais de Homologação
+// EfiPay Configuration - Credenciais de Produção
 var basePath = AppContext.BaseDirectory;
-var certFileName = "homologacao-864384-agroSyste.p12";
+var certFileName = "producao-643354-AgroSyste.p12";
 var certPath = Path.Combine(basePath, certFileName);
 
 // Fallback para desenvolvimento local
@@ -223,14 +223,14 @@ if (!File.Exists(certPath))
 
 builder.Services.Configure<EfiPaySettings>(options =>
 {
-    // Credenciais EfiPay (Homologação)
-    options.ClientId = "4ccdea5552b19fa0e01152a47b4f17b758c3bcbe";
-    options.ClientSecret = "2e645d560537f2c24f8d86969cd79e7ddf0322ff";
-    options.ChavePix = "lui_zzzz@hotmail.com";
+    // Credenciais EfiPay (Produção)
+    options.ClientId = "Client_Id_17711359c8b4a9ce370814111e98a3e1c4821443";
+    options.ClientSecret = "Client_Secret_a1e623c3bd3f90262b377c9ab167def9b9d89234";
+    options.ChavePix = "43f89047-906c-4876-b9d5-1c3149cbff95";
     options.CertificadoPath = certPath;
 
     options.WebhookUrl = "https://dev-api-coleta.w4dxlp.easypanel.host/api/webhook/pix";
-    options.UseSandbox = true; // Homologação
+    options.UseSandbox = false; // Produção
 });
 
 // Licensing Repositories
