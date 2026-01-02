@@ -210,17 +210,27 @@ builder.Services.AddScoped<ContatoService>();
 builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 // ===== LICENSING SYSTEM =====
-// EfiPay Configuration - Credenciais de Produção
+// EfiPay Configuration - Credenciais de Homologação
+var basePath = AppContext.BaseDirectory;
+var certFileName = "homologacao-864384-agroSyste.p12";
+var certPath = Path.Combine(basePath, certFileName);
+
+// Fallback para desenvolvimento local
+if (!File.Exists(certPath))
+{
+    certPath = Path.Combine(Directory.GetCurrentDirectory(), certFileName);
+}
+
 builder.Services.Configure<EfiPaySettings>(options =>
 {
-    // Credenciais EfiPay (Produção)
+    // Credenciais EfiPay (Homologação)
     options.ClientId = "4ccdea5552b19fa0e01152a47b4f17b758c3bcbe";
     options.ClientSecret = "2e645d560537f2c24f8d86969cd79e7ddf0322ff";
     options.ChavePix = "lui_zzzz@hotmail.com";
-    options.CertificadoPath = "/Volumes/MacOS/Trabalhos/Agro/api.coleta/homologacao-864384-agroSyste.p12";
-  
-    options.WebhookUrl = "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/pix";
-    options.UseSandbox = true; // Produção
+    options.CertificadoPath = certPath;
+
+    options.WebhookUrl = "https://dev-api-coleta.w4dxlp.easypanel.host/api/webhook/pix";
+    options.UseSandbox = true; // Homologação
 });
 
 // Licensing Repositories
