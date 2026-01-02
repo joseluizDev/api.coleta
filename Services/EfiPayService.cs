@@ -33,21 +33,13 @@ namespace api.coleta.Services
             AssinaturaRepository assinaturaRepo,
             IUnitOfWork unitOfWork)
         {
-            
+            _settings = settings.Value;
             _logger = logger;
             _pagamentoRepo = pagamentoRepo;
             _assinaturaRepo = assinaturaRepo;
             _unitOfWork = unitOfWork;
 
-             _settings = new EfiPaySettings
-            {
-                ClientId = "Client_Id_17711359c8b4a9ce370814111e98a3e1c4821443",
-                ClientSecret = "Client_Secret_a1e623c3bd3f90262b377c9ab167def9b9d89234",
-                ChavePix = "43f89047-906c-4876-b9d5-1c3149cbff95", // Chave aleatória de produção
-                CertificadoPath = "/Volumes/MacOS/Trabalhos/Agro/api.coleta/producao-643354-AgroSyste.p12",
-                WebhookUrl = "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/pix",
-                UseSandbox = false, // Produção
-            };
+            _logger.LogInformation("EfiPayService initialized with CertificatePath: {Path}", _settings.CertificadoPath);
         }
 
         public bool EstaConfigurado()
