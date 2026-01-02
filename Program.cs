@@ -22,6 +22,8 @@ using api.coleta.Services;
 using api.dashboard.Services;
 using DotNetEnv;
 using api.coleta.Jobs;
+using api.coleta.Interfaces;
+using api.coleta.Middleware;
 
 
 DotNetEnv.Env.Load();
@@ -207,6 +209,34 @@ builder.Services.AddScoped<ContatoService>();
 
 builder.Services.AddHostedService<MensagemAgendadaJob>();
 
+// ===== LICENSING SYSTEM =====
+// EfiPay Configuration - Credenciais de Produção
+builder.Services.Configure<EfiPaySettings>(options =>
+{
+    // Credenciais EfiPay (Produção)
+    options.ClientId = "4ccdea5552b19fa0e01152a47b4f17b758c3bcbe";
+    options.ClientSecret = "2e645d560537f2c24f8d86969cd79e7ddf0322ff";
+    options.ChavePix = "lui_zzzz@hotmail.com";
+    options.CertificadoPath = "/Volumes/MacOS/Trabalhos/Agro/api.coleta/homologacao-864384-agroSyste.p12";
+  
+    options.WebhookUrl = "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/pix";
+    options.UseSandbox = true; // Produção
+});
+
+// Licensing Repositories
+builder.Services.AddScoped<PlanoRepository>();
+builder.Services.AddScoped<AssinaturaRepository>();
+builder.Services.AddScoped<HistoricoPagamentoRepository>();
+
+// Licensing Services
+builder.Services.AddScoped<IEfiPayService, EfiPayService>();
+builder.Services.AddScoped<IEfiPayBoletoService, EfiPayBoletoService>();
+builder.Services.AddScoped<IEfiPayCartaoService, EfiPayCartaoService>();
+builder.Services.AddScoped<IEfiPayAssinaturaService, EfiPayAssinaturaService>();
+builder.Services.AddScoped<PlanoService>();
+builder.Services.AddScoped<AssinaturaService>();
+builder.Services.AddScoped<LicenseService>();
+
 string corsPolicyName = "AllowAnyOrigin";
 builder.Services.AddCors(options =>
 {
@@ -315,6 +345,120 @@ if (applyMigrations)
 
 app.UseCors(corsPolicyName);
 
+// Fix licensing tables if needed (recreate with correct schema)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        // Check if licensing tables need to be recreated (check for missing columns)
+        var needsRecreate = false;
+        try
+        {
+            // Check Planos table
+            db.Database.ExecuteSqlRaw("SELECT ValorAnual FROM Planos LIMIT 1");
+            // Check Assinaturas table has all required columns
+            db.Database.ExecuteSqlRaw("SELECT Ativa, AutoRenovar, StatusPagamento FROM Assinaturas LIMIT 1");
+        }
+        catch
+        {
+            needsRecreate = true;
+        }
+
+        if (needsRecreate)
+        {
+            Console.WriteLine("Recreating licensing tables with correct schema...");
+
+            // Drop existing tables with FK checks disabled in same statement
+            db.Database.ExecuteSqlRaw(@"
+                SET FOREIGN_KEY_CHECKS = 0;
+                DROP TABLE IF EXISTS `HistoricosPagamento`;
+                DROP TABLE IF EXISTS `Assinaturas`;
+                DROP TABLE IF EXISTS `Planos`;
+                SET FOREIGN_KEY_CHECKS = 1;
+            ");
+
+            // Recreate Planos table
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE `Planos` (
+                    `Id` char(36) COLLATE ascii_general_ci NOT NULL,
+                    `Nome` varchar(100) CHARACTER SET utf8mb4 NOT NULL,
+                    `Descricao` longtext CHARACTER SET utf8mb4 NOT NULL,
+                    `ValorAnual` decimal(12,4) NOT NULL,
+                    `LimiteHectares` decimal(12,4) NOT NULL,
+                    `Ativo` tinyint(1) NOT NULL DEFAULT 1,
+                    `RequereContato` tinyint(1) NOT NULL DEFAULT 0,
+                    `EfiPayPlanId` varchar(50) CHARACTER SET utf8mb4 NULL,
+                    `DataInclusao` datetime(6) NOT NULL,
+                    CONSTRAINT `PK_Planos` PRIMARY KEY (`Id`)
+                ) CHARACTER SET=utf8mb4
+            ");
+
+            // Recreate Assinaturas table with all columns
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE `Assinaturas` (
+                    `Id` char(36) COLLATE ascii_general_ci NOT NULL,
+                    `ClienteId` char(36) COLLATE ascii_general_ci NOT NULL,
+                    `PlanoId` char(36) COLLATE ascii_general_ci NOT NULL,
+                    `DataInicio` datetime(6) NOT NULL,
+                    `DataFim` datetime(6) NOT NULL,
+                    `Ativa` tinyint(1) NOT NULL DEFAULT 0,
+                    `AutoRenovar` tinyint(1) NOT NULL DEFAULT 0,
+                    `Observacao` varchar(500) CHARACTER SET utf8mb4 NULL,
+                    `DeletadoEm` datetime(6) NULL,
+                    `EfiPaySubscriptionId` varchar(100) CHARACTER SET utf8mb4 NULL,
+                    `EfiPayPlanId` varchar(50) CHARACTER SET utf8mb4 NULL,
+                    `StatusPagamento` varchar(50) CHARACTER SET utf8mb4 NULL,
+                    `DataUltimoPagamento` datetime(6) NULL,
+                    `DataInclusao` datetime(6) NOT NULL,
+                    CONSTRAINT `PK_Assinaturas` PRIMARY KEY (`Id`),
+                    CONSTRAINT `FK_Assinaturas_Clientes_ClienteId` FOREIGN KEY (`ClienteId`) REFERENCES `Clientes` (`Id`) ON DELETE CASCADE,
+                    CONSTRAINT `FK_Assinaturas_Planos_PlanoId` FOREIGN KEY (`PlanoId`) REFERENCES `Planos` (`Id`) ON DELETE CASCADE
+                ) CHARACTER SET=utf8mb4
+            ");
+
+            // Recreate HistoricosPagamento table with all columns
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE `HistoricosPagamento` (
+                    `Id` char(36) COLLATE ascii_general_ci NOT NULL,
+                    `AssinaturaId` char(36) COLLATE ascii_general_ci NOT NULL,
+                    `Valor` decimal(12,4) NOT NULL,
+                    `DataPagamento` datetime(6) NOT NULL,
+                    `MetodoPagamento` varchar(50) CHARACTER SET utf8mb4 NOT NULL,
+                    `Status` int NOT NULL DEFAULT 0,
+                    `TransacaoId` varchar(255) CHARACTER SET utf8mb4 NULL,
+                    `Observacao` longtext CHARACTER SET utf8mb4 NULL,
+                    `DeletadoEm` datetime(6) NULL,
+                    `EfiPayChargeId` varchar(100) CHARACTER SET utf8mb4 NULL,
+                    `EfiPayStatus` varchar(50) CHARACTER SET utf8mb4 NULL,
+                    `PixQrCode` longtext CHARACTER SET utf8mb4 NULL,
+                    `PixQrCodeBase64` longtext CHARACTER SET utf8mb4 NULL,
+                    `PixTxId` varchar(100) CHARACTER SET utf8mb4 NULL,
+                    `DataExpiracao` datetime(6) NULL,
+                    `DataInclusao` datetime(6) NOT NULL,
+                    CONSTRAINT `PK_HistoricosPagamento` PRIMARY KEY (`Id`),
+                    CONSTRAINT `FK_HistoricosPagamento_Assinaturas_AssinaturaId` FOREIGN KEY (`AssinaturaId`) REFERENCES `Assinaturas` (`Id`) ON DELETE CASCADE
+                ) CHARACTER SET=utf8mb4
+            ");
+
+            // Insert default plans
+            db.Database.ExecuteSqlRaw(@"
+                INSERT INTO `Planos` (`Id`, `Nome`, `Descricao`, `ValorAnual`, `LimiteHectares`, `Ativo`, `RequereContato`, `DataInclusao`)
+                VALUES
+                (UUID(), 'Básico', 'Plano ideal para pequenos produtores. Inclui todas as funcionalidades essenciais para até 1.000 hectares.', 3598.00, 1000, 1, 0, NOW()),
+                (UUID(), 'Premium', 'Plano completo para produtores de médio porte. Todas as funcionalidades para até 2.000 hectares.', 6599.80, 2000, 1, 0, NOW()),
+                (UUID(), 'Gold', 'Plano personalizado para grandes produtores. Hectares e funcionalidades sob medida para sua operação.', 0, 999999, 1, 1, NOW())
+            ");
+
+            Console.WriteLine("Licensing tables recreated successfully with default plans!");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Note: Could not setup licensing tables: {ex.Message}");
+    }
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -322,6 +466,10 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// License validation middleware (after auth, before controllers)
+// Uncomment to enable license validation:
+// app.UseLicenseValidation();
 
 app.MapControllers();
 

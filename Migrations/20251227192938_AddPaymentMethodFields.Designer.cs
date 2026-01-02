@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace api.coleta.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251227192938_AddPaymentMethodFields")]
+    partial class AddPaymentMethodFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -335,37 +338,6 @@ namespace api.coleta.Migrations
                     b.Property<Guid>("AssinaturaId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("BoletoCodigoBarras")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<string>("BoletoLinhaDigitavel")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<string>("BoletoLink")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("BoletoPdfUrl")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("BoletoVencimento")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("CartaoBandeira")
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
-                    b.Property<int?>("CartaoParcelas")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CartaoUltimos4Digitos")
-                        .HasMaxLength(4)
-                        .HasColumnType("varchar(4)");
-
-                    b.Property<decimal?>("CartaoValorParcela")
-                        .HasColumnType("decimal(12,4)");
-
                     b.Property<DateTime?>("DataExpiracao")
                         .HasColumnType("datetime(6)");
 
@@ -386,10 +358,6 @@ namespace api.coleta.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
-                    b.Property<string>("EfiPaySubscriptionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
                     b.Property<string>("MetodoPagamento")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -407,12 +375,6 @@ namespace api.coleta.Migrations
                     b.Property<string>("PixTxId")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
-
-                    b.Property<int?>("RecorrenciaParcela")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RecorrenciaTotalParcelas")
-                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -702,9 +664,6 @@ namespace api.coleta.Migrations
                     b.Property<string>("EfiPayPlanId")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
-
-                    b.Property<int?>("EfiPayPlanIdInt")
-                        .HasColumnType("int");
 
                     b.Property<decimal>("LimiteHectares")
                         .HasColumnType("decimal(12,4)");
