@@ -5,8 +5,10 @@ namespace api.coleta.Models.DTOs.Licenciamento
     public class AssinaturaDTO
     {
         public Guid Id { get; set; }
-        public Guid ClienteId { get; set; }
+        public Guid? ClienteId { get; set; }
         public string ClienteNome { get; set; } = string.Empty;
+        public Guid? UsuarioId { get; set; }
+        public string UsuarioNome { get; set; } = string.Empty;
         public Guid PlanoId { get; set; }
         public PlanoDTO? Plano { get; set; }
         public DateTime DataInicio { get; set; }
@@ -21,8 +23,8 @@ namespace api.coleta.Models.DTOs.Licenciamento
 
     public class AssinaturaCreateDTO
     {
-        [Required(ErrorMessage = "Cliente é obrigatório")]
-        public Guid ClienteId { get; set; }
+        // ClienteId é opcional - se não fornecido, usa UsuarioId do token
+        public Guid? ClienteId { get; set; }
 
         [Required(ErrorMessage = "Plano é obrigatório")]
         public Guid PlanoId { get; set; }
@@ -36,6 +38,15 @@ namespace api.coleta.Models.DTOs.Licenciamento
         public bool AutoRenovar { get; set; } = false;
 
         public string? Observacao { get; set; }
+    }
+
+    // DTO específico para criação de assinatura vinculada a usuário
+    public class AssinaturaCreateUsuarioDTO
+    {
+        [Required(ErrorMessage = "Plano é obrigatório")]
+        public Guid PlanoId { get; set; }
+
+        public string? CpfCnpj { get; set; }
     }
 
     public class AssinaturaCreateComPixDTO : AssinaturaCreateDTO

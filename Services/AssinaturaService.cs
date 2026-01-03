@@ -1,8 +1,10 @@
 using api.cliente.Repositories;
 using api.coleta.Interfaces;
+using api.coleta.Models.DTOs.EfiPay;
 using api.coleta.Models.DTOs.Licenciamento;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
+using api.coleta.Data.Repository;
 
 namespace api.coleta.Services
 {
@@ -11,6 +13,7 @@ namespace api.coleta.Services
         private readonly AssinaturaRepository _assinaturaRepo;
         private readonly PlanoRepository _planoRepo;
         private readonly ClienteRepository _clienteRepo;
+        private readonly UsuarioRepository _usuarioRepo;
         private readonly HistoricoPagamentoRepository _pagamentoRepo;
         private readonly IEfiPayService _efiPayService;
         private readonly INotificador _notificador;
@@ -20,6 +23,7 @@ namespace api.coleta.Services
             AssinaturaRepository assinaturaRepo,
             PlanoRepository planoRepo,
             ClienteRepository clienteRepo,
+            UsuarioRepository usuarioRepo,
             HistoricoPagamentoRepository pagamentoRepo,
             IEfiPayService efiPayService,
             INotificador notificador,
@@ -29,6 +33,7 @@ namespace api.coleta.Services
             _assinaturaRepo = assinaturaRepo;
             _planoRepo = planoRepo;
             _clienteRepo = clienteRepo;
+            _usuarioRepo = usuarioRepo;
             _pagamentoRepo = pagamentoRepo;
             _efiPayService = efiPayService;
             _notificador = notificador;
@@ -38,8 +43,15 @@ namespace api.coleta.Services
         public async Task<AssinaturaComPagamentoDTO?> CriarAssinaturaComPagamentoPixAsync(
             AssinaturaCreateComPixDTO dto)
         {
+            // Validate ClienteId is provided
+            if (!dto.ClienteId.HasValue || dto.ClienteId.Value == Guid.Empty)
+            {
+                _notificador.Notificar(new Notificacao("ClienteId é obrigatório para esta operação."));
+                return null;
+            }
+
             // Validate Cliente
-            var cliente = _clienteRepo.ObterPorId(dto.ClienteId);
+            var cliente = _clienteRepo.ObterPorId(dto.ClienteId.Value);
             if (cliente == null)
             {
                 _notificador.Notificar(new Notificacao("Cliente não encontrado."));
@@ -64,7 +76,7 @@ namespace api.coleta.Services
             }
 
             // Deactivate existing subscriptions
-            var existente = await _assinaturaRepo.ObterAssinaturaAtivaDoClienteAsync(dto.ClienteId);
+            var existente = await _assinaturaRepo.ObterAssinaturaAtivaDoClienteAsync(dto.ClienteId.Value);
             if (existente != null)
             {
                 existente.Ativa = false;
@@ -79,7 +91,7 @@ namespace api.coleta.Services
 
             var assinatura = new Assinatura
             {
-                ClienteId = dto.ClienteId,
+                ClienteId = dto.ClienteId.Value,
                 PlanoId = dto.PlanoId,
                 DataInicio = dataInicio,
                 DataFim = dataFim,
@@ -159,6 +171,117 @@ namespace api.coleta.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar cobrança PIX para assinatura {AssinaturaId}", assinatura.Id);
+                _notificador.Notificar(new Notificacao($"Erro ao gerar PIX: {ex.Message}"));
+                return null;
+            }
+        }
+
+        // Método para criar assinatura vinculada ao USUÁRIO (não cliente)
+        public async Task<AssinaturaComPagamentoDTO?> CriarAssinaturaUsuarioComPixAsync(
+            Guid usuarioId, AssinaturaCreateUsuarioDTO dto)
+        {
+            // Validate Usuario
+            var usuario = _usuarioRepo.ObterPorId(usuarioId);
+            if (usuario == null)
+            {
+                _notificador.Notificar(new Notificacao("Usuário não encontrado."));
+                return null;
+            }
+
+            // Validate Plano
+            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
+            if (plano == null || !plano.Ativo)
+            {
+                _notificador.Notificar(new Notificacao("Plano não encontrado ou inativo."));
+                return null;
+            }
+
+            // Gold plan requires contact
+            if (plano.RequereContato)
+            {
+                _notificador.Notificar(new Notificacao(
+                    "Plano Gold requer contato direto. Entre em contato conosco para um orçamento personalizado."
+                ));
+                return null;
+            }
+
+            // Deactivate existing subscriptions (by usuario)
+            var existente = await _assinaturaRepo.ObterAssinaturaAtivaPorUsuarioAsync(usuarioId);
+            if (existente != null)
+            {
+                existente.Ativa = false;
+                existente.Observacao = $"Substituída por nova assinatura em {DateTime.Now:dd/MM/yyyy}";
+                _assinaturaRepo.Atualizar(existente);
+            }
+
+            // Create subscription linked to Usuario
+            var assinatura = new Assinatura
+            {
+                UsuarioId = usuarioId,  // Vincula ao usuario, não ao cliente
+                ClienteId = null,
+                PlanoId = dto.PlanoId,
+                DataInicio = DateTime.Now,
+                DataFim = DateTime.Now.AddYears(1),
+                Ativa = false, // Will be activated by webhook
+                AutoRenovar = false,
+                StatusPagamento = "pending"
+            };
+
+            _assinaturaRepo.Adicionar(assinatura);
+            UnitOfWork.Commit();
+
+            // Create PIX charge using user's data
+            try
+            {
+                var cpfCnpj = dto.CpfCnpj ?? usuario.CPF ?? "";
+                var pixResponse = await _efiPayService.CriarCobrancaPixAsync(
+                    plano.ValorAnual,
+                    cpfCnpj,
+                    usuario.NomeCompleto ?? "Usuário",
+                    $"AgroSyste - {plano.Nome}"
+                );
+
+                // Get QR Code
+                var qrCode = await _efiPayService.ObterQrCodePixAsync(pixResponse.Loc!.Id);
+
+                // Create payment record
+                var pagamento = new HistoricoPagamento
+                {
+                    AssinaturaId = assinatura.Id,
+                    Valor = plano.ValorAnual,
+                    DataPagamento = DateTime.Now,
+                    MetodoPagamento = "PIX",
+                    Status = StatusPagamento.Pendente,
+                    PixTxId = pixResponse.Txid,
+                    PixQrCode = qrCode.Qrcode,
+                    PixQrCodeBase64 = qrCode.ImagemQrcode,
+                    DataExpiracao = DateTime.Now.AddHours(24),
+                    EfiPayChargeId = pixResponse.Loc.Id.ToString(),
+                    EfiPayStatus = pixResponse.Status
+                };
+
+                _pagamentoRepo.Adicionar(pagamento);
+                UnitOfWork.Commit();
+
+                _logger.LogInformation("PIX charge created for user subscription {AssinaturaId}, txid={Txid}, usuarioId={UsuarioId}",
+                    assinatura.Id, pixResponse.Txid, usuarioId);
+
+                return new AssinaturaComPagamentoDTO
+                {
+                    Assinatura = MapToDTO(assinatura),
+                    Pagamento = new PagamentoPixDTO
+                    {
+                        TxId = pixResponse.Txid,
+                        QrCode = qrCode.Qrcode,
+                        QrCodeImagem = qrCode.ImagemQrcode,
+                        Valor = plano.ValorAnual,
+                        DataExpiracao = DateTime.Now.AddHours(24)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar cobrança PIX para assinatura de usuario {AssinaturaId}", assinatura.Id);
                 _notificador.Notificar(new Notificacao($"Erro ao gerar PIX: {ex.Message}"));
                 return null;
             }
@@ -599,6 +722,138 @@ namespace api.coleta.Services
         }
 
         /// <summary>
+        /// Cria assinatura vinculada ao USUÁRIO com pagamento via Boleto
+        /// </summary>
+        public async Task<(AssinaturaDTO? Assinatura, PagamentoBoletoDTO? Boleto)> CriarAssinaturaUsuarioComBoletoAsync(
+            Guid usuarioId, AssinaturaCreateUsuarioDTO dto, PagamentoBoletoDTO boleto)
+        {
+            var usuario = _usuarioRepo.ObterPorId(usuarioId);
+            if (usuario == null)
+            {
+                _notificador.Notificar(new Notificacao("Usuário não encontrado."));
+                return (null, null);
+            }
+
+            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
+            if (plano == null || !plano.Ativo)
+            {
+                _notificador.Notificar(new Notificacao("Plano não encontrado ou inativo."));
+                return (null, null);
+            }
+
+            // Desativar assinatura existente do usuário
+            var existente = await _assinaturaRepo.ObterAssinaturaAtivaPorUsuarioAsync(usuarioId);
+            if (existente != null)
+            {
+                existente.Ativa = false;
+                existente.Observacao = $"Substituída por nova assinatura em {DateTime.Now:dd/MM/yyyy}";
+                _assinaturaRepo.Atualizar(existente);
+            }
+
+            var assinatura = new Assinatura
+            {
+                UsuarioId = usuarioId,
+                ClienteId = null,
+                PlanoId = dto.PlanoId,
+                DataInicio = DateTime.Now,
+                DataFim = DateTime.Now.AddYears(1),
+                Ativa = false, // Será ativada após confirmação do pagamento
+                AutoRenovar = false,
+                StatusPagamento = "pending",
+                Observacao = "Aguardando pagamento via boleto"
+            };
+
+            _assinaturaRepo.Adicionar(assinatura);
+
+            var pagamento = new HistoricoPagamento
+            {
+                AssinaturaId = assinatura.Id,
+                Valor = plano.ValorAnual,
+                DataPagamento = DateTime.Now,
+                MetodoPagamento = "BOLETO",
+                Status = StatusPagamento.Pendente,
+                EfiPayChargeId = boleto.ChargeId.ToString(),
+                EfiPayStatus = "waiting"
+            };
+
+            _pagamentoRepo.Adicionar(pagamento);
+            UnitOfWork.Commit();
+
+            _logger.LogInformation("Assinatura de usuário com boleto criada: {AssinaturaId}, chargeId: {ChargeId}, usuarioId: {UsuarioId}",
+                assinatura.Id, boleto.ChargeId, usuarioId);
+
+            return (MapToDTO(assinatura), boleto);
+        }
+
+        /// <summary>
+        /// Cria assinatura vinculada ao USUÁRIO com pagamento via Cartão (ativa imediatamente)
+        /// </summary>
+        public async Task<(AssinaturaDTO? Assinatura, PagamentoCartaoDTO? Pagamento)> CriarAssinaturaUsuarioComCartaoAsync(
+            Guid usuarioId, AssinaturaCreateUsuarioDTO dto, PagamentoCartaoDTO cartao)
+        {
+            var usuario = _usuarioRepo.ObterPorId(usuarioId);
+            if (usuario == null)
+            {
+                _notificador.Notificar(new Notificacao("Usuário não encontrado."));
+                return (null, null);
+            }
+
+            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
+            if (plano == null || !plano.Ativo)
+            {
+                _notificador.Notificar(new Notificacao("Plano não encontrado ou inativo."));
+                return (null, null);
+            }
+
+            // Desativar assinatura existente do usuário
+            var existente = await _assinaturaRepo.ObterAssinaturaAtivaPorUsuarioAsync(usuarioId);
+            if (existente != null)
+            {
+                existente.Ativa = false;
+                existente.Observacao = $"Substituída por nova assinatura em {DateTime.Now:dd/MM/yyyy}";
+                _assinaturaRepo.Atualizar(existente);
+            }
+
+            var assinatura = new Assinatura
+            {
+                UsuarioId = usuarioId,
+                ClienteId = null,
+                PlanoId = dto.PlanoId,
+                DataInicio = DateTime.Now,
+                DataFim = DateTime.Now.AddYears(1),
+                Ativa = true, // Cartão aprovado = assinatura ativa
+                AutoRenovar = false,
+                StatusPagamento = "active",
+                DataUltimoPagamento = DateTime.Now,
+                Observacao = $"Pagamento via cartão em {cartao.Parcelas}x"
+            };
+
+            _assinaturaRepo.Adicionar(assinatura);
+
+            var pagamento = new HistoricoPagamento
+            {
+                AssinaturaId = assinatura.Id,
+                Valor = plano.ValorAnual,
+                DataPagamento = DateTime.Now,
+                MetodoPagamento = "CARTAO",
+                Status = StatusPagamento.Aprovado,
+                EfiPayChargeId = cartao.ChargeId.ToString(),
+                EfiPayStatus = "approved",
+                CartaoParcelas = cartao.Parcelas,
+                CartaoValorParcela = cartao.ValorParcela,
+                CartaoBandeira = cartao.Bandeira
+            };
+
+            _pagamentoRepo.Adicionar(pagamento);
+            UnitOfWork.Commit();
+
+            _logger.LogInformation("Assinatura de usuário com cartão criada e ativada: {AssinaturaId}, {Parcelas}x, usuarioId: {UsuarioId}",
+                assinatura.Id, cartao.Parcelas, usuarioId);
+
+            return (MapToDTO(assinatura), cartao);
+        }
+
+        /// <summary>
         /// Deleta todas as assinaturas e pagamentos de um cliente (desenvolvimento)
         /// </summary>
         public async Task<int> DeletarTodasAssinaturasDoClienteAsync(Guid clienteId)
@@ -635,6 +890,8 @@ namespace api.coleta.Services
                 Id = a.Id,
                 ClienteId = a.ClienteId,
                 ClienteNome = a.Cliente?.Nome ?? "",
+                UsuarioId = a.UsuarioId,
+                UsuarioNome = a.Usuario?.NomeCompleto ?? "",
                 PlanoId = a.PlanoId,
                 Plano = a.Plano != null ? new PlanoDTO
                 {

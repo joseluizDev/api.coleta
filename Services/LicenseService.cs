@@ -70,6 +70,9 @@ namespace api.coleta.Services
                 {
                     Id = assinatura.Id,
                     ClienteId = assinatura.ClienteId,
+                    ClienteNome = assinatura.Cliente?.Nome ?? "",
+                    UsuarioId = assinatura.UsuarioId,
+                    UsuarioNome = assinatura.Usuario?.NomeCompleto ?? "",
                     PlanoId = assinatura.PlanoId,
                     DataInicio = assinatura.DataInicio,
                     DataFim = assinatura.DataFim,
@@ -157,12 +160,18 @@ namespace api.coleta.Services
             return (hectaresAtuais + hectaresAdicionais) <= limiteHectares;
         }
 
-        private async Task<decimal> CalcularHectaresUtilizadosAsync(Guid clienteId)
+        private async Task<decimal> CalcularHectaresUtilizadosAsync(Guid? clienteId)
         {
+            // Se não há cliente vinculado (assinatura de usuário direto), retorna 0
+            if (!clienteId.HasValue || clienteId.Value == Guid.Empty)
+            {
+                return 0;
+            }
+
             try
             {
                 // Get all talhões from fazendas linked to this cliente
-                var totalHectares = await _talhaoRepo.ObterTotalHectaresPorClienteAsync(clienteId);
+                var totalHectares = await _talhaoRepo.ObterTotalHectaresPorClienteAsync(clienteId.Value);
                 return totalHectares;
             }
             catch (Exception ex)
@@ -240,6 +249,9 @@ namespace api.coleta.Services
                 {
                     Id = assinatura.Id,
                     ClienteId = assinatura.ClienteId,
+                    ClienteNome = assinatura.Cliente?.Nome ?? "",
+                    UsuarioId = assinatura.UsuarioId,
+                    UsuarioNome = assinatura.Usuario?.NomeCompleto ?? "",
                     PlanoId = assinatura.PlanoId,
                     DataInicio = assinatura.DataInicio,
                     DataFim = assinatura.DataFim,

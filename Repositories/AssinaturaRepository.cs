@@ -120,5 +120,37 @@ namespace api.coleta.Repositories
                 .OrderByDescending(a => a.DataInclusao)
                 .ToListAsync();
         }
+
+        /// <summary>
+        /// Busca assinatura ativa diretamente pelo UsuarioId (assinatura vinculada ao usuario, não cliente)
+        /// </summary>
+        public async Task<Assinatura?> ObterAssinaturaAtivaPorUsuarioAsync(Guid usuarioId)
+        {
+            return await Context.Assinaturas
+                .Include(a => a.Plano)
+                .Include(a => a.Usuario)
+                .Where(a => a.UsuarioId == usuarioId
+                         && a.Ativa
+                         && a.DataFim >= DateTime.Now
+                         && a.DeletadoEm == null)
+                .OrderByDescending(a => a.DataFim)
+                .FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Busca assinatura ativa unificada - primeiro tenta por UsuarioId direto, depois por Cliente
+        /// </summary>
+        public async Task<Assinatura?> ObterAssinaturaAtivaUnificadaAsync(Guid usuarioId)
+        {
+            // Primeiro tenta buscar assinatura vinculada diretamente ao usuario
+            var assinaturaUsuario = await ObterAssinaturaAtivaPorUsuarioAsync(usuarioId);
+            if (assinaturaUsuario != null)
+            {
+                return assinaturaUsuario;
+            }
+
+            // Fallback: busca assinatura via Cliente
+            return await ObterAssinaturaAtivaDoUsuarioAsync(usuarioId);
+        }
     }
 }
