@@ -210,31 +210,43 @@ builder.Services.AddScoped<ContatoService>();
 builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 // ===== LICENSING SYSTEM =====
-// EfiPay Configuration - Credenciais de Produção
-var basePath = AppContext.BaseDirectory;
-var certFileName = "producao-643354-AgroSyste.p12";
-var certPath = Path.Combine(basePath, certFileName);
+// EfiPay Configuration - Lê credenciais do .env
+var efiCertPath = Environment.GetEnvironmentVariable("EFI_CERTIFICATE_PATH") ?? "";
 
-// Fallback para desenvolvimento local
-if (!File.Exists(certPath))
+// Fallback: procurar certificado no diretório do app
+if (string.IsNullOrEmpty(efiCertPath) || !File.Exists(efiCertPath))
 {
-    certPath = Path.Combine(Directory.GetCurrentDirectory(), certFileName);
+    var certFileName = "producao-643354-AgroSyste.p12";
+    var basePath = AppContext.BaseDirectory;
+    efiCertPath = Path.Combine(basePath, certFileName);
+
+    if (!File.Exists(efiCertPath))
+    {
+        efiCertPath = Path.Combine(Directory.GetCurrentDirectory(), certFileName);
+    }
 }
+
+// Ler configurações do .env
+var efiClientId = Environment.GetEnvironmentVariable("EFI_CLIENT_ID") ?? "";
+var efiClientSecret = Environment.GetEnvironmentVariable("EFI_CLIENT_SECRET") ?? "";
+var efiPixKey = Environment.GetEnvironmentVariable("EFI_PIX_KEY") ?? "";
+var efiWebhookUrl = Environment.GetEnvironmentVariable("EFI_WEBHOOK_URL") ?? "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/efipay";
+var efiWebhookSecret = Environment.GetEnvironmentVariable("EFI_WEBHOOK_SECRET") ?? "agrosyste_webhook_2024_secret";
+var efiSandbox = Environment.GetEnvironmentVariable("EFI_SANDBOX")?.ToLower() == "true";
 
 builder.Services.Configure<EfiPaySettings>(options =>
 {
-    // Credenciais EfiPay (Produção)
-    options.ClientId = "Client_Id_17711359c8b4a9ce370814111e98a3e1c4821443";
-    options.ClientSecret = "Client_Secret_a1e623c3bd3f90262b377c9ab167def9b9d89234";
-    options.ChavePix = "43f89047-906c-4876-b9d5-1c3149cbff95";
-    options.CertificadoPath = certPath;
+    // Credenciais EfiPay do .env
+    options.ClientId = efiClientId;
+    options.ClientSecret = efiClientSecret;
+    options.ChavePix = efiPixKey;
+    options.CertificadoPath = efiCertPath;
 
-    // Webhook URLs para EfiPay (skip-mTLS com validação de IP + HMAC)
+    // Webhook URL com HMAC para segurança (skip-mTLS)
     // PIX: /api/webhook/efipay (Efi Pay adiciona /pix automaticamente)
     // Cobranças/Assinaturas Recorrentes: /api/webhook/efipay/cobranca
-    // IMPORTANTE: hmac deve ser igual ao WEBHOOK_HMAC_SECRET no WebhookController
-    options.WebhookUrl = "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/efipay?hmac=agrosyste_webhook_2024_secret&ignorar=";
-    options.UseSandbox = false; // Produção
+    options.WebhookUrl = $"{efiWebhookUrl}?hmac={efiWebhookSecret}&ignorar=";
+    options.UseSandbox = efiSandbox;
 });
 
 // Licensing Repositories

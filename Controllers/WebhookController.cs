@@ -82,8 +82,9 @@ namespace api.coleta.Controllers
         /// </summary>
         private bool ValidarHmacWebhook()
         {
-            // Hash secreta configurada (deve ser a mesma cadastrada na Efi Pay)
-            const string WEBHOOK_HMAC_SECRET = "agrosyste_webhook_2024_secret";
+            // Hash secreta configurada via variável de ambiente EFI_WEBHOOK_SECRET
+            var webhookSecret = Environment.GetEnvironmentVariable("EFI_WEBHOOK_SECRET")
+                ?? "agrosyste_webhook_2024_secret";
 
             var hmacQuery = HttpContext.Request.Query["hmac"].FirstOrDefault();
 
@@ -95,7 +96,7 @@ namespace api.coleta.Controllers
                 return true;
             }
 
-            var isValid = hmacQuery == WEBHOOK_HMAC_SECRET;
+            var isValid = hmacQuery == webhookSecret;
 
             if (!isValid)
             {
