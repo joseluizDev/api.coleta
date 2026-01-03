@@ -201,11 +201,12 @@ namespace api.coleta.Services
         }
 
         /// <summary>
-        /// Verifica licenca diretamente pelo UsuarioId (fallback quando clienteId nao encontrado)
+        /// Verifica licenca diretamente pelo UsuarioId (busca unificada: primeiro por UsuarioId, depois via Cliente)
         /// </summary>
         public async Task<LicenseStatusDTO> VerificarLicencaDoUsuarioAsync(Guid usuarioId)
         {
-            var assinatura = await _assinaturaRepo.ObterAssinaturaAtivaDoUsuarioAsync(usuarioId);
+            // Usa busca unificada: primeiro tenta por UsuarioId direto, depois fallback via Cliente
+            var assinatura = await _assinaturaRepo.ObterAssinaturaAtivaUnificadaAsync(usuarioId);
 
             if (assinatura == null)
             {
