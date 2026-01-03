@@ -52,6 +52,34 @@ public class UsuarioService : ServiceBase
         return _jwtToken.GerarToken(usuario);
     }
 
+    public UsuarioResponseDTO CadastrarNovo(UsuarioResquestDTO usuario)
+    {
+        var usuarioExistente = _usuarioRepository.ObterPorEmail(usuario.Email);
+        if (usuarioExistente != null)
+        {
+            throw new Exception("Email já cadastrado");
+        }
+
+        var cpfExistente = _usuarioRepository.ObterPorCpf(usuario.CPF);
+        if (cpfExistente != null)
+        {
+            throw new Exception("CPF já cadastrado");
+        }
+
+        var usuarioEntidade = new Usuario(usuario);
+        _usuarioRepository.Adicionar(usuarioEntidade);
+        UnitOfWork.Commit();
+
+        return new UsuarioResponseDTO
+        {
+            Id = usuarioEntidade.Id,
+            NomeCompleto = usuarioEntidade.NomeCompleto,
+            CPF = usuarioEntidade.CPF,
+            Email = usuarioEntidade.Email,
+            Telefone = usuarioEntidade.Telefone
+        };
+    }
+
     public bool Cadastrar(Guid userId, UsuarioResquestDTO usuario)
     {
         var usuarioAdmin = _usuarioRepository.ObterPorId(userId);

@@ -40,6 +40,20 @@ namespace api.coleta.Controllers
             }
         }
 
+        [HttpPost("cadastrar")]
+        public IActionResult CadastrarNovo([FromBody] UsuarioResquestDTO usuario)
+        {
+            try
+            {
+                var novoUsuario = _usuarioService.CadastrarNovo(usuario);
+                return Ok(new { message = "Usuário cadastrado com sucesso.", usuario = novoUsuario });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(409, new { message = ex.Message });
+            }
+        }
+
         [HttpPost("cadastrar/funcionario")]
         public IActionResult Cadastrar([FromBody] UsuarioResquestDTO usuario)
         {
