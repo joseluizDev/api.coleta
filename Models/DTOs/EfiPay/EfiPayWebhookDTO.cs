@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace api.coleta.Models.DTOs.EfiPay
 {
+    // ===== WEBHOOK NOTIFICATION DTOs =====
+
     public class EfiPayWebhookNotificationDTO
     {
         [JsonPropertyName("pix")]
@@ -27,5 +29,46 @@ namespace api.coleta.Models.DTOs.EfiPay
 
         [JsonPropertyName("pagador")]
         public EfiPayDevedorDTO? Pagador { get; set; }
+    }
+
+    // ===== WEBHOOK CONFIGURATION DTOs =====
+
+    /// <summary>
+    /// DTO para cadastrar/atualizar webhook PIX
+    /// PUT /v2/webhook/:chave
+    /// </summary>
+    public class EfiPayWebhookConfigDTO
+    {
+        [JsonPropertyName("webhookUrl")]
+        public string WebhookUrl { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Resposta ao consultar webhook configurado
+    /// GET /v2/webhook/:chave
+    /// </summary>
+    public class EfiPayWebhookResponseDTO
+    {
+        [JsonPropertyName("webhookUrl")]
+        public string? WebhookUrl { get; set; }
+
+        [JsonPropertyName("chave")]
+        public string? Chave { get; set; }
+
+        [JsonPropertyName("criacao")]
+        public string? Criacao { get; set; }
+    }
+
+    /// <summary>
+    /// Resultado do cadastro de webhook
+    /// </summary>
+    public class WebhookCadastroResultDTO
+    {
+        public bool Sucesso { get; set; }
+        public string? Mensagem { get; set; }
+        public string? WebhookUrl { get; set; }
+        public string? ChavePix { get; set; }
+        public string? DataCadastro { get; set; }
+        public string? Erro { get; set; }
     }
 }

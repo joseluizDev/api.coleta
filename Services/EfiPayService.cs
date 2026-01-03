@@ -272,6 +272,149 @@ namespace api.coleta.Services
                 pagamento.AssinaturaId);
         }
 
+        // ===== Webhook Configuration (skip-mTLS) =====
+
+        public async Task<WebhookCadastroResultDTO> CadastrarWebhookPixAsync(string? webhookUrl = null)
+        {
+            var result = new WebhookCadastroResultDTO();
+
+            try
+            {
+                var token = await ObterAccessTokenAsync();
+                using var client = CreateHttpClientWithCertificate();
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                // Header skip-mTLS para servidores compartilhados (Easypanel)
+                // Ref: https://dev.efipay.com.br/docs/api-pix/webhooks#skip-mtls
+                client.DefaultRequestHeaders.Add("x-skip-mtls-checking", "true");
+
+                // Usar URL configurada ou a passada como parâmetro
+                var url = webhookUrl ?? _settings.WebhookUrl;
+
+                if (string.IsNullOrEmpty(url))
+                {
+                    result.Erro = "WebhookUrl não configurada";
+                    return result;
+                }
+
+                var webhookConfig = new EfiPayWebhookConfigDTO
+                {
+                    WebhookUrl = url
+                };
+
+                var jsonContent = JsonSerializer.Serialize(webhookConfig, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                // PUT /v2/webhook/:chave
+                var response = await client.PutAsync(
+                    $"{_settings.GetBaseUrl()}/v2/webhook/{_settings.ChavePix}",
+                    content
+                );
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    result.Sucesso = true;
+                    result.Mensagem = "Webhook cadastrado com sucesso";
+                    result.WebhookUrl = url;
+                    result.ChavePix = _settings.ChavePix;
+                    result.DataCadastro = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    _logger.LogInformation("Webhook PIX cadastrado com sucesso: {WebhookUrl}", url);
+                }
+                else
+                {
+                    result.Erro = $"Erro ao cadastrar webhook: {response.StatusCode} - {responseContent}";
+                    _logger.LogError("Erro ao cadastrar webhook PIX: {StatusCode} - {Response}",
+                        response.StatusCode, responseContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Erro = $"Exceção ao cadastrar webhook: {ex.Message}";
+                _logger.LogError(ex, "Exceção ao cadastrar webhook PIX");
+            }
+
+            return result;
+        }
+
+        public async Task<EfiPayWebhookResponseDTO?> ConsultarWebhookPixAsync()
+        {
+            try
+            {
+                var token = await ObterAccessTokenAsync();
+                using var client = CreateHttpClientWithCertificate();
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                // GET /v2/webhook/:chave
+                var response = await client.GetAsync(
+                    $"{_settings.GetBaseUrl()}/v2/webhook/{_settings.ChavePix}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var webhookInfo = await response.Content.ReadFromJsonAsync<EfiPayWebhookResponseDTO>();
+                    _logger.LogInformation("Webhook PIX consultado: {WebhookUrl}", webhookInfo?.WebhookUrl);
+                    return webhookInfo;
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("Webhook PIX não configurado para a chave: {ChavePix}", _settings.ChavePix);
+                    return null;
+                }
+
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Erro ao consultar webhook PIX: {StatusCode} - {Error}",
+                    response.StatusCode, error);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exceção ao consultar webhook PIX");
+                return null;
+            }
+        }
+
+        public async Task<bool> RemoverWebhookPixAsync()
+        {
+            try
+            {
+                var token = await ObterAccessTokenAsync();
+                using var client = CreateHttpClientWithCertificate();
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                // DELETE /v2/webhook/:chave
+                var response = await client.DeleteAsync(
+                    $"{_settings.GetBaseUrl()}/v2/webhook/{_settings.ChavePix}"
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Webhook PIX removido com sucesso");
+                    return true;
+                }
+
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Erro ao remover webhook PIX: {StatusCode} - {Error}",
+                    response.StatusCode, error);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exceção ao remover webhook PIX");
+                return false;
+            }
+        }
+
         // ===== Private Helpers =====
         private HttpClient CreateHttpClientWithCertificate()
         {

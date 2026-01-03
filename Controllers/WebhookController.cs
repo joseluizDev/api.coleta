@@ -18,6 +18,15 @@ namespace api.coleta.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<WebhookController> _logger;
 
+        // IP oficial da Efi Pay para webhooks (skip-mTLS validation)
+        // Ref: https://dev.efipay.com.br/docs/api-pix/webhooks
+        private static readonly HashSet<string> EfiPayAllowedIPs = new()
+        {
+            "34.193.116.226",  // IP principal Efi Pay
+            "::1",             // localhost IPv6 (dev)
+            "127.0.0.1"        // localhost IPv4 (dev)
+        };
+
         public WebhookController(
             IEfiPayService efiPayService,
             AssinaturaRepository assinaturaRepo,
@@ -33,15 +42,94 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
+        /// Valida se o IP da requisição é da Efi Pay (skip-mTLS security)
+        /// </summary>
+        private bool ValidarIPEfiPay()
+        {
+            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            // Verificar header X-Forwarded-For (proxy/load balancer)
+            var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // Pegar o primeiro IP (origem real)
+                remoteIp = forwardedFor.Split(',')[0].Trim();
+            }
+
+            _logger.LogInformation("Webhook request from IP: {RemoteIp}, X-Forwarded-For: {ForwardedFor}",
+                HttpContext.Connection.RemoteIpAddress, forwardedFor);
+
+            if (string.IsNullOrEmpty(remoteIp))
+            {
+                _logger.LogWarning("Could not determine remote IP for webhook request");
+                return false;
+            }
+
+            // Em produção, validar IP da Efi Pay
+            var isValid = EfiPayAllowedIPs.Contains(remoteIp);
+
+            if (!isValid)
+            {
+                _logger.LogWarning("Webhook request from unauthorized IP: {RemoteIp}", remoteIp);
+            }
+
+            return isValid;
+        }
+
+        /// <summary>
+        /// Valida hash HMAC na query string para autenticação adicional (skip-mTLS)
+        /// URL cadastrada deve ter: ?hmac=SUA_HASH_SECRETA
+        /// </summary>
+        private bool ValidarHmacWebhook()
+        {
+            // Hash secreta configurada (deve ser a mesma cadastrada na Efi Pay)
+            const string WEBHOOK_HMAC_SECRET = "agrosyste_webhook_2024_secret";
+
+            var hmacQuery = HttpContext.Request.Query["hmac"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(hmacQuery))
+            {
+                // Se não tem hmac na query, aceitar (para compatibilidade)
+                // Em produção, pode-se tornar obrigatório
+                _logger.LogDebug("No HMAC in query string - skipping validation");
+                return true;
+            }
+
+            var isValid = hmacQuery == WEBHOOK_HMAC_SECRET;
+
+            if (!isValid)
+            {
+                _logger.LogWarning("Invalid HMAC in webhook request: {Hmac}", hmacQuery);
+            }
+
+            return isValid;
+        }
+
+        /// <summary>
         /// Webhook endpoint for EfiPay PIX notifications
-        /// URL: https://your-domain.com/api/webhook/efipay
+        /// URL: https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/efipay
+        /// Efi Pay adiciona /pix ao final automaticamente
         /// </summary>
         [HttpPost("efipay")]
         public async Task<IActionResult> ReceberNotificacaoEfiPay([FromBody] EfiPayWebhookNotificationDTO notification)
         {
             try
             {
-                _logger.LogInformation("Received EfiPay webhook notification");
+                _logger.LogInformation("Received EfiPay PIX webhook notification");
+
+                // Validar origem da requisição (skip-mTLS security)
+                if (!ValidarIPEfiPay())
+                {
+                    _logger.LogWarning("Webhook request rejected - invalid IP");
+                    // Retornar 200 para não expor informações de segurança
+                    return Ok();
+                }
+
+                if (!ValidarHmacWebhook())
+                {
+                    _logger.LogWarning("Webhook request rejected - invalid HMAC");
+                    return Ok();
+                }
 
                 if (notification.Pix != null && notification.Pix.Count > 0)
                 {
@@ -66,7 +154,8 @@ namespace api.coleta.Controllers
 
         /// <summary>
         /// Webhook unificado para notificacoes da API de Cobrancas EfiPay
-        /// Processa: Boleto, Cartao e Assinatura Recorrente
+        /// Processa: Boleto, Cartao e Assinatura Recorrente (renovação automática)
+        /// URL: https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/efipay/cobranca
         /// </summary>
         [HttpPost("efipay/cobranca")]
         public async Task<IActionResult> ReceberNotificacaoCobranca([FromBody] JsonElement payload)
@@ -75,6 +164,19 @@ namespace api.coleta.Controllers
             {
                 var json = payload.GetRawText();
                 _logger.LogInformation("Received EfiPay Cobranca webhook: {Payload}", json);
+
+                // Validar origem da requisição (skip-mTLS security)
+                if (!ValidarIPEfiPay())
+                {
+                    _logger.LogWarning("Cobranca webhook request rejected - invalid IP");
+                    return Ok();
+                }
+
+                if (!ValidarHmacWebhook())
+                {
+                    _logger.LogWarning("Cobranca webhook request rejected - invalid HMAC");
+                    return Ok();
+                }
 
                 // Identificar tipo de notificacao
                 if (payload.TryGetProperty("id", out var idProperty) &&
@@ -86,9 +188,12 @@ namespace api.coleta.Controllers
                         ? identsProperty
                         : default;
 
-                    // Verificar se e uma assinatura recorrente
+                    // Verificar se e uma assinatura recorrente (RENOVAÇÃO AUTOMÁTICA)
                     if (payload.TryGetProperty("subscription_id", out var subscriptionIdProperty))
                     {
+                        _logger.LogInformation("Processing RECURRING subscription payment: subscriptionId={SubscriptionId}",
+                            subscriptionIdProperty.GetInt64());
+
                         await ProcessarNotificacaoAssinaturaRecorrente(
                             subscriptionIdProperty.GetInt64(),
                             chargeId,
@@ -247,5 +352,103 @@ namespace api.coleta.Controllers
             // Same as efipay endpoint, just different route
             return await ReceberNotificacaoEfiPay(notification);
         }
+
+        // ===== WEBHOOK MANAGEMENT ENDPOINTS =====
+
+        /// <summary>
+        /// Cadastra webhook PIX na Efi Pay (skip-mTLS)
+        /// Usa a URL configurada no sistema ou a passada como parâmetro
+        /// </summary>
+        [HttpPost("efipay/configurar")]
+        public async Task<IActionResult> ConfigurarWebhookEfiPay([FromBody] ConfigurarWebhookRequest? request = null)
+        {
+            try
+            {
+                _logger.LogInformation("Configurando webhook PIX na Efi Pay...");
+
+                var resultado = await _efiPayService.CadastrarWebhookPixAsync(request?.WebhookUrl);
+
+                if (resultado.Sucesso)
+                {
+                    return Ok(resultado);
+                }
+
+                return BadRequest(resultado);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao configurar webhook PIX");
+                return StatusCode(500, new { erro = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Consulta webhook PIX configurado na Efi Pay
+        /// </summary>
+        [HttpGet("efipay/configuracao")]
+        public async Task<IActionResult> ConsultarWebhookEfiPay()
+        {
+            try
+            {
+                var webhook = await _efiPayService.ConsultarWebhookPixAsync();
+
+                if (webhook == null)
+                {
+                    return Ok(new
+                    {
+                        configurado = false,
+                        mensagem = "Webhook PIX não está configurado na Efi Pay"
+                    });
+                }
+
+                return Ok(new
+                {
+                    configurado = true,
+                    webhookUrl = webhook.WebhookUrl,
+                    chavePix = webhook.Chave,
+                    dataCriacao = webhook.Criacao
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao consultar webhook PIX");
+                return StatusCode(500, new { erro = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Remove webhook PIX da Efi Pay
+        /// </summary>
+        [HttpDelete("efipay/configuracao")]
+        public async Task<IActionResult> RemoverWebhookEfiPay()
+        {
+            try
+            {
+                var sucesso = await _efiPayService.RemoverWebhookPixAsync();
+
+                if (sucesso)
+                {
+                    return Ok(new { mensagem = "Webhook PIX removido com sucesso" });
+                }
+
+                return BadRequest(new { erro = "Falha ao remover webhook PIX" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao remover webhook PIX");
+                return StatusCode(500, new { erro = ex.Message });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request para configurar webhook
+    /// </summary>
+    public class ConfigurarWebhookRequest
+    {
+        /// <summary>
+        /// URL do webhook (opcional, usa a configurada no sistema se não informada)
+        /// </summary>
+        public string? WebhookUrl { get; set; }
     }
 }
