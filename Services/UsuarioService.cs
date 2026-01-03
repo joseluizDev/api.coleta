@@ -5,6 +5,7 @@ using api.coleta.Models.Entidades;
 using api.coleta.Services;
 using api.coleta.Data.Repository;
 using api.cliente.Interfaces;
+using api.cliente.Repositories;
 using api.coleta.Utils;
 using api.coleta.Utils.Maps;
 using api.fazenda.Models.Entidades;
@@ -13,12 +14,14 @@ using api.funcionario.Models.DTOs;
 public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
+    private readonly ClienteRepository _clienteRepository;
     private readonly IJwtToken _jwtToken;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IJwtToken jwtToken)
+    public UsuarioService(UsuarioRepository usuarioRepository, ClienteRepository clienteRepository, IUnitOfWork unitOfWork, IJwtToken jwtToken)
         : base(unitOfWork)
     {
         _usuarioRepository = usuarioRepository;
+        _clienteRepository = clienteRepository;
         _jwtToken = jwtToken;
     }
 
@@ -69,6 +72,28 @@ public class UsuarioService : ServiceBase
         var usuarioEntidade = new Usuario(usuario);
         _usuarioRepository.Adicionar(usuarioEntidade);
         UnitOfWork.Commit();
+
+        // Criar cliente automaticamente se os dados de endereço foram fornecidos
+        if (!string.IsNullOrWhiteSpace(usuario.Cep) &&
+            !string.IsNullOrWhiteSpace(usuario.Endereco) &&
+            !string.IsNullOrWhiteSpace(usuario.Cidade) &&
+            !string.IsNullOrWhiteSpace(usuario.Estado))
+        {
+            var cliente = new Cliente
+            {
+                Nome = usuario.NomeCompleto,
+                Email = usuario.Email,
+                Documento = usuario.CPF.Replace(".", "").Replace("-", ""),
+                Telefone = usuario.Telefone.Replace("(", "").Replace(")", "").Replace(" ", "").Replace("-", ""),
+                UsuarioID = usuarioEntidade.Id,
+                Cep = usuario.Cep.Replace("-", ""),
+                Endereco = usuario.Endereco,
+                Cidade = usuario.Cidade,
+                Estado = usuario.Estado
+            };
+            _clienteRepository.Adicionar(cliente);
+            UnitOfWork.Commit();
+        }
 
         return new UsuarioResponseDTO
         {
