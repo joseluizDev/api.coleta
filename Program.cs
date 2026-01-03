@@ -84,14 +84,19 @@ builder.Services.AddScoped<ApplicationDbContext>();
 builder.Services.AddOutputCache();
 
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var dbServer = Environment.GetEnvironmentVariable("DB_SERVER");
+var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+var connectionString = !string.IsNullOrEmpty(dbServer)
+    ? $"server={dbServer};port={dbPort};database={dbName};user={dbUser};password={dbPassword};"
+    : builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     var versao = ServerVersion.AutoDetect(connectionString);
-
     options.UseMySql(connectionString, versao);
 });
 

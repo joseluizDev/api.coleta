@@ -277,7 +277,7 @@ namespace api.coleta.Services
 
         public bool? ExcluirColeta(Guid userID, Guid id)
         {
-            Coleta buscarColeta = _visualizarMapaRepository.BuscarVisualizarMapaPorIdTalhao(userID, id);
+            Coleta buscarColeta = _visualizarMapaRepository.BuscarVisualizarMapaPorId(userID, id);
             if (buscarColeta != null)
             {
                 _visualizarMapaRepository.DeletarVisualizarMapa(buscarColeta);

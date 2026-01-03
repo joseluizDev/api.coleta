@@ -183,8 +183,7 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
-        [HttpDelete]
-        [Route("{id}")]
+        [HttpDelete("{id}")]
         public IActionResult Excluir([FromRoute] Guid id)
         {
             var token = ObterIDDoToken();
@@ -255,8 +254,7 @@ namespace api.coleta.Controllers
             }
         }
 
-        [HttpGet]
-        [Route("{id}")]
+        [HttpGet("{id}")]
         public IActionResult BuscarPorId([FromRoute] Guid id)
         {
             var token = ObterIDDoToken();
