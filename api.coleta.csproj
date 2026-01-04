@@ -16,6 +16,13 @@
     <None Remove="Services\NovaPasta\**" />
   </ItemGroup>
 
+  <!-- Copiar certificados EfiPay para o output -->
+  <ItemGroup>
+    <None Update="*.p12">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <ItemGroup>
 	  <PackageReference Include="AutoMapper" Version="13.0.1" />
 	  <PackageReference Include="LibTessDotNet" Version="1.1.15" />

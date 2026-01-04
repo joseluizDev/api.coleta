@@ -33,6 +33,20 @@ namespace api.ndvi.Controllers
 
                 Console.WriteLine($"[NDVI Upload] TalhaoId: {dto.TalhaoId}, TipoImagem: {dto.TipoImagem}, Arquivo: {dto.Arquivo?.FileName}");
 
+                // Log detalhado para debug de campos específicos por tipo
+                if (dto.TipoImagem?.ToLower() == "colheita")
+                {
+                    Console.WriteLine($"[Colheita] DataImagemColheita: {dto.DataImagemColheita}, Min: {dto.ColheitaMin}, Max: {dto.ColheitaMax}, Media: {dto.ColheitaMedia}");
+                }
+                else if (dto.TipoImagem?.ToLower() == "altimetria")
+                {
+                    Console.WriteLine($"[Altimetria] Min: {dto.AltimetriaMin}, Max: {dto.AltimetriaMax}, Variacao: {dto.AltimetriaVariacao}");
+                }
+                else
+                {
+                    Console.WriteLine($"[NDVI] PercentualNuvens: {dto.PercentualNuvens}, Min: {dto.NdviMin}, Max: {dto.NdviMax}");
+                }
+
                 var resultado = await _imagemNdviService.SalvarImagemAsync(dto, userId);
                 if (resultado == null) return BadRequest(new { message = "Erro ao salvar imagem - arquivo vazio ou upload falhou" });
 
@@ -55,6 +69,27 @@ namespace api.ndvi.Controllers
         {
             var imagens = await _imagemNdviService.GetByTalhaoIdAsync(talhaoId);
             return Ok(imagens);
+        }
+
+        [HttpDelete("image/{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                var token = ObterIDDoToken();
+                var userIdNullable = _jwtToken.ObterUsuarioIdDoToken(token);
+                if (userIdNullable == null) return BadRequest(new { message = "Token inválido" });
+
+                var resultado = await _imagemNdviService.DeletarImagemAsync(id);
+                if (!resultado) return NotFound(new { message = "Imagem não encontrada" });
+
+                return Ok(new { message = "Imagem deletada com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[NDVI Delete] Erro: {ex.Message}");
+                return StatusCode(500, new { message = "Erro ao deletar imagem", error = ex.Message });
+            }
         }
     }
 }

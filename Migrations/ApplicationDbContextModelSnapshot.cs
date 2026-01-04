@@ -21,6 +21,68 @@ namespace api.coleta.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.Assinatura", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("Ativa")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("AutoRenovar")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("DataFim")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInicio")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DataUltimoPagamento")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DeletadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EfiPayPlanId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("EfiPaySubscriptionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Observacao")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("PlanoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("StatusPagamento")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("PlanoId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Assinaturas");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Cliente", b =>
                 {
                     b.Property<Guid>("Id")
@@ -204,6 +266,49 @@ namespace api.coleta.Migrations
                     b.ToTable("ConfiguracaoPersonalizadas");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.Contato", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Cidade")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("DataEnvioEmail")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("EmailAdminsEnviado")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("EmailUsuarioEnviado")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("NomeCompleto")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("NumeroTelefone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Contatos");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Geojson", b =>
                 {
                     b.Property<Guid>("Id")
@@ -226,6 +331,156 @@ namespace api.coleta.Migrations
                     b.ToTable("Geojson");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.HistoricoPagamento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("AssinaturaId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("BoletoCodigoBarras")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("BoletoLinhaDigitavel")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("BoletoLink")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("BoletoPdfUrl")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("BoletoVencimento")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CartaoBandeira")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int?>("CartaoParcelas")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CartaoUltimos4Digitos")
+                        .HasMaxLength(4)
+                        .HasColumnType("varchar(4)");
+
+                    b.Property<decimal?>("CartaoValorParcela")
+                        .HasColumnType("decimal(12,4)");
+
+                    b.Property<DateTime?>("DataExpiracao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DataPagamento")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DeletadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EfiPayChargeId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("EfiPayStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("EfiPaySubscriptionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("MetodoPagamento")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Observacao")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PixQrCode")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PixQrCodeBase64")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PixTxId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int?>("RecorrenciaParcela")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RecorrenciaTotalParcelas")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransacaoId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("decimal(12,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssinaturaId");
+
+                    b.ToTable("HistoricosPagamento");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Imagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("BucketName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NomeOriginal")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ObjectName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long?>("TamanhoBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Imagens");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.ImagemNdvi", b =>
                 {
                     b.Property<Guid>("Id")
@@ -241,7 +496,19 @@ namespace api.coleta.Migrations
                     b.Property<double?>("AltimetriaVariacao")
                         .HasColumnType("double");
 
+                    b.Property<double?>("ColheitaMax")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("ColheitaMedia")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("ColheitaMin")
+                        .HasColumnType("double");
+
                     b.Property<DateTime>("DataImagem")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DataImagemColheita")
                         .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("DataInclusao")
@@ -249,6 +516,9 @@ namespace api.coleta.Migrations
 
                     b.Property<Guid>("FazendaId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("Legenda")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("LinkImagem")
                         .HasColumnType("longtext");
@@ -416,6 +686,48 @@ namespace api.coleta.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("NutrientConfigs");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Plano", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("DataInclusao")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EfiPayPlanId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int?>("EfiPayPlanIdInt")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LimiteHectares")
+                        .HasColumnType("decimal(12,4)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("RequereContato")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("ValorAnual")
+                        .HasColumnType("decimal(12,4)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Planos");
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.PontoColetado", b =>
@@ -634,12 +946,28 @@ namespace api.coleta.Migrations
                         .HasMaxLength(11)
                         .HasColumnType("varchar(11)");
 
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
                     b.Property<DateTime>("DataInclusao")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Endereco")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Estado")
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
 
                     b.Property<string>("FcmToken")
                         .HasMaxLength(500)
@@ -739,6 +1067,29 @@ namespace api.coleta.Migrations
                     b.ToTable("Fazendas");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.Assinatura", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId");
+
+                    b.HasOne("api.coleta.Models.Entidades.Plano", "Plano")
+                        .WithMany("Assinaturas")
+                        .HasForeignKey("PlanoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId");
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Plano");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Cliente", b =>
                 {
                     b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
@@ -798,6 +1149,28 @@ namespace api.coleta.Migrations
                 });
 
             modelBuilder.Entity("api.coleta.Models.Entidades.ConfiguracaoPersonalizada", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.HistoricoPagamento", b =>
+                {
+                    b.HasOne("api.coleta.Models.Entidades.Assinatura", "Assinatura")
+                        .WithMany("Pagamentos")
+                        .HasForeignKey("AssinaturaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assinatura");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Imagem", b =>
                 {
                     b.HasOne("api.coleta.Models.Entidades.Usuario", "Usuario")
                         .WithMany()
@@ -998,9 +1371,19 @@ namespace api.coleta.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("api.coleta.Models.Entidades.Assinatura", b =>
+                {
+                    b.Navigation("Pagamentos");
+                });
+
             modelBuilder.Entity("api.coleta.Models.Entidades.Coleta", b =>
                 {
                     b.Navigation("Relatorios");
+                });
+
+            modelBuilder.Entity("api.coleta.Models.Entidades.Plano", b =>
+                {
+                    b.Navigation("Assinaturas");
                 });
 #pragma warning restore 612, 618
         }

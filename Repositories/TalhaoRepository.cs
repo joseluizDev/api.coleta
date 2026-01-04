@@ -149,5 +149,44 @@ namespace api.talhao.Repositories
 
             return query.ToList();
         }
+
+        /// <summary>
+        /// Calcula o total de hectares utilizados por um cliente
+        /// </summary>
+        public async Task<decimal> ObterTotalHectaresPorClienteAsync(Guid clienteId)
+        {
+            // Get all talhoes for this cliente
+            var talhoes = await Context.Talhoes
+                .Where(t => t.ClienteID == clienteId)
+                .Select(t => t.Id)
+                .ToListAsync();
+
+            if (!talhoes.Any())
+            {
+                return 0;
+            }
+
+            // Get all TalhaoJson for these talhoes and sum the area
+            var talhoesJson = await Context.TalhaoJson
+                .Where(tj => talhoes.Contains(tj.TalhaoID))
+                .ToListAsync();
+
+            decimal totalHectares = 0;
+            foreach (var tj in talhoesJson)
+            {
+                if (!string.IsNullOrEmpty(tj.Area))
+                {
+                    // Try to parse the area value
+                    var areaStr = tj.Area.Replace(",", ".").Trim();
+                    if (decimal.TryParse(areaStr, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out var area))
+                    {
+                        totalHectares += area;
+                    }
+                }
+            }
+
+            return totalHectares;
+        }
     }
 }

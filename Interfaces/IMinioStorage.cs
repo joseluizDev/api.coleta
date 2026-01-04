@@ -4,5 +4,6 @@
     Task<Stream> DownloadFileAsync(string bucketName, string objectName);
     Task<bool> FileExistsAsync(string bucketName, string objectName);
     Task<string> GetUrl(string bucketName, string objectName);
+    Task<bool> DeleteFileAsync(string bucketName, string objectName);
 }
 

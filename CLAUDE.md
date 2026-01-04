@@ -45,35 +45,47 @@ docker build -t api-coleta .
 
 ## Architecture
 
-The codebase follows a layered architecture:
+### Layered Structure
 
-- **Controllers/** - API endpoints, inherit from `BaseController` which provides `CustomResponse()` for standardized responses and `ObterIDDoToken()` for JWT extraction
+- **Controllers/** - API endpoints inheriting from `BaseController`
+  - `CustomResponse()` returns 400 with errors if `INotificador` has notifications, else 200
+  - `ObterIDDoToken()` extracts JWT from Authorization header
 - **Controllers/Mobile/** - Mobile-specific endpoints with simplified DTOs
-- **Services/** - Business logic layer; each service has a corresponding repository
-- **Repositories/** - Data access layer; all inherit from `GenericRepository<T>` which provides CRUD operations (`Adicionar`, `Atualizar`, `ObterPorId`, `Deletar`, `BuscaPaginada`)
-- **Models/Entidades/** - Entity classes that inherit from `Entity` base class (provides `Id` as GUID and `DataInclusao` timestamp)
-- **Models/DTOs/** - Data transfer objects for API requests/responses
-- **Data/** - EF Core DbContext (`ApplicationDbContext`) and Unit of Work pattern (`IUnitOfWork.Commit()` to save changes)
-- **Utils/** - Utility classes including `NutrienteConfig.cs` (nutrient mapping/configuration), `JwtTokenService`, and mapping utilities in `Utils/Maps/`
-- **Jobs/** - Background jobs (e.g., `MensagemAgendadaJob` for scheduled notifications)
-- **Interfaces/** - Core interfaces (`INotificador`, `IMinioStorage`, `IJwtToken`, `IOneSignalService`)
+- **Services/** - Business logic layer; all inherit from `ServiceBase` which provides `IUnitOfWork`
+  - **Services/Relatorio/** - Specialized services for nutrient classification and soil indicators
+- **Repositories/** - Data access layer inheriting from `GenericRepository<T>`
+  - Core methods: `Adicionar`, `Atualizar`, `ObterPorId`, `Deletar`, `BuscaPaginada`
+- **Models/Entidades/** - Entity classes inheriting from `Entity` (provides `Id` as GUID, `DataInclusao` timestamp)
+- **Models/DTOs/** - Data transfer objects
+- **Data/** - EF Core `ApplicationDbContext` and Unit of Work (`IUnitOfWork.Commit()`)
+- **Utils/** - Utilities including `NutrienteConfig.cs` (nutrient classification with CTC/Argila-dependent intervals)
 
-## Error Handling Pattern
+### Error Handling Pattern
 
-Controllers use `INotificador` to collect validation errors. Call `Notificador.Notificar(new Notificacao("message"))` to add errors, then return `CustomResponse()` which automatically returns 400 with errors if any exist.
+Controllers use `INotificador` to collect validation errors:
+```csharp
+Notificador.Notificar(new Notificacao("Error message"));
+return CustomResponse();  // Returns 400 with errors if any exist
+```
+
+### Nutrient Classification System
+
+`Utils/NutrienteConfig.cs` contains the core nutrient classification logic:
+- `DefaultNutrienteConfig` - Static intervals for nutrients (pH, V%, m%, micronutrients)
+- `config_dependentes` - Dynamic intervals based on CTC or Argila values (Ca, Mg, K, P, Al)
+- `NutrientKeyMapping` - Maps short keys (e.g., "Ca") to full names (e.g., "Cálcio - Ca (cmolc/dm³)")
+- `GetNutrientClassification()` - Main method that returns classification, color, and intervals
+- Classification colors: Muito Baixo (red) → Baixo (orange) → Médio (yellow) → Adequado (green) → Alto (light green) → Muito Alto (dark green)
 
 ## Key Domain Entities
 
-- **Cliente** - Customer/client
-- **Fazenda** - Farm
-- **Talhao/TalhaoJson** - Farm plot with GeoJSON polygon data
+- **Cliente** → **Fazenda** → **Talhao** (Client → Farm → Field/Plot)
 - **Safra** - Harvest/crop season
-- **Coleta** - Sample collection
-- **PontoColetado** - Collected point data
-- **Relatorio** - Analysis report
+- **Coleta** / **MColeta** - Sample collection with GeoJSON
+- **PontoColetado** - Individual collected point data
+- **Relatorio** - Analysis report with nutrient data
 - **Recomendacao** - Fertilizer/nutrient recommendation
-- **NutrientConfig** - Nutrient analysis configuration
-- **MensagemAgendada** - Scheduled notification (processed by `MensagemAgendadaJob`)
+- **ConfiguracaoPadrao** / **ConfiguracaoPersonalizada** - Default and user-specific nutrient configs
 
 ## Database
 
@@ -84,7 +96,25 @@ Controllers use `INotificador` to collect validation errors. Call `Notificador.N
 
 ## Testing
 
-Tests use xUnit with EF Core InMemory provider. Use `TestHelper.CreateInMemoryContext()` to create isolated database contexts for tests. Integration tests use `TestApplicationFactory` with `WebApplicationFactory<Program>`, which provides `FakeMinioStorage` and `FakeJwtToken` for mocking external dependencies.
+Tests use xUnit with EF Core InMemory provider:
+
+```csharp
+// Unit tests - use TestHelper for isolated contexts
+var context = TestHelper.CreateInMemoryContext();
+
+// Integration tests - use TestApplicationFactory
+public class MyTests : IClassFixture<TestApplicationFactory>
+{
+    // Factory provides FakeMinioStorage and FakeJwtToken
+    // Set factory.TestUserId to control authenticated user
+}
+```
+
+Test files are organized:
+- `Tests/` - Unit tests for services and repositories
+- `Tests/Integration/` - Integration tests with `TestApplicationFactory`
+- `Tests/Fakes/` - Fake implementations (`FakeMinioStorage`, `FakeJwtToken`)
+- `Tests/Helpers/` - Test utilities (`TestHelper.cs`, `RelatorioTestData.cs`)
 
 ## External Services
 
@@ -96,6 +126,22 @@ Tests use xUnit with EF Core InMemory provider. Use `TestHelper.CreateInMemoryCo
 
 JWT Bearer authentication. Configuration in `appsettings.json` under `Jwt` section. Token service implemented in `Utils/JwtTokenService.cs`.
 
+## API Endpoints Structure
+
+| Controller | Route | Purpose |
+|------------|-------|---------|
+| `RelatorioController` | `/api/relatorio` | Report upload, retrieval, nutrient indicators |
+| `VisualizarMapaController` | `/api/visualizar-mapa` | GeoJSON/hexagon map visualization |
+| `ColetaController` | `/api/coleta` | Sample collection CRUD |
+| `ClienteController` | `/api/cliente` | Client management |
+| `FazendaController` | `/api/fazenda` | Farm management |
+| `TalhaoController` | `/api/talhao` | Field/plot management |
+| `SafraController` | `/api/safra` | Harvest season management |
+| `RecomendacaoController` | `/api/recomendacao` | Fertilizer recommendations |
+| `NdviController` | `/api/ndvi` | NDVI satellite imagery |
+
 ## Environment Variables
 
 Required: `GOOGLE_API_KEY` (see `.env.example`)
+
+Environment is loaded via `DotNetEnv.Env.Load()` at startup.
