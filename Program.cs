@@ -229,7 +229,11 @@ builder.Services.Configure<EfiPaySettings>(options =>
     options.ChavePix = "43f89047-906c-4876-b9d5-1c3149cbff95";
     options.CertificadoPath = certPath;
 
-    options.WebhookUrl = "https://dev-api-coleta.w4dxlp.easypanel.host/api/webhook/pix";
+    // Webhook URLs para EfiPay (skip-mTLS com validação de IP + HMAC)
+    // PIX: /api/webhook/efipay (Efi Pay adiciona /pix automaticamente)
+    // Cobranças/Assinaturas Recorrentes: /api/webhook/efipay/cobranca
+    // IMPORTANTE: hmac deve ser igual ao WEBHOOK_HMAC_SECRET no WebhookController
+    options.WebhookUrl = "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/efipay?hmac=agrosyste_webhook_2024_secret&ignorar=";
     options.UseSandbox = false; // Produção
 });
 
@@ -490,3 +494,4 @@ app.Run();
 public partial class Program
 {
 }
+

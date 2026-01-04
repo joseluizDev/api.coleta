@@ -22,6 +22,25 @@ namespace api.coleta.Interfaces
         // Webhook Processing
         Task ProcessarWebhookPixAsync(EfiPayPixWebhookDataDTO pixData);
 
+        // Webhook Configuration (skip-mTLS)
+        /// <summary>
+        /// Cadastra webhook PIX na Efi Pay
+        /// PUT /v2/webhook/:chave com header x-skip-mtls-checking: true
+        /// </summary>
+        Task<WebhookCadastroResultDTO> CadastrarWebhookPixAsync(string? webhookUrl = null);
+
+        /// <summary>
+        /// Consulta webhook PIX configurado na Efi Pay
+        /// GET /v2/webhook/:chave
+        /// </summary>
+        Task<EfiPayWebhookResponseDTO?> ConsultarWebhookPixAsync();
+
+        /// <summary>
+        /// Remove webhook PIX da Efi Pay
+        /// DELETE /v2/webhook/:chave
+        /// </summary>
+        Task<bool> RemoverWebhookPixAsync();
+
         // Health Check
         bool EstaConfigurado();
     }
