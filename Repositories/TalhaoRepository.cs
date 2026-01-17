@@ -53,36 +53,19 @@ namespace api.talhao.Repositories
                 .FirstOrDefault(c => c.Id == id);
         }
 
-        public PagedResult<Talhao> ListarTalhao(Guid userId, QueryTalhao query)
+        public List<Talhao> ListarTalhao(Guid userId, QueryTalhao query)
         {
-            if (query.Page is null || query.Page < 1)
-                query.Page = 1;
-
-            int pageSize = 10;
-            int page = query.Page.Value;
-
             var clientesQuery = Context.Talhoes
                 .Where(c => c.UsuarioID == userId);
 
             if (query.FazendaID.HasValue)
                 clientesQuery = clientesQuery.Where(c => c.FazendaID == query.FazendaID);
 
-
-            int totalItems = clientesQuery.Count();
-            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
             List<Talhao> talhoes = clientesQuery
                 .OrderBy(c => c.Id)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
                 .ToList();
 
-            return new PagedResult<Talhao>
-            {
-                Items = talhoes,
-                TotalPages = totalPages,
-                CurrentPage = page
-            };
+            return talhoes;
         }
 
         public TalhaoJson BuscarPorTalhao(Guid id)

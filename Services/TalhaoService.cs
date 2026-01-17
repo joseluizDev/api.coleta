@@ -112,10 +112,10 @@ namespace api.talhao.Services
             }
         }
 
-        public PagedResult<TalhaoResponseDTO> ListarTalhao(Guid userId, QueryTalhao query)
+        public List<TalhaoResponseDTO> ListarTalhao(Guid userId, QueryTalhao query)
         {
-            var talhao = _talhaoRepository.ListarTalhao(userId, query);
-            var talhaoDtos = _mapper.Map<List<TalhaoResponseDTO>>(talhao.Items);
+            var talhoes = _talhaoRepository.ListarTalhao(userId, query);
+            var talhaoDtos = _mapper.Map<List<TalhaoResponseDTO>>(talhoes);
             foreach (var dto in talhaoDtos)
             {
                 var fazenda = _fazendaRepository.ObterPorId(dto.FazendaID);
@@ -137,12 +137,7 @@ namespace api.talhao.Services
                 }
             }
 
-            return new PagedResult<TalhaoResponseDTO>
-            {
-                Items = talhaoDtos,
-                TotalPages = talhao.TotalPages,
-                CurrentPage = talhao.CurrentPage
-            };
+            return talhaoDtos;
         }
 
         public bool DeletarTalhao(Guid userId, Guid id)
