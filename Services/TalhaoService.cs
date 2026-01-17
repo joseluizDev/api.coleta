@@ -135,7 +135,7 @@ namespace api.talhao.Services
         public List<TalhaoResponseDTO> ListarTalhao(Guid userId, QueryTalhao query)
         {
             var talhoes = _talhaoRepository.ListarTalhao(userId, query);
-            var talhaoDtos = _mapper.Map<List<TalhaoResponseDTO>>(talhoes);
+            var talhaoDtos = talhoes.ToResponseDtoList();
             foreach (var dto in talhaoDtos)
             {
                 var fazenda = _fazendaRepository.ObterPorId(dto.FazendaID);
