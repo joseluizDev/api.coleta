@@ -1,20 +1,20 @@
 ﻿using api.coleta.Models.DTOs;
 using api.coleta.Repositories;
-using AutoMapper;
+using api.coleta.Utils.Maps;
 
 namespace api.coleta.Services
 {
     public class ConfiguracaoPadraoService : ServiceBase
     {
         private readonly ConfiguracaoPadraoRepository _configuracaoPadraoRepository;
-        public ConfiguracaoPadraoService(ConfiguracaoPadraoRepository configuracaoPadraoRepository, IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
+        public ConfiguracaoPadraoService(ConfiguracaoPadraoRepository configuracaoPadraoRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _configuracaoPadraoRepository = configuracaoPadraoRepository;
         }
         public List<ConfiguracaoPadraoResponseDTO> ListarConfiguracoes()
         {
             var configuracoes = _configuracaoPadraoRepository.ListConfiguracaoPadraos();
-            return _mapper.Map<List<ConfiguracaoPadraoResponseDTO>>(configuracoes);
+            return configuracoes.ToResponseDtoList();
         }
     }
 }

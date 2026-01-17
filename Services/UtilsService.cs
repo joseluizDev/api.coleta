@@ -1,12 +1,13 @@
 using api.coleta.Data.Repository;
 using api.coleta.Services;
-using AutoMapper;
 using NetTopologySuite.Geometries;
 using ProjNet.CoordinateSystems;
 using ProjNet.CoordinateSystems.Transformations;
 using System.Text.Json;
 using api.utils.DTOs;
 using Microsoft.AspNetCore.Http.Features;
+using LibTessDotNet;
+using NetTopologySuite.Triangulate;
 
 namespace api.vinculoClienteFazenda.Services
 {
@@ -17,8 +18,8 @@ namespace api.vinculoClienteFazenda.Services
         private readonly CoordinateSystemFactory _csFactory = new();
         private readonly VinculoClienteFazendaRepository _vinculoRepository;
 
-        public UtilsService(VinculoClienteFazendaRepository vinculoRepository, IUnitOfWork unitOfWork, IMapper mapper)
-            : base(unitOfWork, mapper)
+        public UtilsService(VinculoClienteFazendaRepository vinculoRepository, IUnitOfWork unitOfWork)
+            : base(unitOfWork)
         {
             _vinculoRepository = vinculoRepository;
         }
@@ -77,9 +78,9 @@ namespace api.vinculoClienteFazenda.Services
             var bounds = projectedPolygon.EnvelopeInternal;
             var hexagons = new List<Geometry>();
 
-            for (int row = 0; row < ((bounds.MaxY - bounds.MinY) / vertDist) + 3; row++)
+            for (int row = 0; row < ((bounds.MaxY - bounds.MinY) / vertDist) + 1; row++)
             {
-                for (int col = 0; col < ((bounds.MaxX - bounds.MinX) / hexWidth) + 3; col++)
+                for (int col = 0; col < ((bounds.MaxX - bounds.MinX) / hexWidth) + 1; col++)
                 {
                     double offset = (row % 2 == 0) ? 0 : hexWidth / 2;
                     double centerX = bounds.MinX + col * hexWidth + offset;
@@ -174,16 +175,20 @@ namespace api.vinculoClienteFazenda.Services
         }
 
 
-        public JsonElement GetPointsInsideArea(PontosDentroDaAreaRequest dados)
+        public PontosDentroDaAreaResponse GetPointsInsideArea(PontosDentroDaAreaRequest dados)
         {
             try
             {
-                // Extrair os polígonos do GeoJSON
-                var polygons = ParseFeatureCollection(dados.GeoJsonAreas);
+                // Configurar seed para determinismo
+                int seed = dados.Seed ?? Environment.TickCount;
+                var random = new Random(seed);
+
                 var transformToUtm = GetWgs84ToUtm();
 
                 // Lista para armazenar pontos com seus respectivos IDs de hexágono
                 var pointsWithHexagonId = new List<(Coordinate Point, int HexagonId)>();
+                var perHexCounts = new Dictionary<int, int>();
+                var metodosUsados = new List<string>();
 
                 int pontosPorHex = dados.QtdPontosNaArea;
 
@@ -191,83 +196,117 @@ namespace api.vinculoClienteFazenda.Services
                 var reader = new NetTopologySuite.IO.GeoJsonReader();
                 var featureCollection = reader.Read<NetTopologySuite.Features.FeatureCollection>(dados.GeoJsonAreas.ToString());
 
-                // Processar cada polígono
-                for (int i = 0; i < polygons.Count; i++)
+                // 1) Pré-cálculo das áreas (em UTM) por hexágono e alocação proporcional de pontos
+                var areas = new double[featureCollection.Count];
+                int validCount = 0;
+                double totalArea = 0.0;
+                for (int fIdx = 0; fIdx < featureCollection.Count; fIdx++)
                 {
-                    var polygonWgs84 = polygons[i];
-                    var polygonUtm = TransformPolygon(polygonWgs84, transformToUtm);
-                    var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygonUtm);
-                    var bounds = polygonUtm.EnvelopeInternal;
+                    var feature = featureCollection[fIdx];
+                    double area = 0.0;
 
-                    // Obter o ID do hexágono das propriedades do GeoJSON
-                    int hexagonId = 0;
-                    if (i < featureCollection.Count)
+                    if (feature.Geometry is Polygon p)
                     {
-                        var feature = featureCollection[i];
-                        // Verificar se existe o atributo "id" nas propriedades
-                        if (feature.Attributes.Exists("id"))
-                        {
-                            // Obter o valor do atributo "id"
-                            object idObj = feature.Attributes["id"];
-                            if (idObj != null)
-                            {
-                                hexagonId = Convert.ToInt32(idObj);
-                            }
-                            else
-                            {
-                                // Usar o índice + 1 como ID se o valor for nulo
-                                hexagonId = i + 1;
-                            }
-                        }
-                        else
-                        {
-                            // Usar o índice + 1 como ID se não encontrar nas propriedades
-                            hexagonId = i + 1;
-                        }
+                        var pUtm = TransformPolygon(p, transformToUtm);
+                        area = Math.Max(0, pUtm.Area);
                     }
-                    else
+                    else if (feature.Geometry is MultiPolygon mp)
                     {
-                        hexagonId = i + 1;
+                        var polysUtm = mp.Geometries.Cast<Polygon>().Select(q => TransformPolygon(q, transformToUtm));
+                        area = polysUtm.Sum(q => Math.Max(0, q.Area));
                     }
 
-                    double area = polygonUtm.Area;
-
-                    // 🧠 Distância ideal com base na área e número de pontos
-                    double spacing = Math.Sqrt(area / pontosPorHex);
-
-                    var pontosCandidatos = new List<Coordinate>();
-
-                    // Gera grade com espaçamento uniforme
-                    for (double x = bounds.MinX; x <= bounds.MaxX; x += spacing)
+                    areas[fIdx] = area;
+                    if (area > 0)
                     {
-                        for (double y = bounds.MinY; y <= bounds.MaxY; y += spacing)
-                        {
-                            var point = new Point(x, y) { SRID = polygonUtm.SRID };
-                            if (preparedPolygon.Contains(point))
-                            {
-                                pontosCandidatos.Add(new Coordinate(x, y));
-                            }
-                        }
-                    }
-
-                    if (pontosCandidatos.Count < pontosPorHex)
-                    {
-                        Console.WriteLine($"⚠️ Apenas {pontosCandidatos.Count} pontos gerados no polígono. Solicitado: {pontosPorHex}. Espaçamento: {spacing:F2} m².");
-                    }
-
-                    var pontosSelecionados = pontosCandidatos
-                        .Take(Math.Min(pontosPorHex, pontosCandidatos.Count))
-                        .ToList();
-
-                    // Adicionar os pontos com o ID do hexágono
-                    foreach (var ponto in pontosSelecionados)
-                    {
-                        pointsWithHexagonId.Add((ponto, hexagonId));
+                        totalArea += area;
+                        validCount++;
                     }
                 }
 
-                // Usar a versão do método que aceita pontos com IDs de hexágono
-                return ConvertPointsToGeoJson(pointsWithHexagonId);
+                // Interpretação: QtdPontosNaArea = pontos médios por hex; total = média * número de hex válidos
+                int totalPoints = Math.Max(0, pontosPorHex * Math.Max(1, validCount));
+                double avgArea = validCount > 0 ? totalArea / validCount : 0.0;
+
+                var allocationByIndex = new Dictionary<int, int>();
+                for (int i = 0; i < featureCollection.Count; i++)
+                {
+                    int alloc;
+                    if (avgArea <= 0 || areas[i] <= 0 || pontosPorHex <= 0)
+                    {
+                        alloc = 0;
+                    }
+                    else
+                    {
+                        // proporcional à área relativa vs área média, garantindo ao menos 1
+                        alloc = Math.Max(1, (int)Math.Round((areas[i] / avgArea) * pontosPorHex));
+                    }
+                    allocationByIndex[i] = alloc;
+                }
+
+                // 2) Processar cada feature (hexágono) com alocação proporcional
+                for (int fIdx = 0; fIdx < featureCollection.Count; fIdx++)
+                {
+                    var feature = featureCollection[fIdx];
+                    int hexagonId = GetHexagonId(featureCollection, fIdx);
+
+                    int pontosAlocados = allocationByIndex.GetValueOrDefault(fIdx, 0);
+                    if (pontosAlocados <= 0)
+                    {
+                        perHexCounts[hexagonId] = 0;
+                        continue;
+                    }
+
+                    List<Coordinate> pontosGerados = new();
+                    string metodoUsado = "triangulacao";
+
+                    if (feature.Geometry is Polygon poly)
+                    {
+                        // Transformar para UTM
+                        var polyUtm = TransformPolygon(poly, transformToUtm);
+                        pontosGerados = GenerateExactPointsForPolygon(polyUtm, pontosAlocados, random, out metodoUsado);
+                    }
+                    else if (feature.Geometry is MultiPolygon multi)
+                    {
+                        // Transformar cada componente para UTM e distribuir por área
+                        var polysUtm = multi.Geometries.Cast<Polygon>().Select(p => TransformPolygon(p, transformToUtm)).ToList();
+                        pontosGerados = DistributePointsInMultiPolygon(polysUtm, pontosAlocados, random);
+                        metodoUsado = "triangulacao"; // pode incluir fallback internamente
+                    }
+                    else
+                    {
+                        // Geometria não suportada
+                        continue;
+                    }
+
+                    // Adicionar os pontos com o ID do hexágono
+                    foreach (var ponto in pontosGerados)
+                    {
+                        pointsWithHexagonId.Add((ponto, hexagonId));
+                    }
+
+                    // Registrar estatísticas
+                    perHexCounts[hexagonId] = pontosGerados.Count;
+                    if (!metodosUsados.Contains(metodoUsado))
+                    {
+                        metodosUsados.Add(metodoUsado);
+                    }
+                }
+
+                // Criar resposta com metadados
+                var pointsGeoJson = ConvertPointsToGeoJson(pointsWithHexagonId);
+                var meta = new PontosDentroDaAreaMeta
+                {
+                    PerHexCounts = perHexCounts,
+                    SeedUsado = seed,
+                    Metodo = string.Join(", ", metodosUsados)
+                };
+
+                return new PontosDentroDaAreaResponse
+                {
+                    Points = pointsGeoJson,
+                    Meta = meta
+                };
             }
             catch (Exception ex)
             {
@@ -294,6 +333,52 @@ namespace api.vinculoClienteFazenda.Services
             }
 
             return polygons;
+        }
+
+        /// <summary>
+        /// Obtém o ID do hexágono das propriedades do GeoJSON
+        /// </summary>
+        private int GetHexagonId(NetTopologySuite.Features.FeatureCollection featureCollection, int index)
+        {
+            if (index < featureCollection.Count)
+            {
+                var feature = featureCollection[index];
+                if (feature.Attributes.Exists("id"))
+                {
+                    object idObj = feature.Attributes["id"];
+                    if (idObj != null)
+                    {
+                        return Convert.ToInt32(idObj);
+                    }
+                }
+            }
+            return index + 1; // Fallback para índice + 1
+        }
+
+        /// <summary>
+        /// Gera exatamente N pontos para um polígono usando triangulação com fallback
+        /// </summary>
+        private List<Coordinate> GenerateExactPointsForPolygon(Polygon polygon, int numPoints, Random random, out string metodoUsado)
+        {
+            // Gera pontos organizados (distribuição uniforme) usando candidatos via triangulação
+            var points = GenerateEvenlyDistributedPoints(polygon, numPoints, random);
+
+            // Lloyd relaxation (centroidal Voronoi) for more regular spacing
+            points = LloydRelaxation(polygon, points, iterations: 3);
+
+            metodoUsado = "even_farthest+lloyd3+triangulation_candidates";
+
+            if (points.Count < numPoints)
+            {
+                // Complementa (edge cases) com rejection sampling
+                var fallback = GeneratePointsByRejectionSampling(polygon, numPoints - points.Count, random);
+                points.AddRange(fallback);
+                metodoUsado += "+rejection_sampling";
+            }
+
+            // Garantir exatamente N
+            if (points.Count > numPoints) points = points.Take(numPoints).ToList();
+            return points;
         }
 
 
@@ -359,6 +444,491 @@ namespace api.vinculoClienteFazenda.Services
 
             return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(features));
         }
+
+        #region Triangulation Methods
+
+        /// <summary>
+        /// Gera pontos usando triangulação de polígonos
+        /// </summary>
+        private List<Coordinate> GeneratePointsByTriangulation(Polygon polygon, int numPoints, Random random)
+        {
+            try
+            {
+                var triangles = TriangulatePolygon(polygon);
+                if (triangles == null || triangles.Count == 0)
+                {
+                    return new List<Coordinate>(); // Fallback será usado
+                }
+
+                return DistributePointsInTriangles(triangles, numPoints, random);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro na triangulação: {ex.Message}");
+                return new List<Coordinate>(); // Fallback será usado
+            }
+        }
+
+        /// <summary>
+        /// Triangula um polígono usando Poly2Tri
+        /// </summary>
+        private List<(Vec3 A, Vec3 B, Vec3 C)> TriangulatePolygon(Polygon polygon)
+        {
+            try
+            {
+                var tess = new Tess();
+
+                // Adicionar contorno externo
+                var outerRing = polygon.ExteriorRing.Coordinates;
+                var outerVertices = outerRing.Take(outerRing.Length - 1)
+                    .Select(c => new ContourVertex { Position = new Vec3((float)c.X, (float)c.Y, 0) })
+                    .ToArray();
+                tess.AddContour(outerVertices, ContourOrientation.Original);
+
+                // Adicionar buracos
+                for (int i = 0; i < polygon.NumInteriorRings; i++)
+                {
+                    var hole = polygon.GetInteriorRingN(i).Coordinates;
+                    var holeVertices = hole.Take(hole.Length - 1)
+                        .Select(c => new ContourVertex { Position = new Vec3((float)c.X, (float)c.Y, 0) })
+                        .ToArray();
+                    tess.AddContour(holeVertices, ContourOrientation.Original);
+                }
+
+                // Triangular
+                tess.Tessellate(WindingRule.EvenOdd, ElementType.Polygons, 3);
+
+                var triangles = new List<(Vec3 A, Vec3 B, Vec3 C)>();
+                for (int i = 0; i < tess.ElementCount; i++)
+                {
+                    int idx0 = tess.Elements[i * 3 + 0];
+                    int idx1 = tess.Elements[i * 3 + 1];
+                    int idx2 = tess.Elements[i * 3 + 2];
+                    if (idx0 == -1 || idx1 == -1 || idx2 == -1) continue; // skip degenerate
+                    var a = tess.Vertices[idx0].Position;
+                    var b = tess.Vertices[idx1].Position;
+                    var c = tess.Vertices[idx2].Position;
+                    triangles.Add((a, b, c));
+                }
+
+                return triangles;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro na triangulação do polígono: {ex.Message}");
+                return new List<(Vec3, Vec3, Vec3)>();
+            }
+        }
+
+        /// <summary>
+        /// Distribui pontos entre triângulos proporcionalmente às suas áreas
+        /// </summary>
+        private List<Coordinate> DistributePointsInTriangles(List<(Vec3 A, Vec3 B, Vec3 C)> triangles, int numPoints, Random random)
+        {
+            var points = new List<Coordinate>();
+
+            // Calcular áreas dos triângulos
+            var triangleAreas = triangles.Select(CalculateTriangleArea).ToList();
+            var totalArea = triangleAreas.Sum();
+
+            if (totalArea <= 0)
+            {
+                return points;
+            }
+
+            // Distribuir pontos proporcionalmente
+            var pointsDistributed = 0;
+            for (int i = 0; i < triangles.Count && pointsDistributed < numPoints; i++)
+            {
+                var triangle = triangles[i];
+                var area = triangleAreas[i];
+
+                // Calcular quantos pontos este triângulo deve receber
+                int pointsForTriangle;
+                if (i == triangles.Count - 1) // Último triângulo recebe os pontos restantes
+                {
+                    pointsForTriangle = numPoints - pointsDistributed;
+                }
+                else
+                {
+                    pointsForTriangle = (int)Math.Round((area / totalArea) * numPoints);
+                }
+
+                // Gerar pontos no triângulo
+                for (int j = 0; j < pointsForTriangle; j++)
+                {
+                    var point = GenerateRandomPointInTriangle(triangle.A, triangle.B, triangle.C, random);
+                    points.Add(point);
+                    pointsDistributed++;
+                }
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// Calcula a área de um triângulo
+        /// </summary>
+        private double CalculateTriangleArea((Vec3 A, Vec3 B, Vec3 C) triangle)
+        {
+            var p1 = triangle.A;
+            var p2 = triangle.B;
+            var p3 = triangle.C;
+
+            return Math.Abs((p1.X * (p2.Y - p3.Y) + p2.X * (p3.Y - p1.Y) + p3.X * (p1.Y - p2.Y)) / 2.0);
+        }
+
+        /// <summary>
+        /// Gera um ponto aleatório dentro de um triângulo usando coordenadas baricêntricas
+        /// </summary>
+        private Coordinate GenerateRandomPointInTriangle(Vec3 p1, Vec3 p2, Vec3 p3, Random random)
+        {
+            // Gerar coordenadas baricêntricas aleatórias
+            double u = random.NextDouble();
+            double v = random.NextDouble();
+
+            // Garantir que u + v <= 1
+            if (u + v > 1)
+            {
+                u = 1 - u;
+                v = 1 - v;
+            }
+
+            double w = 1 - u - v;
+
+            // Converter para coordenadas cartesianas
+            double x = u * p1.X + v * p2.X + w * p3.X;
+            double y = u * p1.Y + v * p2.Y + w * p3.Y;
+
+            return new Coordinate(x, y);
+        }
+
+        /// <summary>
+        /// Distribui pontos entre componentes de MultiPolygon proporcionalmente às suas áreas
+        /// </summary>
+        private List<Coordinate> DistributePointsInMultiPolygon(List<Polygon> polygons, int numPoints, Random random)
+        {
+            var allPoints = new List<Coordinate>();
+
+            // Calcular áreas dos polígonos
+            var polygonAreas = polygons.Select(p => p.Area).ToList();
+            var totalArea = polygonAreas.Sum();
+
+            if (totalArea <= 0)
+            {
+                return allPoints;
+            }
+
+            // Distribuir pontos proporcionalmente
+            var pointsDistributed = 0;
+            for (int i = 0; i < polygons.Count && pointsDistributed < numPoints; i++)
+            {
+                var polygon = polygons[i];
+                var area = polygonAreas[i];
+
+                // Calcular quantos pontos este polígono deve receber
+                int pointsForPolygon;
+                if (i == polygons.Count - 1) // Último polígono recebe os pontos restantes
+                {
+                    pointsForPolygon = numPoints - pointsDistributed;
+                }
+                else
+                {
+                    pointsForPolygon = (int)Math.Round((area / totalArea) * numPoints);
+                }
+
+                // Gerar pontos no polígono usando triangulação
+                var polygonPoints = GeneratePointsByTriangulation(polygon, pointsForPolygon, random);
+
+                // Se triangulação falhou, usar fallback
+                if (polygonPoints.Count < pointsForPolygon)
+                {
+                    var fallbackPoints = GeneratePointsByRejectionSampling(polygon, pointsForPolygon - polygonPoints.Count, random);
+                    polygonPoints.AddRange(fallbackPoints);
+                }
+
+                allPoints.AddRange(polygonPoints);
+                pointsDistributed += polygonPoints.Count;
+            }
+
+            return allPoints;
+        }
+
+        /// <summary>
+        /// Fallback: Gera pontos usando rejection sampling no bbox do polígono
+        /// </summary>
+        private List<Coordinate> GeneratePointsByRejectionSampling(Polygon polygon, int numPoints, Random random, int maxAttempts = 10000)
+        {
+            var points = new List<Coordinate>();
+            var bounds = polygon.EnvelopeInternal;
+            var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+
+            int attempts = 0;
+            int pointsGenerated = 0;
+
+            while (pointsGenerated < numPoints && attempts < maxAttempts)
+            {
+                // Gerar ponto aleatório no bbox
+                double x = bounds.MinX + random.NextDouble() * (bounds.MaxX - bounds.MinX);
+                double y = bounds.MinY + random.NextDouble() * (bounds.MaxY - bounds.MinY);
+
+                var point = new Point(x, y) { SRID = polygon.SRID };
+
+                // Verificar se está dentro do polígono
+                if (preparedPolygon.Contains(point))
+                {
+                    points.Add(new Coordinate(x, y));
+                    pointsGenerated++;
+                }
+
+                attempts++;
+            }
+
+            // Se não conseguiu gerar pontos suficientes, usar fallback determinístico
+            if (pointsGenerated < numPoints)
+            {
+                var remainingPoints = GenerateDeterministicFallbackPoints(polygon, numPoints - pointsGenerated, random);
+                points.AddRange(remainingPoints);
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// Fallback determinístico: usa centroide com jitter aleatório
+        /// </summary>
+        private List<Coordinate> GenerateDeterministicFallbackPoints(Polygon polygon, int numPoints, Random random)
+        {
+            var points = new List<Coordinate>();
+            var centroid = polygon.Centroid;
+            var bounds = polygon.EnvelopeInternal;
+            var preparedPolygon = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+
+            // Calcular raio máximo para jitter (10% da menor dimensão do bbox)
+            double maxJitter = Math.Min(bounds.Width, bounds.Height) * 0.1;
+
+            for (int i = 0; i < numPoints; i++)
+            {
+                Coordinate point = null;
+                int attempts = 0;
+                const int maxJitterAttempts = 100;
+
+                // Tentar gerar ponto próximo ao centroide
+                while (point == null && attempts < maxJitterAttempts)
+                {
+                    double jitterX = (random.NextDouble() - 0.5) * 2 * maxJitter;
+                    double jitterY = (random.NextDouble() - 0.5) * 2 * maxJitter;
+
+                    double x = centroid.X + jitterX;
+                    double y = centroid.Y + jitterY;
+
+                    var testPoint = new Point(x, y) { SRID = polygon.SRID };
+
+                    if (preparedPolygon.Contains(testPoint))
+                    {
+                        point = new Coordinate(x, y);
+                    }
+
+                    attempts++;
+                }
+
+                // Se ainda não conseguiu, usar o centroide mesmo
+                if (point == null)
+                {
+                    point = new Coordinate(centroid.X, centroid.Y);
+                }
+
+                points.Add(point);
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// Geração de pontos organizados: seleciona N pontos maximizando a distância mínima entre eles e das bordas
+        /// Usa candidatos gerados por triangulação (amostragem uniforme por área dos triângulos)
+        /// </summary>
+        private List<Coordinate> GenerateEvenlyDistributedPoints(Polygon polygon, int numPoints, Random random)
+        {
+            // 1) Gerar muitos candidatos dentro do polígono (triangulação + baricêntricas)
+            var triangles = TriangulatePolygon(polygon);
+            if (triangles.Count == 0)
+            {
+                return new List<Coordinate>();
+            }
+
+            // número de candidatos: p.ex. 20x N (limitado)
+            int candidateCount = Math.Clamp(numPoints * 20, numPoints, numPoints * 100);
+            var candidates = DistributePointsInTriangles(triangles, candidateCount, random);
+
+            if (candidates.Count == 0)
+                return candidates;
+
+            // 2) Farthest-Point Sampling (greedy): seleciona pontos maximizando espaçamento
+            var prepared = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+
+            // dist mínima ao contorno para penalizar bordas
+            double EdgePenalty(Coordinate c)
+            {
+                // distância euclidiana até o polígono (0 se dentro), usamos distância até o limite
+                var pnt = new Point(c.X, c.Y) { SRID = polygon.SRID };
+                // usa Distance para aproximar distância ao contorno
+                return polygon.Boundary.Distance(pnt);
+            }
+
+            // Inicialização: pega o candidato com maior distância à borda
+            var distToEdge = candidates.Select(EdgePenalty).ToArray();
+            int firstIdx = 0;
+            double best = double.NegativeInfinity;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (distToEdge[i] > best)
+                {
+                    best = distToEdge[i];
+                    firstIdx = i;
+                }
+            }
+
+            var selected = new List<Coordinate> { candidates[firstIdx] };
+
+            if (numPoints == 1)
+                return selected;
+
+            // Manter, para cada candidato, a distância mínima para o conjunto selecionado
+            var minDist = new double[candidates.Count];
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                minDist[i] = Distance(candidates[i], selected[0]);
+            }
+
+            // Greedy farthest: escolher sempre o candidato que maximiza minDist + pesoEdge
+            for (int k = 1; k < numPoints; k++)
+            {
+                int bestIdx = -1;
+                double bestScore = double.NegativeInfinity;
+
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    // penalizar pontos muito próximos da borda
+                    double score = minDist[i] + 0.25 * distToEdge[i];
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestIdx = i;
+                    }
+                }
+
+                if (bestIdx == -1)
+                    break;
+
+                var chosen = candidates[bestIdx];
+                if (!prepared.Contains(new Point(chosen) { SRID = polygon.SRID }))
+                {
+                    continue;
+                }
+
+                selected.Add(chosen);
+
+                // atualizar minDist
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    double d = Distance(candidates[i], chosen);
+                    if (d < minDist[i]) minDist[i] = d;
+                }
+            }
+
+            return selected;
+        }
+
+        private List<Coordinate> LloydRelaxation(Polygon polygon, List<Coordinate> sites, int iterations = 2)
+        {
+            if (sites == null || sites.Count == 0 || iterations <= 0)
+                return sites ?? new List<Coordinate>();
+
+            // Ensure all sites are inside polygon; if not, filter
+            var prepared = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+            var current = sites.Where(c => prepared.Contains(new Point(c) { SRID = polygon.SRID })).ToList();
+            if (current.Count == 0)
+                return sites; // fallback to original if all filtered out
+
+            for (int it = 0; it < iterations; it++)
+            {
+                var builder = new VoronoiDiagramBuilder();
+                builder.SetSites(current);
+                // Some NTS versions don't expose SetClipEnvelope; we'll intersect cells with polygon instead
+                var diagram = builder.GetDiagram(_geometryFactory);
+
+                var next = new List<Coordinate>(current.Count);
+
+                for (int i = 0; i < diagram.NumGeometries; i++)
+                {
+                    var cell = diagram.GetGeometryN(i);
+                    // Clip the cell to the target polygon to keep centroids inside
+                    var clipped = cell.Intersection(polygon);
+
+                    if (clipped == null || clipped.IsEmpty || clipped.Area <= 0)
+                    {
+                        // Keep original site if clipping failed
+                        if (i < current.Count)
+                            next.Add(current[i]);
+                        continue;
+                    }
+
+                    // Use centroid; if not inside (degenerate), fallback to interior point
+                    var centroid = clipped.Centroid;
+                    Coordinate newCoord;
+                    if (centroid == null || centroid.IsEmpty || !prepared.Contains(centroid))
+                    {
+                        var interior = clipped.PointOnSurface;
+                        newCoord = interior?.Coordinate ?? (i < current.Count ? current[i] : current.Last());
+                    }
+                    else
+                    {
+                        newCoord = centroid.Coordinate;
+                    }
+
+                    next.Add(newCoord);
+                }
+
+                // Maintain same count as original; if diagram produced more cells than sites, trim; if fewer, pad with existing
+                if (next.Count > sites.Count)
+                    next = next.Take(sites.Count).ToList();
+                else if (next.Count < sites.Count)
+                {
+                    // pad deterministically with nearest existing
+                    next.AddRange(current.Skip(next.Count).Take(sites.Count - next.Count));
+                }
+
+                current = next;
+            }
+
+            // Final pass: ensure all points are strictly inside polygon
+            var final = new List<Coordinate>(current.Count);
+            foreach (var c in current)
+            {
+                var p = new Point(c) { SRID = polygon.SRID };
+                if (prepared.Contains(p))
+                {
+                    final.Add(c);
+                }
+                else
+                {
+                    // snap to interior using point on surface
+                    final.Add(polygon.PointOnSurface.Coordinate);
+                }
+            }
+
+            return final;
+        }
+
+        private static double Distance(Coordinate a, Coordinate b)
+        {
+            double dx = a.X - b.X;
+            double dy = a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        #endregion
 
 
     }

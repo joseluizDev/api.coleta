@@ -87,7 +87,9 @@ namespace api.talhao.Repositories
 
         public TalhaoJson BuscarTalhaoJsonPorId(Guid id)
         {
-            return Context.TalhaoJson.FirstOrDefault(c => c.Id == id);
+            return Context.TalhaoJson
+                .AsNoTracking()
+                .FirstOrDefault(c => c.Id == id);
         }
 
         public TalhaoJson DeletarTalhaoPorId(Guid id)
@@ -97,9 +99,38 @@ namespace api.talhao.Repositories
                 .FirstOrDefault();
         }
 
+        public void DeletarTalhaoJson(TalhaoJson talhaoJson)
+        {
+            // Reattach se necessário
+            if (Context.Entry(talhaoJson).State == EntityState.Detached)
+            {
+                Context.TalhaoJson.Attach(talhaoJson);
+            }
+            Context.TalhaoJson.Remove(talhaoJson);
+        }
+
+        public void AtualizarTalhaoJson(TalhaoJson talhaoJson)
+        {
+            Context.TalhaoJson.Update(talhaoJson);
+        }
+
         public Talhao? BuscarTalhaoPorFazendaID(Guid userID, Guid id)
         {
             return Context.Talhoes.Where(item => item.FazendaID == id && item.UsuarioID == userID).FirstOrDefault();
+        }
+
+        public List<Talhao> ListarTodosComFazenda(Guid userId, Guid? fazendaId = null)
+        {
+            var query = Context.Talhoes
+                .Include(t => t.Fazenda)
+                .Where(t => t.UsuarioID == userId);
+
+            if (fazendaId.HasValue)
+            {
+                query = query.Where(t => t.FazendaID == fazendaId.Value);
+            }
+
+            return query.ToList();
         }
     }
 }

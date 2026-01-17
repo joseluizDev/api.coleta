@@ -1,7 +1,6 @@
 using api.coleta.Data;
 using api.coleta.Services;
 using api.dashboard.DTOs;
-using AutoMapper;
 
 namespace api.dashboard.Services
 {
@@ -9,8 +8,8 @@ namespace api.dashboard.Services
     {
         private readonly ApplicationDbContext _context;
 
-        public DashboardService(ApplicationDbContext context, IUnitOfWork unitOfWork, IMapper mapper)
-            : base(unitOfWork, mapper)
+        public DashboardService(ApplicationDbContext context, IUnitOfWork unitOfWork)
+            : base(unitOfWork)
         {
             _context = context;
         }

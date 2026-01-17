@@ -1,14 +1,13 @@
 ﻿using System.Threading.Tasks;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
-using AutoMapper;
 
 namespace api.coleta.Services
 {
     public class MineralService : ServiceBase
     {
         private readonly MineralRepository _mineralRepository;
-        public MineralService(MineralRepository mineralRepository, IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
+        public MineralService(MineralRepository mineralRepository, IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _mineralRepository = mineralRepository;
         }
