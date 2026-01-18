@@ -12,6 +12,7 @@ namespace api.coleta.Services
         Task<GatewayLicenseResponse?> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null);
         Task<GatewayPlanoResponse[]> ListarPlanosAsync();
         Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
+        Task<(GatewayAssinaturaBoletoResponse? Response, string? ErrorMessage)> CriarAssinaturaBoletoAsync(Guid planoId, Guid usuarioId, string nomePagador, string cpfCnpj, Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
     }
 
@@ -140,6 +141,50 @@ namespace api.coleta.Services
         }
 
         /// <summary>
+        /// Cria assinatura com pagamento Boleto no gateway
+        /// </summary>
+        public async Task<(GatewayAssinaturaBoletoResponse? Response, string? ErrorMessage)> CriarAssinaturaBoletoAsync(
+            Guid planoId, Guid usuarioId, string nomePagador, string cpfCnpj, Guid? clienteId = null)
+        {
+            try
+            {
+                var request = new
+                {
+                    plano_id = planoId,
+                    usuario_id = usuarioId,
+                    cliente_id = clienteId ?? usuarioId,
+                    nome_pagador = nomePagador,
+                    cpf_cnpj = cpfCnpj
+                };
+
+                _logger.LogInformation("Criando assinatura Boleto no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}",
+                    planoId, usuarioId);
+
+                var response = await _httpClient.PostAsJsonAsync("/api/v1/assinaturas/boleto", request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Erro ao criar assinatura Boleto: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return (null, $"Gateway retornou {response.StatusCode}: {errorContent}");
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<GatewayAssinaturaBoletoResponse>();
+                return (result, null);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway");
+                return (null, $"Erro de conexao com gateway: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar assinatura Boleto no gateway");
+                return (null, $"Erro interno: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Verifica status do pagamento de uma assinatura no gateway
         /// </summary>
         public async Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId)
@@ -247,6 +292,21 @@ namespace api.coleta.Services
 
         [JsonPropertyName("pix_qrcode_base64")]
         public string? PixQrCodeBase64 { get; set; }
+    }
+
+    public class GatewayAssinaturaBoletoResponse
+    {
+        [JsonPropertyName("assinatura")]
+        public GatewayAssinaturaResponse? Assinatura { get; set; }
+
+        [JsonPropertyName("pagamento_id")]
+        public Guid PagamentoId { get; set; }
+
+        [JsonPropertyName("boleto_codigo_barras")]
+        public string? BoletoCodigoBarras { get; set; }
+
+        [JsonPropertyName("boleto_url")]
+        public string? BoletoUrl { get; set; }
     }
 
     public class GatewayAssinaturaResponse

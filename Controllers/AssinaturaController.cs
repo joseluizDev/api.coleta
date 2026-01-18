@@ -323,6 +323,104 @@ namespace api.coleta.Controllers
             });
         }
 
+        /// <summary>
+        /// Cria assinatura com pagamento Boleto via Gateway de Pagamentos.
+        /// </summary>
+        [HttpPost("criar-com-boleto")]
+        public async Task<IActionResult> CriarAssinaturaComBoleto([FromBody] CriarAssinaturaBoletoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NomePagador))
+            {
+                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto." });
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaBoletoAsync(
+                dto.PlanoId, userId.Value, dto.NomePagador, dto.CpfCnpj, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com boleto. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    codigoBarras = response.BoletoCodigoBarras,
+                    url = response.BoletoUrl,
+                    txId = response.PagamentoId.ToString(),
+                    dataVencimento = DateTime.UtcNow.AddDays(3)
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento Boleto vinculada ao usuario (sem cliente).
+        /// </summary>
+        [HttpPost("usuario/criar-com-boleto")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComBoleto([FromBody] CriarAssinaturaUsuarioBoletoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NomePagador))
+            {
+                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto." });
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaBoletoAsync(
+                dto.PlanoId, userId.Value, dto.NomePagador, dto.CpfCnpj, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com boleto. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    codigoBarras = response.BoletoCodigoBarras,
+                    url = response.BoletoUrl,
+                    txId = response.PagamentoId.ToString(),
+                    dataVencimento = DateTime.UtcNow.AddDays(3)
+                }
+            });
+        }
+
         private async Task<Guid?> ObterClienteIdDoUsuarioLogadoAsync()
         {
             var token = ObterIDDoToken();
@@ -355,5 +453,20 @@ namespace api.coleta.Controllers
     public class CriarAssinaturaUsuarioPixDTO
     {
         public Guid PlanoId { get; set; }
+    }
+
+    public class CriarAssinaturaBoletoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+        public string NomePagador { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+    }
+
+    public class CriarAssinaturaUsuarioBoletoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public string NomePagador { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
     }
 }
