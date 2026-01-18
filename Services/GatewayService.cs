@@ -11,7 +11,7 @@ namespace api.coleta.Services
     {
         Task<GatewayLicenseResponse?> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null);
         Task<GatewayPlanoResponse[]> ListarPlanosAsync();
-        Task<GatewayAssinaturaPixResponse?> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
+        Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
     }
 
     public class GatewayService : IGatewayService
@@ -100,7 +100,7 @@ namespace api.coleta.Services
         /// <summary>
         /// Cria assinatura com pagamento PIX no gateway
         /// </summary>
-        public async Task<GatewayAssinaturaPixResponse?> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null)
+        public async Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null)
         {
             try
             {
@@ -111,7 +111,8 @@ namespace api.coleta.Services
                     cliente_id = clienteId ?? usuarioId // Se nao tem cliente, usa usuarioId
                 };
 
-                _logger.LogInformation("Criando assinatura PIX no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}", planoId, usuarioId);
+                _logger.LogInformation("Criando assinatura PIX no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}, ClienteId={ClienteId}, GatewayUrl={Url}",
+                    planoId, usuarioId, clienteId, _httpClient.BaseAddress);
 
                 var response = await _httpClient.PostAsJsonAsync("/api/v1/assinaturas/pix", request);
 
@@ -119,15 +120,21 @@ namespace api.coleta.Services
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _logger.LogError("Erro ao criar assinatura PIX: {StatusCode} - {Error}", response.StatusCode, errorContent);
-                    return null;
+                    return (null, $"Gateway retornou {response.StatusCode}: {errorContent}");
                 }
 
-                return await response.Content.ReadFromJsonAsync<GatewayAssinaturaPixResponse>();
+                var result = await response.Content.ReadFromJsonAsync<GatewayAssinaturaPixResponse>();
+                return (result, null);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway");
+                return (null, $"Erro de conexao com gateway: {ex.Message}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar assinatura PIX no gateway");
-                return null;
+                return (null, $"Erro interno: {ex.Message}");
             }
         }
     }

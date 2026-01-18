@@ -260,11 +260,11 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            var response = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, dto.ClienteId);
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, dto.ClienteId);
 
             if (response == null)
             {
-                return BadRequest(new { message = "Erro ao criar assinatura PIX. Tente novamente." });
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura PIX. Tente novamente." });
             }
 
             // Mapear resposta para formato esperado pelo frontend
@@ -299,11 +299,11 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            var response = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, null);
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, null);
 
             if (response == null)
             {
-                return BadRequest(new { message = "Erro ao criar assinatura PIX. Tente novamente." });
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura PIX. Tente novamente." });
             }
 
             // Mapear resposta para formato esperado pelo frontend
