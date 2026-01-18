@@ -13,6 +13,7 @@ namespace api.coleta.Services
         Task<GatewayPlanoResponse[]> ListarPlanosAsync();
         Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
         Task<(GatewayAssinaturaBoletoResponse? Response, string? ErrorMessage)> CriarAssinaturaBoletoAsync(Guid planoId, Guid usuarioId, string nomePagador, string cpfCnpj, Guid? clienteId = null);
+        Task<(GatewayAssinaturaPixAutomaticoResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAutomaticoAsync(Guid planoId, Guid usuarioId, string nomeDevedor, string cpfCnpj, string periodicidade = "ANUAL", Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
     }
 
@@ -185,6 +186,51 @@ namespace api.coleta.Services
         }
 
         /// <summary>
+        /// Cria assinatura com Pix Automatico (recorrencia) no gateway
+        /// </summary>
+        public async Task<(GatewayAssinaturaPixAutomaticoResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAutomaticoAsync(
+            Guid planoId, Guid usuarioId, string nomeDevedor, string cpfCnpj, string periodicidade = "ANUAL", Guid? clienteId = null)
+        {
+            try
+            {
+                var request = new
+                {
+                    plano_id = planoId,
+                    usuario_id = usuarioId,
+                    cliente_id = clienteId ?? usuarioId,
+                    nome_devedor = nomeDevedor,
+                    cpf_cnpj_devedor = cpfCnpj,
+                    periodicidade = periodicidade
+                };
+
+                _logger.LogInformation("Criando assinatura Pix Automatico no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}, Periodicidade={Periodicidade}",
+                    planoId, usuarioId, periodicidade);
+
+                var response = await _httpClient.PostAsJsonAsync("/api/v1/assinaturas/pix-automatico", request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Erro ao criar assinatura Pix Automatico: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return (null, $"Gateway retornou {response.StatusCode}: {errorContent}");
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<GatewayAssinaturaPixAutomaticoResponse>();
+                return (result, null);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway");
+                return (null, $"Erro de conexao com gateway: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar assinatura Pix Automatico no gateway");
+                return (null, $"Erro interno: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Verifica status do pagamento de uma assinatura no gateway
         /// </summary>
         public async Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId)
@@ -307,6 +353,33 @@ namespace api.coleta.Services
 
         [JsonPropertyName("boleto_url")]
         public string? BoletoUrl { get; set; }
+    }
+
+    public class GatewayAssinaturaPixAutomaticoResponse
+    {
+        [JsonPropertyName("assinatura")]
+        public GatewayAssinaturaResponse? Assinatura { get; set; }
+
+        [JsonPropertyName("pagamento_id")]
+        public Guid PagamentoId { get; set; }
+
+        [JsonPropertyName("id_rec")]
+        public string? IdRec { get; set; }
+
+        [JsonPropertyName("contrato")]
+        public string? Contrato { get; set; }
+
+        [JsonPropertyName("status_recorrencia")]
+        public string? StatusRecorrencia { get; set; }
+
+        [JsonPropertyName("pix_copia_cola")]
+        public string? PixCopiaCola { get; set; }
+
+        [JsonPropertyName("pix_qrcode_base64")]
+        public string? PixQrCodeBase64 { get; set; }
+
+        [JsonPropertyName("link_autorizacao")]
+        public string? LinkAutorizacao { get; set; }
     }
 
     public class GatewayAssinaturaResponse

@@ -459,6 +459,158 @@ namespace api.coleta.Controllers
             });
         }
 
+        /// <summary>
+        /// Cria assinatura com Pix Automatico (recorrencia) via Gateway de Pagamentos.
+        /// O Pix Automatico permite que o cliente autorize uma unica vez e as cobrancas
+        /// futuras sejam feitas automaticamente.
+        /// </summary>
+        [HttpPost("criar-com-pix-automatico")]
+        public async Task<IActionResult> CriarAssinaturaComPixAutomatico([FromBody] CriarAssinaturaPixAutomaticoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Buscar dados do usuario se nao fornecidos
+            var nomeDevedor = dto.NomeDevedor;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor) || string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomeDevedor))
+                        nomeDevedor = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor))
+            {
+                return BadRequest(new { message = "Nome do devedor e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            var periodicidade = string.IsNullOrWhiteSpace(dto.Periodicidade) ? "ANUAL" : dto.Periodicidade;
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAutomaticoAsync(
+                dto.PlanoId, userId.Value, nomeDevedor, cpfCnpj, periodicidade, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com Pix Automatico. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                recorrencia = new
+                {
+                    idRec = response.IdRec,
+                    contrato = response.Contrato,
+                    statusRecorrencia = response.StatusRecorrencia,
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    linkAutorizacao = response.LinkAutorizacao
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com Pix Automatico vinculada ao usuario (sem cliente).
+        /// </summary>
+        [HttpPost("usuario/criar-com-pix-automatico")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComPixAutomatico([FromBody] CriarAssinaturaUsuarioPixAutomaticoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Buscar dados do usuario se nao fornecidos
+            var nomeDevedor = dto.NomeDevedor;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor) || string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomeDevedor))
+                        nomeDevedor = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor))
+            {
+                return BadRequest(new { message = "Nome do devedor e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            var periodicidade = string.IsNullOrWhiteSpace(dto.Periodicidade) ? "ANUAL" : dto.Periodicidade;
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAutomaticoAsync(
+                dto.PlanoId, userId.Value, nomeDevedor, cpfCnpj, periodicidade, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com Pix Automatico. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                recorrencia = new
+                {
+                    idRec = response.IdRec,
+                    contrato = response.Contrato,
+                    statusRecorrencia = response.StatusRecorrencia,
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    linkAutorizacao = response.LinkAutorizacao
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
         private async Task<Guid?> ObterClienteIdDoUsuarioLogadoAsync()
         {
             var token = ObterIDDoToken();
@@ -506,5 +658,22 @@ namespace api.coleta.Controllers
         public Guid PlanoId { get; set; }
         public string NomePagador { get; set; } = string.Empty;
         public string CpfCnpj { get; set; } = string.Empty;
+    }
+
+    public class CriarAssinaturaPixAutomaticoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+        public string NomeDevedor { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+        public string Periodicidade { get; set; } = "ANUAL";
+    }
+
+    public class CriarAssinaturaUsuarioPixAutomaticoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public string NomeDevedor { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+        public string Periodicidade { get; set; } = "ANUAL";
     }
 }
