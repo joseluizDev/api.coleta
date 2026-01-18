@@ -100,15 +100,15 @@ namespace api.coleta.Repositories
         }
 
         /// <summary>
-        /// Busca todas as assinaturas do usuário (através do Cliente)
+        /// Busca todas as assinaturas do usuário (via Cliente.UsuarioID ou UsuarioId direto)
         /// </summary>
         public async Task<List<Assinatura>> ObterAssinaturasDoUsuarioAsync(Guid usuarioId)
         {
             return await Context.Assinaturas
                                 .Include(a => a.Cliente)
-                .Where(a => a.Cliente != null
-                         && a.Cliente.UsuarioID == usuarioId
-                         && a.DeletadoEm == null)
+                .Where(a => a.DeletadoEm == null
+                         && ((a.Cliente != null && a.Cliente.UsuarioID == usuarioId)
+                             || a.UsuarioId == usuarioId))
                 .OrderByDescending(a => a.DataInclusao)
                 .ToListAsync();
         }
