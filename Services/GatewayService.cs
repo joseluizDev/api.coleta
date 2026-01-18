@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using api.coleta.Settings;
 using Microsoft.Extensions.Options;
 
@@ -100,33 +101,61 @@ namespace api.coleta.Services
 
     public class GatewayLicenseResponse
     {
+        [JsonPropertyName("tem_licenca")]
         public bool TemLicenca { get; set; }
+
+        [JsonPropertyName("licenca_ativa")]
         public bool LicencaAtiva { get; set; }
+
+        [JsonPropertyName("status_mensagem")]
         public string StatusMensagem { get; set; } = string.Empty;
+
+        [JsonPropertyName("dias_restantes")]
         public int DiasRestantes { get; set; }
+
+        [JsonPropertyName("plano")]
         public GatewayPlanoResumoResponse? Plano { get; set; }
     }
 
     public class GatewayPlanoResumoResponse
     {
+        [JsonPropertyName("nome")]
         public string Nome { get; set; } = string.Empty;
+
+        [JsonPropertyName("limite_hectares")]
         public decimal LimiteHectares { get; set; }
     }
 
     public class GatewayPlanoResponse
     {
+        [JsonPropertyName("id")]
         public Guid Id { get; set; }
+
+        [JsonPropertyName("nome")]
         public string Nome { get; set; } = string.Empty;
+
+        [JsonPropertyName("descricao")]
         public string Descricao { get; set; } = string.Empty;
+
+        [JsonPropertyName("valor_anual")]
         public decimal ValorAnual { get; set; }
+
+        [JsonPropertyName("limite_hectares")]
         public decimal LimiteHectares { get; set; }
+
+        [JsonPropertyName("ativo")]
         public bool Ativo { get; set; }
     }
 
     public class GatewayErrorResponse
     {
+        [JsonPropertyName("error")]
         public string Error { get; set; } = string.Empty;
+
+        [JsonPropertyName("code")]
         public string Code { get; set; } = string.Empty;
+
+        [JsonPropertyName("redirect_to")]
         public string RedirectTo { get; set; } = string.Empty;
     }
 
