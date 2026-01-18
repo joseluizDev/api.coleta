@@ -11,6 +11,7 @@ namespace api.coleta.Services
     {
         Task<GatewayLicenseResponse?> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null);
         Task<GatewayPlanoResponse[]> ListarPlanosAsync();
+        Task<GatewayAssinaturaPixResponse?> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
     }
 
     public class GatewayService : IGatewayService
@@ -95,6 +96,40 @@ namespace api.coleta.Services
                 return Array.Empty<GatewayPlanoResponse>();
             }
         }
+
+        /// <summary>
+        /// Cria assinatura com pagamento PIX no gateway
+        /// </summary>
+        public async Task<GatewayAssinaturaPixResponse?> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null)
+        {
+            try
+            {
+                var request = new
+                {
+                    plano_id = planoId,
+                    usuario_id = usuarioId,
+                    cliente_id = clienteId ?? usuarioId // Se nao tem cliente, usa usuarioId
+                };
+
+                _logger.LogInformation("Criando assinatura PIX no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}", planoId, usuarioId);
+
+                var response = await _httpClient.PostAsJsonAsync("/api/v1/assinaturas/pix", request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Erro ao criar assinatura PIX: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return null;
+                }
+
+                return await response.Content.ReadFromJsonAsync<GatewayAssinaturaPixResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar assinatura PIX no gateway");
+                return null;
+            }
+        }
     }
 
     #region DTOs para Gateway
@@ -157,6 +192,54 @@ namespace api.coleta.Services
 
         [JsonPropertyName("redirect_to")]
         public string RedirectTo { get; set; } = string.Empty;
+    }
+
+    public class GatewayAssinaturaPixResponse
+    {
+        [JsonPropertyName("assinatura")]
+        public GatewayAssinaturaResponse? Assinatura { get; set; }
+
+        [JsonPropertyName("pagamento_id")]
+        public Guid PagamentoId { get; set; }
+
+        [JsonPropertyName("pix_copia_cola")]
+        public string? PixCopiaCola { get; set; }
+
+        [JsonPropertyName("pix_qrcode_base64")]
+        public string? PixQrCodeBase64 { get; set; }
+    }
+
+    public class GatewayAssinaturaResponse
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+
+        [JsonPropertyName("cliente_id")]
+        public Guid ClienteId { get; set; }
+
+        [JsonPropertyName("usuario_id")]
+        public Guid UsuarioId { get; set; }
+
+        [JsonPropertyName("plano_id")]
+        public Guid PlanoId { get; set; }
+
+        [JsonPropertyName("plano_nome")]
+        public string? PlanoNome { get; set; }
+
+        [JsonPropertyName("data_inicio")]
+        public DateTime DataInicio { get; set; }
+
+        [JsonPropertyName("data_fim")]
+        public DateTime DataFim { get; set; }
+
+        [JsonPropertyName("ativa")]
+        public bool Ativa { get; set; }
+
+        [JsonPropertyName("status_pagamento")]
+        public string? StatusPagamento { get; set; }
+
+        [JsonPropertyName("dias_restantes")]
+        public int DiasRestantes { get; set; }
     }
 
     #endregion

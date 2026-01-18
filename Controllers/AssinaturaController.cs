@@ -245,6 +245,84 @@ namespace api.coleta.Controllers
             return Ok(planos);
         }
 
+        /// <summary>
+        /// Cria assinatura com pagamento PIX via Gateway de Pagamentos.
+        /// Compatibilidade com frontend existente.
+        /// </summary>
+        [HttpPost("criar-com-pix")]
+        public async Task<IActionResult> CriarAssinaturaComPix([FromBody] CriarAssinaturaPixDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            var response = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = "Erro ao criar assinatura PIX. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString(),
+                    dataExpiracao = DateTime.UtcNow.AddHours(24)
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento PIX vinculada ao usuario (sem cliente).
+        /// Compatibilidade com frontend existente.
+        /// </summary>
+        [HttpPost("usuario/criar-com-pix")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComPix([FromBody] CriarAssinaturaUsuarioPixDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            var response = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = "Erro ao criar assinatura PIX. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString(),
+                    dataExpiracao = DateTime.UtcNow.AddHours(24)
+                }
+            });
+        }
+
         private async Task<Guid?> ObterClienteIdDoUsuarioLogadoAsync()
         {
             var token = ObterIDDoToken();
@@ -266,5 +344,16 @@ namespace api.coleta.Controllers
     public class AtivarAssinaturaDTO
     {
         public string? Observacao { get; set; }
+    }
+
+    public class CriarAssinaturaPixDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+    }
+
+    public class CriarAssinaturaUsuarioPixDTO
+    {
+        public Guid PlanoId { get; set; }
     }
 }
