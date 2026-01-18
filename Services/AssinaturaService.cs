@@ -25,6 +25,7 @@ namespace api.coleta.Services
         private readonly ClienteRepository _clienteRepo;
         private readonly UsuarioRepository _usuarioRepo;
         private readonly HistoricoPagamentoRepository _pagamentoRepo;
+        private readonly IGatewayService _gatewayService;
         private readonly INotificador _notificador;
         private readonly ILogger<AssinaturaService> _logger;
 
@@ -33,6 +34,7 @@ namespace api.coleta.Services
             ClienteRepository clienteRepo,
             UsuarioRepository usuarioRepo,
             HistoricoPagamentoRepository pagamentoRepo,
+            IGatewayService gatewayService,
             INotificador notificador,
             ILogger<AssinaturaService> logger,
             IUnitOfWork unitOfWork) : base(unitOfWork)
@@ -41,6 +43,7 @@ namespace api.coleta.Services
             _clienteRepo = clienteRepo;
             _usuarioRepo = usuarioRepo;
             _pagamentoRepo = pagamentoRepo;
+            _gatewayService = gatewayService;
             _notificador = notificador;
             _logger = logger;
         }
@@ -183,10 +186,32 @@ namespace api.coleta.Services
         }
 
         /// <summary>
-        /// Verifica status de pagamento PIX de uma assinatura (consulta local apenas)
+        /// Verifica status de pagamento PIX de uma assinatura.
+        /// Tenta primeiro o gateway (PostgreSQL), depois fallback para banco local (MySQL).
         /// </summary>
         public async Task<VerificacaoPagamentoDTO?> VerificarPagamentoPixAsync(Guid assinaturaId)
         {
+            // Tentar primeiro via Gateway de Pagamentos
+            var gatewayResponse = await _gatewayService.VerificarPagamentoAsync(assinaturaId);
+            if (gatewayResponse != null)
+            {
+                _logger.LogInformation("Verificacao de pagamento via gateway: AssinaturaId={AssinaturaId}, Pago={Pago}",
+                    assinaturaId, gatewayResponse.Pago);
+
+                return new VerificacaoPagamentoDTO
+                {
+                    AssinaturaId = gatewayResponse.AssinaturaId,
+                    Status = gatewayResponse.Status,
+                    Pago = gatewayResponse.Pago,
+                    AssinaturaAtiva = gatewayResponse.AssinaturaAtiva,
+                    Valor = gatewayResponse.Valor,
+                    DataVerificacao = gatewayResponse.DataVerificacao
+                };
+            }
+
+            // Fallback: buscar no banco local
+            _logger.LogInformation("Gateway nao encontrou assinatura, tentando banco local: AssinaturaId={AssinaturaId}", assinaturaId);
+
             var assinatura = await _assinaturaRepo.ObterPorIdAsync(assinaturaId);
             if (assinatura == null)
             {
@@ -206,7 +231,6 @@ namespace api.coleta.Services
                 return null;
             }
 
-            // Retorna status local (consulta ao gateway deve ser feita pelo frontend)
             return new VerificacaoPagamentoDTO
             {
                 AssinaturaId = assinaturaId,

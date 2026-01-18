@@ -12,6 +12,7 @@ namespace api.coleta.Services
         Task<GatewayLicenseResponse?> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null);
         Task<GatewayPlanoResponse[]> ListarPlanosAsync();
         Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
+        Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
     }
 
     public class GatewayService : IGatewayService
@@ -137,6 +138,38 @@ namespace api.coleta.Services
                 return (null, $"Erro interno: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Verifica status do pagamento de uma assinatura no gateway
+        /// </summary>
+        public async Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId)
+        {
+            try
+            {
+                _logger.LogInformation("Verificando pagamento no gateway: AssinaturaId={AssinaturaId}", assinaturaId);
+
+                var response = await _httpClient.GetAsync($"/api/v1/assinaturas/{assinaturaId}/verificar-pagamento");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Erro ao verificar pagamento: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return null;
+                }
+
+                return await response.Content.ReadFromJsonAsync<GatewayVerificacaoPagamentoResponse>();
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway ao verificar pagamento");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao verificar pagamento no gateway");
+                return null;
+            }
+        }
     }
 
     #region DTOs para Gateway
@@ -247,6 +280,27 @@ namespace api.coleta.Services
 
         [JsonPropertyName("dias_restantes")]
         public int DiasRestantes { get; set; }
+    }
+
+    public class GatewayVerificacaoPagamentoResponse
+    {
+        [JsonPropertyName("assinatura_id")]
+        public Guid AssinaturaId { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = string.Empty;
+
+        [JsonPropertyName("pago")]
+        public bool Pago { get; set; }
+
+        [JsonPropertyName("assinatura_ativa")]
+        public bool AssinaturaAtiva { get; set; }
+
+        [JsonPropertyName("valor")]
+        public decimal Valor { get; set; }
+
+        [JsonPropertyName("data_verificacao")]
+        public DateTime DataVerificacao { get; set; }
     }
 
     #endregion
