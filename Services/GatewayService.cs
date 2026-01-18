@@ -17,6 +17,9 @@ namespace api.coleta.Services
         Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoAsync(
             Guid planoId, Guid usuarioId, string numeroCartao, string cvv, string mesValidade,
             string anoValidade, string nomeCartao, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
+        Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoComTokenAsync(
+            Guid planoId, Guid usuarioId, string paymentToken, string? nomePagador, string? cpfCnpj,
+            string? email, string? telefone, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
     }
 
@@ -291,6 +294,63 @@ namespace api.coleta.Services
         }
 
         /// <summary>
+        /// Cria assinatura com pagamento Cartao de Credito usando payment_token (modo seguro)
+        /// </summary>
+        public async Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoComTokenAsync(
+            Guid planoId, Guid usuarioId, string paymentToken, string? nomePagador, string? cpfCnpj,
+            string? email, string? telefone, int parcelas = 1, string bandeira = "", Guid? clienteId = null)
+        {
+            try
+            {
+                var request = new
+                {
+                    plano_id = planoId,
+                    usuario_id = usuarioId,
+                    cliente_id = clienteId ?? usuarioId,
+                    payment_token = paymentToken,
+                    nome_pagador = nomePagador,
+                    cpf_cnpj = cpfCnpj,
+                    email = email,
+                    telefone = telefone,
+                    parcelas = parcelas,
+                    bandeira = bandeira
+                };
+
+                _logger.LogInformation("Criando assinatura Cartao (token) no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}, Parcelas={Parcelas}",
+                    planoId, usuarioId, parcelas);
+
+                var response = await _httpClient.PostAsJsonAsync("/api/v1/assinaturas/cartao", request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Pagamento com cartao recusado: {Error}", errorContent);
+                    return (null, "Pagamento recusado. Verifique os dados do cartao e tente novamente.");
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Erro ao criar assinatura Cartao: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return (null, $"Gateway retornou {response.StatusCode}: {errorContent}");
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<GatewayAssinaturaCartaoResponse>();
+                return (result, null);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway");
+                return (null, $"Erro de conexao com gateway: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar assinatura Cartao com token no gateway");
+                return (null, $"Erro interno: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Verifica status do pagamento de uma assinatura no gateway
         /// </summary>
         public async Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId)
@@ -461,6 +521,9 @@ namespace api.coleta.Services
 
         [JsonPropertyName("parcelas")]
         public int Parcelas { get; set; }
+
+        [JsonPropertyName("valor_total")]
+        public decimal? ValorTotal { get; set; }
     }
 
     public class GatewayAssinaturaResponse

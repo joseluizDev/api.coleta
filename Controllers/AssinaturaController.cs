@@ -674,7 +674,14 @@ namespace api.coleta.Controllers
         /// <summary>
         /// Cria assinatura com pagamento Cartao de Credito via Gateway de Pagamentos.
         /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
-        /// Recebe os dados do cartao que serao processados pelo gateway.
+        ///
+        /// **Modo Recomendado (payment_token):**
+        /// - Envie payment_token gerado pelo SDK EfiPay no frontend
+        /// - Dados sensiveis do cartao nao passam pelo backend
+        ///
+        /// **Modo Legado (dados do cartao):**
+        /// - Envie os dados do cartao diretamente
+        /// - Usado quando SDK nao esta disponivel
         /// </summary>
         [HttpPost("criar-com-cartao")]
         public async Task<IActionResult> CriarAssinaturaComCartao([FromBody] CriarAssinaturaCartaoDTO dto)
@@ -687,37 +694,71 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            // Validacao dos dados do cartao
-            if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
+            // Determinar modo de pagamento
+            bool usarToken = !string.IsNullOrWhiteSpace(dto.PaymentToken);
+
+            if (usarToken)
             {
-                return BadRequest(new { message = "Numero do cartao e obrigatorio." });
-            }
+                // Modo payment_token: validar dados do cliente
+                if (string.IsNullOrWhiteSpace(dto.NomePagador))
+                {
+                    return BadRequest(new { message = "Nome do pagador e obrigatorio para pagamento com token." });
+                }
 
-            if (string.IsNullOrWhiteSpace(dto.Cvv))
+                if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+                {
+                    return BadRequest(new { message = "CPF/CNPJ e obrigatorio para pagamento com token." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoComTokenAsync(
+                    dto.PlanoId, userId.Value, dto.PaymentToken!, dto.NomePagador, dto.CpfCnpj,
+                    dto.Email, dto.Telefone, dto.Parcelas, dto.Bandeira, dto.ClienteId);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
+            else
             {
-                return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+                // Modo legado: validar dados do cartao
+                if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
+                {
+                    return BadRequest(new { message = "Numero do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Cvv))
+                {
+                    return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
+                {
+                    return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.NomeCartao))
+                {
+                    return BadRequest(new { message = "Nome no cartao e obrigatorio." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
+                    dto.PlanoId, userId.Value, dto.NumeroCartao!, dto.Cvv!, dto.MesValidade!,
+                    dto.AnoValidade!, dto.NomeCartao!, dto.Parcelas, dto.Bandeira, dto.ClienteId);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
             }
+        }
 
-            if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
-            {
-                return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.NomeCartao))
-            {
-                return BadRequest(new { message = "Nome no cartao e obrigatorio." });
-            }
-
-            var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
-                dto.PlanoId, userId.Value, dto.NumeroCartao, dto.Cvv, dto.MesValidade,
-                dto.AnoValidade, dto.NomeCartao, dto.Parcelas, dto.Bandeira, dto.ClienteId);
-
-            if (response == null)
-            {
-                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
-            }
-
-            // Mapear resposta para formato esperado pelo frontend
+        private IActionResult RetornarRespostaCartao(GatewayAssinaturaCartaoResponse response)
+        {
             return Ok(new
             {
                 assinatura = new
@@ -731,6 +772,7 @@ namespace api.coleta.Controllers
                     status = response.Status,
                     autorizacao = response.Autorizacao,
                     parcelas = response.Parcelas,
+                    valorTotal = response.ValorTotal,
                     txId = response.PagamentoId.ToString()
                 }
             });
@@ -739,7 +781,14 @@ namespace api.coleta.Controllers
         /// <summary>
         /// Cria assinatura com pagamento Cartao de Credito vinculada ao usuario (sem cliente).
         /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
-        /// Recebe os dados do cartao que serao processados pelo gateway.
+        ///
+        /// **Modo Recomendado (payment_token):**
+        /// - Envie payment_token gerado pelo SDK EfiPay no frontend
+        /// - Dados sensiveis do cartao nao passam pelo backend
+        ///
+        /// **Modo Legado (dados do cartao):**
+        /// - Envie os dados do cartao diretamente
+        /// - Usado quando SDK nao esta disponivel
         /// </summary>
         [HttpPost("usuario/criar-com-cartao")]
         public async Task<IActionResult> CriarAssinaturaUsuarioComCartao([FromBody] CriarAssinaturaUsuarioCartaoDTO dto)
@@ -752,53 +801,67 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            // Validacao dos dados do cartao
-            if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
-            {
-                return BadRequest(new { message = "Numero do cartao e obrigatorio." });
-            }
+            // Determinar modo de pagamento
+            bool usarToken = !string.IsNullOrWhiteSpace(dto.PaymentToken);
 
-            if (string.IsNullOrWhiteSpace(dto.Cvv))
+            if (usarToken)
             {
-                return BadRequest(new { message = "CVV do cartao e obrigatorio." });
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
-            {
-                return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.NomeCartao))
-            {
-                return BadRequest(new { message = "Nome no cartao e obrigatorio." });
-            }
-
-            var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
-                dto.PlanoId, userId.Value, dto.NumeroCartao, dto.Cvv, dto.MesValidade,
-                dto.AnoValidade, dto.NomeCartao, dto.Parcelas, dto.Bandeira, null);
-
-            if (response == null)
-            {
-                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
-            }
-
-            // Mapear resposta para formato esperado pelo frontend
-            return Ok(new
-            {
-                assinatura = new
+                // Modo payment_token: validar dados do cliente
+                if (string.IsNullOrWhiteSpace(dto.NomePagador))
                 {
-                    id = response.Assinatura?.Id,
-                    ativa = response.Assinatura?.Ativa ?? false
-                },
-                pagamento = new
-                {
-                    chargeId = response.ChargeId,
-                    status = response.Status,
-                    autorizacao = response.Autorizacao,
-                    parcelas = response.Parcelas,
-                    txId = response.PagamentoId.ToString()
+                    return BadRequest(new { message = "Nome do pagador e obrigatorio para pagamento com token." });
                 }
-            });
+
+                if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+                {
+                    return BadRequest(new { message = "CPF/CNPJ e obrigatorio para pagamento com token." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoComTokenAsync(
+                    dto.PlanoId, userId.Value, dto.PaymentToken!, dto.NomePagador, dto.CpfCnpj,
+                    dto.Email, dto.Telefone, dto.Parcelas, dto.Bandeira, null);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
+            else
+            {
+                // Modo legado: validar dados do cartao
+                if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
+                {
+                    return BadRequest(new { message = "Numero do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Cvv))
+                {
+                    return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
+                {
+                    return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.NomeCartao))
+                {
+                    return BadRequest(new { message = "Nome no cartao e obrigatorio." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
+                    dto.PlanoId, userId.Value, dto.NumeroCartao!, dto.Cvv!, dto.MesValidade!,
+                    dto.AnoValidade!, dto.NomeCartao!, dto.Parcelas, dto.Bandeira, null);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
         }
 
         private async Task<Guid?> ObterClienteIdDoUsuarioLogadoAsync()
@@ -871,24 +934,46 @@ namespace api.coleta.Controllers
     {
         public Guid PlanoId { get; set; }
         public Guid? ClienteId { get; set; }
-        public string NumeroCartao { get; set; } = string.Empty;
-        public string Cvv { get; set; } = string.Empty;
-        public string MesValidade { get; set; } = string.Empty;
-        public string AnoValidade { get; set; } = string.Empty;
-        public string NomeCartao { get; set; } = string.Empty;
+
+        // Modo recomendado: payment_token do SDK EfiPay
+        public string? PaymentToken { get; set; }
+        public string? NomePagador { get; set; }
+        public string? CpfCnpj { get; set; }
+        public string? Email { get; set; }
+        public string? Telefone { get; set; }
+
+        // Modo legado: dados do cartao diretamente
+        public string? NumeroCartao { get; set; }
+        public string? Cvv { get; set; }
+        public string? MesValidade { get; set; }
+        public string? AnoValidade { get; set; }
+        public string? NomeCartao { get; set; }
+
+        // Comum a ambos os modos
         public int Parcelas { get; set; } = 1;
-        public string Bandeira { get; set; } = string.Empty;
+        public string? Bandeira { get; set; }
     }
 
     public class CriarAssinaturaUsuarioCartaoDTO
     {
         public Guid PlanoId { get; set; }
-        public string NumeroCartao { get; set; } = string.Empty;
-        public string Cvv { get; set; } = string.Empty;
-        public string MesValidade { get; set; } = string.Empty;
-        public string AnoValidade { get; set; } = string.Empty;
-        public string NomeCartao { get; set; } = string.Empty;
+
+        // Modo recomendado: payment_token do SDK EfiPay
+        public string? PaymentToken { get; set; }
+        public string? NomePagador { get; set; }
+        public string? CpfCnpj { get; set; }
+        public string? Email { get; set; }
+        public string? Telefone { get; set; }
+
+        // Modo legado: dados do cartao diretamente
+        public string? NumeroCartao { get; set; }
+        public string? Cvv { get; set; }
+        public string? MesValidade { get; set; }
+        public string? AnoValidade { get; set; }
+        public string? NomeCartao { get; set; }
+
+        // Comum a ambos os modos
         public int Parcelas { get; set; } = 1;
-        public string Bandeira { get; set; } = string.Empty;
+        public string? Bandeira { get; set; }
     }
 }
