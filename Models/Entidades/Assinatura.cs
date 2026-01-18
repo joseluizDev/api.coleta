@@ -15,10 +15,11 @@ namespace api.coleta.Models.Entidades
         public Guid? UsuarioId { get; set; }
         public virtual Usuario? Usuario { get; set; }
 
+        /// <summary>
+        /// ID do plano no Gateway de Pagamentos (PostgreSQL)
+        /// </summary>
         [Required]
-        [ForeignKey("Plano")]
         public Guid PlanoId { get; set; }
-        public virtual Plano Plano { get; set; } = null!;
 
         [Required]
         public DateTime DataInicio { get; set; }
@@ -57,9 +58,12 @@ namespace api.coleta.Models.Entidades
             return Ativa && DataFim >= DateTime.Now && DeletadoEm == null;
         }
 
-        public bool EstaDentroDoLimiteHectares(decimal totalHectares)
+        /// <summary>
+        /// Verifica limite de hectares - deve ser consultado via Gateway
+        /// </summary>
+        public bool EstaDentroDoLimiteHectares(decimal totalHectares, decimal limiteHectares)
         {
-            return Plano != null && totalHectares <= Plano.LimiteHectares;
+            return totalHectares <= limiteHectares;
         }
 
         public int DiasRestantes()
