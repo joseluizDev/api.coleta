@@ -250,6 +250,66 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
+        /// Obtem opcoes de parcelamento para cartao de credito.
+        /// Calcula parcelas com e sem juros baseado no valor e bandeira.
+        /// </summary>
+        [HttpGet("parcelas")]
+        [AllowAnonymous]
+        public IActionResult ObterParcelas([FromQuery] string bandeira, [FromQuery] int valor)
+        {
+            // Valor vem em centavos, converter para reais
+            var valorReais = valor / 100m;
+
+            // Configuracoes de parcelamento (pode ser ajustado conforme necessidade)
+            var maxParcelas = 12;
+            var parcelasSemJuros = 3; // Parcelas sem juros
+            var taxaJurosMensal = 0.0199m; // 1.99% ao mes
+
+            var parcelas = new List<object>();
+
+            for (int i = 1; i <= maxParcelas; i++)
+            {
+                decimal valorParcela;
+                decimal valorTotal;
+                bool temJuros = i > parcelasSemJuros;
+                decimal percentualJuros = 0;
+
+                if (temJuros)
+                {
+                    // Calculo com juros compostos
+                    var fator = (decimal)Math.Pow((double)(1 + taxaJurosMensal), i);
+                    valorTotal = valorReais * fator;
+                    valorParcela = Math.Round(valorTotal / i, 2);
+                    percentualJuros = Math.Round((valorTotal / valorReais - 1) * 100, 2);
+                }
+                else
+                {
+                    valorTotal = valorReais;
+                    valorParcela = Math.Round(valorReais / i, 2);
+                }
+
+                // Valor minimo por parcela (R$ 5,00)
+                if (valorParcela < 5) break;
+
+                // Frontend espera 'parcela' e valor em centavos
+                parcelas.Add(new
+                {
+                    parcela = i,
+                    valor = (int)(valorParcela * 100), // Centavos
+                    valorReais = valorParcela,
+                    valorFormatado = valorParcela.ToString("C", new System.Globalization.CultureInfo("pt-BR")),
+                    valorTotal = (int)(valorTotal * 100), // Centavos
+                    valorTotalReais = Math.Round(valorTotal, 2),
+                    valorTotalFormatado = Math.Round(valorTotal, 2).ToString("C", new System.Globalization.CultureInfo("pt-BR")),
+                    temJuros,
+                    percentualJuros
+                });
+            }
+
+            return Ok(new { parcelas, bandeira });
+        }
+
+        /// <summary>
         /// Cria assinatura com pagamento PIX via Gateway de Pagamentos.
         /// Compatibilidade com frontend existente.
         /// </summary>
@@ -614,7 +674,7 @@ namespace api.coleta.Controllers
         /// <summary>
         /// Cria assinatura com pagamento Cartao de Credito via Gateway de Pagamentos.
         /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
-        /// Recebe o paymentToken gerado pelo SDK EfiPay no frontend.
+        /// Recebe os dados do cartao que serao processados pelo gateway.
         /// </summary>
         [HttpPost("criar-com-cartao")]
         public async Task<IActionResult> CriarAssinaturaComCartao([FromBody] CriarAssinaturaCartaoDTO dto)
@@ -627,14 +687,30 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            // Validacao do paymentToken
-            if (string.IsNullOrWhiteSpace(dto.PaymentToken))
+            // Validacao dos dados do cartao
+            if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
             {
-                return BadRequest(new { message = "Token de pagamento e obrigatorio." });
+                return BadRequest(new { message = "Numero do cartao e obrigatorio." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Cvv))
+            {
+                return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
+            {
+                return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NomeCartao))
+            {
+                return BadRequest(new { message = "Nome no cartao e obrigatorio." });
             }
 
             var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
-                dto.PlanoId, userId.Value, dto.PaymentToken, dto.Parcelas, dto.Bandeira, dto.ClienteId);
+                dto.PlanoId, userId.Value, dto.NumeroCartao, dto.Cvv, dto.MesValidade,
+                dto.AnoValidade, dto.NomeCartao, dto.Parcelas, dto.Bandeira, dto.ClienteId);
 
             if (response == null)
             {
@@ -663,7 +739,7 @@ namespace api.coleta.Controllers
         /// <summary>
         /// Cria assinatura com pagamento Cartao de Credito vinculada ao usuario (sem cliente).
         /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
-        /// Recebe o paymentToken gerado pelo SDK EfiPay no frontend.
+        /// Recebe os dados do cartao que serao processados pelo gateway.
         /// </summary>
         [HttpPost("usuario/criar-com-cartao")]
         public async Task<IActionResult> CriarAssinaturaUsuarioComCartao([FromBody] CriarAssinaturaUsuarioCartaoDTO dto)
@@ -676,14 +752,30 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            // Validacao do paymentToken
-            if (string.IsNullOrWhiteSpace(dto.PaymentToken))
+            // Validacao dos dados do cartao
+            if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
             {
-                return BadRequest(new { message = "Token de pagamento e obrigatorio." });
+                return BadRequest(new { message = "Numero do cartao e obrigatorio." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Cvv))
+            {
+                return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
+            {
+                return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NomeCartao))
+            {
+                return BadRequest(new { message = "Nome no cartao e obrigatorio." });
             }
 
             var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
-                dto.PlanoId, userId.Value, dto.PaymentToken, dto.Parcelas, dto.Bandeira, null);
+                dto.PlanoId, userId.Value, dto.NumeroCartao, dto.Cvv, dto.MesValidade,
+                dto.AnoValidade, dto.NomeCartao, dto.Parcelas, dto.Bandeira, null);
 
             if (response == null)
             {
@@ -779,7 +871,11 @@ namespace api.coleta.Controllers
     {
         public Guid PlanoId { get; set; }
         public Guid? ClienteId { get; set; }
-        public string PaymentToken { get; set; } = string.Empty;
+        public string NumeroCartao { get; set; } = string.Empty;
+        public string Cvv { get; set; } = string.Empty;
+        public string MesValidade { get; set; } = string.Empty;
+        public string AnoValidade { get; set; } = string.Empty;
+        public string NomeCartao { get; set; } = string.Empty;
         public int Parcelas { get; set; } = 1;
         public string Bandeira { get; set; } = string.Empty;
     }
@@ -787,7 +883,11 @@ namespace api.coleta.Controllers
     public class CriarAssinaturaUsuarioCartaoDTO
     {
         public Guid PlanoId { get; set; }
-        public string PaymentToken { get; set; } = string.Empty;
+        public string NumeroCartao { get; set; } = string.Empty;
+        public string Cvv { get; set; } = string.Empty;
+        public string MesValidade { get; set; } = string.Empty;
+        public string AnoValidade { get; set; } = string.Empty;
+        public string NomeCartao { get; set; } = string.Empty;
         public int Parcelas { get; set; } = 1;
         public string Bandeira { get; set; } = string.Empty;
     }

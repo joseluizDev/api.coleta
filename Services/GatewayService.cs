@@ -14,7 +14,9 @@ namespace api.coleta.Services
         Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
         Task<(GatewayAssinaturaBoletoResponse? Response, string? ErrorMessage)> CriarAssinaturaBoletoAsync(Guid planoId, Guid usuarioId, string nomePagador, string cpfCnpj, Guid? clienteId = null);
         Task<(GatewayAssinaturaPixAutomaticoResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAutomaticoAsync(Guid planoId, Guid usuarioId, string nomeDevedor, string cpfCnpj, string periodicidade = "ANUAL", Guid? clienteId = null);
-        Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoAsync(Guid planoId, Guid usuarioId, string paymentToken, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
+        Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoAsync(
+            Guid planoId, Guid usuarioId, string numeroCartao, string cvv, string mesValidade,
+            string anoValidade, string nomeCartao, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
     }
 
@@ -235,7 +237,8 @@ namespace api.coleta.Services
         /// Cria assinatura com pagamento Cartao de Credito no gateway
         /// </summary>
         public async Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoAsync(
-            Guid planoId, Guid usuarioId, string paymentToken, int parcelas = 1, string bandeira = "", Guid? clienteId = null)
+            Guid planoId, Guid usuarioId, string numeroCartao, string cvv, string mesValidade,
+            string anoValidade, string nomeCartao, int parcelas = 1, string bandeira = "", Guid? clienteId = null)
         {
             try
             {
@@ -244,7 +247,11 @@ namespace api.coleta.Services
                     plano_id = planoId,
                     usuario_id = usuarioId,
                     cliente_id = clienteId ?? usuarioId,
-                    payment_token = paymentToken,
+                    numero_cartao = numeroCartao,
+                    cvv = cvv,
+                    mes_validade = mesValidade,
+                    ano_validade = anoValidade,
+                    nome_cartao = nomeCartao,
                     parcelas = parcelas,
                     bandeira = bandeira
                 };
