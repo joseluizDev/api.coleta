@@ -22,6 +22,7 @@ namespace api.coleta.Services
             string? email, string? telefone, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
         Task<GatewayAssinaturaResponse[]> ListarAssinaturasDoUsuarioAsync(Guid usuarioId);
+        Task<GatewayHistoricoPagamentoResponse[]> ListarPagamentosDoUsuarioAsync(Guid usuarioId);
     }
 
     public class GatewayService : IGatewayService
@@ -415,6 +416,39 @@ namespace api.coleta.Services
                 return Array.Empty<GatewayAssinaturaResponse>();
             }
         }
+
+        /// <summary>
+        /// Lista historico de pagamentos de um usuario no gateway
+        /// </summary>
+        public async Task<GatewayHistoricoPagamentoResponse[]> ListarPagamentosDoUsuarioAsync(Guid usuarioId)
+        {
+            try
+            {
+                _logger.LogInformation("Listando pagamentos do usuario no gateway: UsuarioId={UsuarioId}", usuarioId);
+
+                var response = await _httpClient.GetAsync($"/api/v1/pagamentos/usuario/{usuarioId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Erro ao listar pagamentos: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return Array.Empty<GatewayHistoricoPagamentoResponse>();
+                }
+
+                return await response.Content.ReadFromJsonAsync<GatewayHistoricoPagamentoResponse[]>()
+                    ?? Array.Empty<GatewayHistoricoPagamentoResponse>();
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway ao listar pagamentos");
+                return Array.Empty<GatewayHistoricoPagamentoResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar pagamentos no gateway");
+                return Array.Empty<GatewayHistoricoPagamentoResponse>();
+            }
+        }
     }
 
     #region DTOs para Gateway
@@ -612,6 +646,30 @@ namespace api.coleta.Services
 
         [JsonPropertyName("data_verificacao")]
         public DateTime DataVerificacao { get; set; }
+    }
+
+    public class GatewayHistoricoPagamentoResponse
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+
+        [JsonPropertyName("assinatura_id")]
+        public Guid AssinaturaId { get; set; }
+
+        [JsonPropertyName("plano_nome")]
+        public string? PlanoNome { get; set; }
+
+        [JsonPropertyName("valor")]
+        public decimal Valor { get; set; }
+
+        [JsonPropertyName("metodo_pagamento")]
+        public string MetodoPagamento { get; set; } = string.Empty;
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = string.Empty;
+
+        [JsonPropertyName("data_pagamento")]
+        public DateTime DataPagamento { get; set; }
     }
 
     #endregion

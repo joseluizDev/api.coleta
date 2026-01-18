@@ -222,19 +222,19 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            // Buscar assinaturas diretamente do Gateway (fonte da verdade)
-            var assinaturas = await _gatewayService.ListarAssinaturasDoUsuarioAsync(userId.Value);
+            // Buscar pagamentos diretamente do Gateway (fonte da verdade)
+            var pagamentos = await _gatewayService.ListarPagamentosDoUsuarioAsync(userId.Value);
 
             // Mapear para o formato esperado pelo frontend
-            var historico = assinaturas.Select(a => new HistoricoPagamentoDTO
+            var historico = pagamentos.Select(p => new HistoricoPagamentoDTO
             {
-                AssinaturaId = a.Id,
-                PlanoNome = a.PlanoNome ?? "Plano",
-                DataInicio = a.DataInicio,
-                DataFim = a.DataFim,
-                Ativa = a.Ativa,
-                StatusPagamento = a.StatusPagamento ?? "PENDENTE",
-                DiasRestantes = a.DiasRestantes
+                Id = p.Id,
+                AssinaturaId = p.AssinaturaId,
+                PlanoNome = p.PlanoNome ?? "Plano",
+                Valor = p.Valor,
+                MetodoPagamento = p.MetodoPagamento,
+                Status = p.Status,
+                DataPagamento = p.DataPagamento
             }).ToList();
 
             return Ok(historico);
