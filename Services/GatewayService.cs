@@ -14,6 +14,7 @@ namespace api.coleta.Services
         Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
         Task<(GatewayAssinaturaBoletoResponse? Response, string? ErrorMessage)> CriarAssinaturaBoletoAsync(Guid planoId, Guid usuarioId, string nomePagador, string cpfCnpj, Guid? clienteId = null);
         Task<(GatewayAssinaturaPixAutomaticoResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAutomaticoAsync(Guid planoId, Guid usuarioId, string nomeDevedor, string cpfCnpj, string periodicidade = "ANUAL", Guid? clienteId = null);
+        Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoAsync(Guid planoId, Guid usuarioId, string paymentToken, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
     }
 
@@ -231,6 +232,58 @@ namespace api.coleta.Services
         }
 
         /// <summary>
+        /// Cria assinatura com pagamento Cartao de Credito no gateway
+        /// </summary>
+        public async Task<(GatewayAssinaturaCartaoResponse? Response, string? ErrorMessage)> CriarAssinaturaCartaoAsync(
+            Guid planoId, Guid usuarioId, string paymentToken, int parcelas = 1, string bandeira = "", Guid? clienteId = null)
+        {
+            try
+            {
+                var request = new
+                {
+                    plano_id = planoId,
+                    usuario_id = usuarioId,
+                    cliente_id = clienteId ?? usuarioId,
+                    payment_token = paymentToken,
+                    parcelas = parcelas,
+                    bandeira = bandeira
+                };
+
+                _logger.LogInformation("Criando assinatura Cartao no gateway: PlanoId={PlanoId}, UsuarioId={UsuarioId}",
+                    planoId, usuarioId);
+
+                var response = await _httpClient.PostAsJsonAsync("/api/v1/assinaturas/cartao", request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Pagamento com cartao recusado: {Error}", errorContent);
+                    return (null, "Pagamento recusado. Verifique os dados do cartao e tente novamente.");
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Erro ao criar assinatura Cartao: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return (null, $"Gateway retornou {response.StatusCode}: {errorContent}");
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<GatewayAssinaturaCartaoResponse>();
+                return (result, null);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway");
+                return (null, $"Erro de conexao com gateway: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar assinatura Cartao no gateway");
+                return (null, $"Erro interno: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Verifica status do pagamento de uma assinatura no gateway
         /// </summary>
         public async Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId)
@@ -380,6 +433,27 @@ namespace api.coleta.Services
 
         [JsonPropertyName("link_autorizacao")]
         public string? LinkAutorizacao { get; set; }
+    }
+
+    public class GatewayAssinaturaCartaoResponse
+    {
+        [JsonPropertyName("assinatura")]
+        public GatewayAssinaturaResponse? Assinatura { get; set; }
+
+        [JsonPropertyName("pagamento_id")]
+        public Guid PagamentoId { get; set; }
+
+        [JsonPropertyName("charge_id")]
+        public string? ChargeId { get; set; }
+
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+
+        [JsonPropertyName("autorizacao")]
+        public string? Autorizacao { get; set; }
+
+        [JsonPropertyName("parcelas")]
+        public int Parcelas { get; set; }
     }
 
     public class GatewayAssinaturaResponse

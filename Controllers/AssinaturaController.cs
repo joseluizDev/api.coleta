@@ -611,6 +611,104 @@ namespace api.coleta.Controllers
             });
         }
 
+        /// <summary>
+        /// Cria assinatura com pagamento Cartao de Credito via Gateway de Pagamentos.
+        /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
+        /// Recebe o paymentToken gerado pelo SDK EfiPay no frontend.
+        /// </summary>
+        [HttpPost("criar-com-cartao")]
+        public async Task<IActionResult> CriarAssinaturaComCartao([FromBody] CriarAssinaturaCartaoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Validacao do paymentToken
+            if (string.IsNullOrWhiteSpace(dto.PaymentToken))
+            {
+                return BadRequest(new { message = "Token de pagamento e obrigatorio." });
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
+                dto.PlanoId, userId.Value, dto.PaymentToken, dto.Parcelas, dto.Bandeira, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id,
+                    ativa = response.Assinatura?.Ativa ?? false
+                },
+                pagamento = new
+                {
+                    chargeId = response.ChargeId,
+                    status = response.Status,
+                    autorizacao = response.Autorizacao,
+                    parcelas = response.Parcelas,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento Cartao de Credito vinculada ao usuario (sem cliente).
+        /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
+        /// Recebe o paymentToken gerado pelo SDK EfiPay no frontend.
+        /// </summary>
+        [HttpPost("usuario/criar-com-cartao")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComCartao([FromBody] CriarAssinaturaUsuarioCartaoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Validacao do paymentToken
+            if (string.IsNullOrWhiteSpace(dto.PaymentToken))
+            {
+                return BadRequest(new { message = "Token de pagamento e obrigatorio." });
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
+                dto.PlanoId, userId.Value, dto.PaymentToken, dto.Parcelas, dto.Bandeira, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id,
+                    ativa = response.Assinatura?.Ativa ?? false
+                },
+                pagamento = new
+                {
+                    chargeId = response.ChargeId,
+                    status = response.Status,
+                    autorizacao = response.Autorizacao,
+                    parcelas = response.Parcelas,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
         private async Task<Guid?> ObterClienteIdDoUsuarioLogadoAsync()
         {
             var token = ObterIDDoToken();
@@ -675,5 +773,22 @@ namespace api.coleta.Controllers
         public string NomeDevedor { get; set; } = string.Empty;
         public string CpfCnpj { get; set; } = string.Empty;
         public string Periodicidade { get; set; } = "ANUAL";
+    }
+
+    public class CriarAssinaturaCartaoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+        public string PaymentToken { get; set; } = string.Empty;
+        public int Parcelas { get; set; } = 1;
+        public string Bandeira { get; set; } = string.Empty;
+    }
+
+    public class CriarAssinaturaUsuarioCartaoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public string PaymentToken { get; set; } = string.Empty;
+        public int Parcelas { get; set; } = 1;
+        public string Bandeira { get; set; } = string.Empty;
     }
 }
