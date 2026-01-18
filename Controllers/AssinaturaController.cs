@@ -208,34 +208,36 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Lista historico de pagamentos do usuario logado
+        /// Lista historico de pagamentos do usuario logado.
+        /// Busca diretamente do Gateway de Pagamentos (fonte da verdade).
         /// </summary>
         [HttpGet("historico-pagamentos")]
         public async Task<IActionResult> ListarHistoricoPagamentos()
         {
-            var clienteId = await ObterClienteIdDoUsuarioLogadoAsync();
-
-            // Tenta buscar pelo clienteId primeiro
-            if (clienteId != null)
-            {
-                var historico = await _assinaturaService.ListarHistoricoPagamentosDoClienteAsync(clienteId.Value);
-                if (historico.Any())
-                {
-                    return Ok(historico);
-                }
-            }
-
-            // Fallback: busca pelo UsuarioId diretamente
             var token = ObterIDDoToken();
             var userId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (userId != null)
+            if (userId == null)
             {
-                var historico = await _assinaturaService.ListarHistoricoPagamentosDoUsuarioAsync(userId.Value);
-                return Ok(historico);
+                return Unauthorized("Usuario nao autenticado");
             }
 
-            return Ok(new List<HistoricoPagamentoDTO>());
+            // Buscar assinaturas diretamente do Gateway (fonte da verdade)
+            var assinaturas = await _gatewayService.ListarAssinaturasDoUsuarioAsync(userId.Value);
+
+            // Mapear para o formato esperado pelo frontend
+            var historico = assinaturas.Select(a => new HistoricoPagamentoDTO
+            {
+                AssinaturaId = a.Id,
+                PlanoNome = a.PlanoNome ?? "Plano",
+                DataInicio = a.DataInicio,
+                DataFim = a.DataFim,
+                Ativa = a.Ativa,
+                StatusPagamento = a.StatusPagamento ?? "PENDENTE",
+                DiasRestantes = a.DiasRestantes
+            }).ToList();
+
+            return Ok(historico);
         }
 
         /// <summary>

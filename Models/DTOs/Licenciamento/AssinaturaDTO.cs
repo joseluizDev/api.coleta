@@ -88,8 +88,14 @@ namespace api.coleta.Models.DTOs.Licenciamento
         /// ID do plano no Gateway PostgreSQL (detalhes devem ser consultados via gateway)
         /// </summary>
         public Guid PlanoId { get; set; }
+        public string? PlanoNome { get; set; }
         public decimal Valor { get; set; }
         public DateTime DataPagamento { get; set; }
+        public DateTime? DataInicio { get; set; }
+        public DateTime? DataFim { get; set; }
+        public bool Ativa { get; set; }
+        public string StatusPagamento { get; set; } = string.Empty;
+        public int DiasRestantes { get; set; }
         public string MetodoPagamento { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string? EfiPayStatus { get; set; }

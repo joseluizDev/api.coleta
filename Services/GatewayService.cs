@@ -21,6 +21,7 @@ namespace api.coleta.Services
             Guid planoId, Guid usuarioId, string paymentToken, string? nomePagador, string? cpfCnpj,
             string? email, string? telefone, int parcelas = 1, string bandeira = "", Guid? clienteId = null);
         Task<GatewayVerificacaoPagamentoResponse?> VerificarPagamentoAsync(Guid assinaturaId);
+        Task<GatewayAssinaturaResponse[]> ListarAssinaturasDoUsuarioAsync(Guid usuarioId);
     }
 
     public class GatewayService : IGatewayService
@@ -379,6 +380,39 @@ namespace api.coleta.Services
             {
                 _logger.LogError(ex, "Erro ao verificar pagamento no gateway");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Lista todas as assinaturas de um usuario no gateway
+        /// </summary>
+        public async Task<GatewayAssinaturaResponse[]> ListarAssinaturasDoUsuarioAsync(Guid usuarioId)
+        {
+            try
+            {
+                _logger.LogInformation("Listando assinaturas do usuario no gateway: UsuarioId={UsuarioId}", usuarioId);
+
+                var response = await _httpClient.GetAsync($"/api/v1/assinaturas/usuario/{usuarioId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("Erro ao listar assinaturas: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return Array.Empty<GatewayAssinaturaResponse>();
+                }
+
+                return await response.Content.ReadFromJsonAsync<GatewayAssinaturaResponse[]>()
+                    ?? Array.Empty<GatewayAssinaturaResponse>();
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Erro de conexao com gateway ao listar assinaturas");
+                return Array.Empty<GatewayAssinaturaResponse>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar assinaturas no gateway");
+                return Array.Empty<GatewayAssinaturaResponse>();
             }
         }
     }
