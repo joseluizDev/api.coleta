@@ -3,6 +3,7 @@ using api.cliente.Repositories;
 using api.coleta.Data;
 using api.coleta.Data.Repository;
 using api.coleta.Models.DTOs.Licenciamento;
+using api.coleta.Repositories;
 using api.coleta.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,7 @@ namespace api.coleta.Controllers
         private readonly LicenseService _licenseService;
         private readonly IGatewayService _gatewayService;
         private readonly ClienteRepository _clienteRepo;
+        private readonly UsuarioRepository _usuarioRepo;
         private readonly IJwtToken _jwtToken;
 
         public AssinaturaController(
@@ -36,6 +38,7 @@ namespace api.coleta.Controllers
             LicenseService licenseService,
             IGatewayService gatewayService,
             ClienteRepository clienteRepo,
+            UsuarioRepository usuarioRepo,
             IJwtToken jwtToken,
             INotificador notificador) : base(notificador)
         {
@@ -43,6 +46,7 @@ namespace api.coleta.Controllers
             _licenseService = licenseService;
             _gatewayService = gatewayService;
             _clienteRepo = clienteRepo;
+            _usuarioRepo = usuarioRepo;
             _jwtToken = jwtToken;
         }
 
@@ -325,6 +329,7 @@ namespace api.coleta.Controllers
 
         /// <summary>
         /// Cria assinatura com pagamento Boleto via Gateway de Pagamentos.
+        /// Busca nome e CPF do usuario logado automaticamente se nao fornecidos.
         /// </summary>
         [HttpPost("criar-com-boleto")]
         public async Task<IActionResult> CriarAssinaturaComBoleto([FromBody] CriarAssinaturaBoletoDTO dto)
@@ -337,18 +342,34 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            if (string.IsNullOrWhiteSpace(dto.NomePagador))
+            // Buscar dados do usuario se nao fornecidos
+            var nomePagador = dto.NomePagador;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomePagador) || string.IsNullOrWhiteSpace(cpfCnpj))
             {
-                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto." });
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomePagador))
+                        nomePagador = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+            if (string.IsNullOrWhiteSpace(nomePagador))
             {
-                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto." });
+                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto. Atualize seu perfil." });
             }
 
             var (response, errorMessage) = await _gatewayService.CriarAssinaturaBoletoAsync(
-                dto.PlanoId, userId.Value, dto.NomePagador, dto.CpfCnpj, dto.ClienteId);
+                dto.PlanoId, userId.Value, nomePagador, cpfCnpj, dto.ClienteId);
 
             if (response == null)
             {
@@ -374,6 +395,7 @@ namespace api.coleta.Controllers
 
         /// <summary>
         /// Cria assinatura com pagamento Boleto vinculada ao usuario (sem cliente).
+        /// Busca nome e CPF do usuario logado automaticamente se nao fornecidos.
         /// </summary>
         [HttpPost("usuario/criar-com-boleto")]
         public async Task<IActionResult> CriarAssinaturaUsuarioComBoleto([FromBody] CriarAssinaturaUsuarioBoletoDTO dto)
@@ -386,18 +408,34 @@ namespace api.coleta.Controllers
                 return Unauthorized("Usuario nao autenticado");
             }
 
-            if (string.IsNullOrWhiteSpace(dto.NomePagador))
+            // Buscar dados do usuario se nao fornecidos
+            var nomePagador = dto.NomePagador;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomePagador) || string.IsNullOrWhiteSpace(cpfCnpj))
             {
-                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto." });
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomePagador))
+                        nomePagador = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+            if (string.IsNullOrWhiteSpace(nomePagador))
             {
-                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto." });
+                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto. Atualize seu perfil." });
             }
 
             var (response, errorMessage) = await _gatewayService.CriarAssinaturaBoletoAsync(
-                dto.PlanoId, userId.Value, dto.NomePagador, dto.CpfCnpj, null);
+                dto.PlanoId, userId.Value, nomePagador, cpfCnpj, null);
 
             if (response == null)
             {
