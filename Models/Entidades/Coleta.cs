@@ -42,16 +42,37 @@ namespace api.coleta.Models.Entidades
 
     public enum Profundidade
     {
+        // Profundidades iniciando em 0
         ZeroADez,
         ZeroAVinte,
         ZeroATrinta,
         ZeroAQuarenta,
         ZeroACinquenta,
         ZeroASetenta,
+
+        // Profundidades iniciando em 10
         DezAVinte,
+        DezATrinta,
+        DezAQuarenta,
+        DezACinquenta,
+        DezASetenta,
+
+        // Profundidades iniciando em 20
         VinteATrinta,
+        VinteAQuarenta,
+        VinteACinquenta,
+        VinteASetenta,
+
+        // Profundidades iniciando em 30
         TrintaAQuarenta,
+        TrintaACinquenta,
+        TrintaASetenta,
+
+        // Profundidades iniciando em 40
         QuarentaACinquenta,
+        QuarentaASetenta,
+
+        // Profundidades iniciando em 50
         CinquentaASetenta
     }
 }
