@@ -14,7 +14,6 @@ namespace api.coleta.Repositories
         {
             return await Context.HistoricosPagamento
                 .Include(p => p.Assinatura)
-                    .ThenInclude(a => a.Plano)
                 .FirstOrDefaultAsync(p => p.Id == id && p.DeletadoEm == null);
         }
 
@@ -22,7 +21,6 @@ namespace api.coleta.Repositories
         {
             return await Context.HistoricosPagamento
                 .Include(p => p.Assinatura)
-                    .ThenInclude(a => a.Plano)
                 .FirstOrDefaultAsync(p => p.PixTxId == pixTxId && p.DeletadoEm == null);
         }
 

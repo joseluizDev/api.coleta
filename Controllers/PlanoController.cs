@@ -1,92 +1,62 @@
-using api.coleta.Models.DTOs.Licenciamento;
 using api.coleta.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.coleta.Controllers
 {
+    /// <summary>
+    /// Controller de compatibilidade para listagem de planos.
+    ///
+    /// NOTA: Os planos são gerenciados pelo Gateway de Pagamentos Python (PostgreSQL).
+    /// Este controller apenas faz proxy para o gateway para manter compatibilidade
+    /// com o frontend existente que chama /api/plano/listar.
+    ///
+    /// Gateway Endpoint: GET /api/v1/planos
+    /// </summary>
     [ApiController]
     [Route("api/plano")]
-    public class PlanoController : BaseController
+    public class PlanoController : ControllerBase
     {
-        private readonly PlanoService _planoService;
+        private readonly IGatewayService _gatewayService;
+        private readonly ILogger<PlanoController> _logger;
 
         public PlanoController(
-            PlanoService planoService,
-            INotificador notificador) : base(notificador)
+            IGatewayService gatewayService,
+            ILogger<PlanoController> logger)
         {
-            _planoService = planoService;
+            _gatewayService = gatewayService;
+            _logger = logger;
         }
 
         /// <summary>
-        /// Lista todos os planos ativos (público)
+        /// Lista planos disponiveis via Gateway de Pagamentos.
+        /// Endpoint de compatibilidade para frontend.
         /// </summary>
         [HttpGet("listar")]
         [AllowAnonymous]
-        public async Task<IActionResult> ListarPlanos()
+        public async Task<IActionResult> Listar()
         {
-            var planos = await _planoService.ListarPlanosAtivosAsync();
+            _logger.LogDebug("Listando planos via gateway");
+            var planos = await _gatewayService.ListarPlanosAsync();
             return Ok(planos);
         }
 
         /// <summary>
-        /// Obtém um plano por ID
+        /// Obtem plano por ID via Gateway de Pagamentos.
         /// </summary>
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<IActionResult> ObterPlano([FromRoute] Guid id)
+        public async Task<IActionResult> ObterPorId([FromRoute] Guid id)
         {
-            var plano = await _planoService.ObterPorIdAsync(id);
+            var planos = await _gatewayService.ListarPlanosAsync();
+            var plano = planos.FirstOrDefault(p => p.Id == id);
 
             if (plano == null)
             {
-                return NotFound("Plano não encontrado");
+                return NotFound(new { message = "Plano não encontrado" });
             }
 
             return Ok(plano);
-        }
-
-        /// <summary>
-        /// Cria um novo plano (admin only)
-        /// </summary>
-        [HttpPost("criar")]
-        [Authorize]
-        public async Task<IActionResult> CriarPlano([FromBody] PlanoCreateDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var plano = await _planoService.CriarPlanoAsync(dto);
-            return CustomResponse(plano);
-        }
-
-        /// <summary>
-        /// Atualiza um plano existente (admin only)
-        /// </summary>
-        [HttpPut("{id}")]
-        [Authorize]
-        public async Task<IActionResult> AtualizarPlano([FromRoute] Guid id, [FromBody] PlanoCreateDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var plano = await _planoService.AtualizarPlanoAsync(id, dto);
-            return CustomResponse(plano);
-        }
-
-        /// <summary>
-        /// Desativa um plano (admin only)
-        /// </summary>
-        [HttpDelete("{id}")]
-        [Authorize]
-        public async Task<IActionResult> DesativarPlano([FromRoute] Guid id)
-        {
-            var resultado = await _planoService.DesativarPlanoAsync(id);
-            return CustomResponse(resultado);
         }
     }
 }

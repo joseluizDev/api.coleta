@@ -25,6 +25,9 @@ namespace api.coleta.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Verifica licenca do cliente (fallback local - detalhes do plano via Gateway)
+        /// </summary>
         public async Task<LicenseStatusDTO> VerificarLicencaDoClienteAsync(Guid clienteId)
         {
             var assinatura = await _assinaturaRepo.ObterAssinaturaAtivaDoClienteAsync(clienteId);
@@ -41,11 +44,6 @@ namespace api.coleta.Services
             }
 
             var hectaresUtilizados = await CalcularHectaresUtilizadosAsync(clienteId);
-            var hectaresDisponiveis = assinatura.Plano?.LimiteHectares ?? 0;
-            var percentualUtilizado = hectaresDisponiveis > 0
-                ? (hectaresUtilizados / hectaresDisponiveis) * 100
-                : 0;
-
             var diasRestantes = assinatura.DiasRestantes();
             var proximoDoVencimento = diasRestantes <= 30;
 
@@ -54,18 +52,10 @@ namespace api.coleta.Services
                 TemLicenca = true,
                 LicencaAtiva = assinatura.EstaVigente(),
                 StatusMensagem = assinatura.EstaVigente()
-                    ? $"Licença ativa - {assinatura.Plano?.Nome}"
+                    ? "Licença ativa"
                     : "Licença expirada",
-                PlanoAtual = assinatura.Plano != null ? new PlanoDTO
-                {
-                    Id = assinatura.Plano.Id,
-                    Nome = assinatura.Plano.Nome,
-                    Descricao = assinatura.Plano.Descricao,
-                    ValorAnual = assinatura.Plano.ValorAnual,
-                    LimiteHectares = assinatura.Plano.LimiteHectares,
-                    Ativo = assinatura.Plano.Ativo,
-                    RequereContato = assinatura.Plano.RequereContato
-                } : null,
+                // Plano details are fetched from Gateway PostgreSQL
+                PlanoAtual = null,
                 AssinaturaAtual = new AssinaturaDTO
                 {
                     Id = assinatura.Id,
@@ -82,8 +72,9 @@ namespace api.coleta.Services
                     StatusPagamento = assinatura.StatusPagamento
                 },
                 HectaresUtilizados = hectaresUtilizados,
-                HectaresDisponiveis = hectaresDisponiveis - hectaresUtilizados,
-                PercentualUtilizado = Math.Round(percentualUtilizado, 1),
+                // Limite de hectares deve ser consultado via Gateway
+                HectaresDisponiveis = 0,
+                PercentualUtilizado = 0,
                 DiasRestantes = diasRestantes,
                 ProximoDoVencimento = proximoDoVencimento,
                 DataVencimento = assinatura.DataFim,
@@ -94,11 +85,6 @@ namespace api.coleta.Services
             if (proximoDoVencimento && diasRestantes > 0)
             {
                 status.Alertas.Add($"Sua licença expira em {diasRestantes} dias. Renove agora!");
-            }
-
-            if (percentualUtilizado >= 90)
-            {
-                status.Alertas.Add($"Você está utilizando {percentualUtilizado:F1}% do limite de hectares.");
             }
 
             if (!assinatura.EstaVigente())
@@ -145,6 +131,11 @@ namespace api.coleta.Services
             };
         }
 
+        /// <summary>
+        /// Valida limite de hectares - ATENÇÃO: Limite deve ser consultado via Gateway.
+        /// Este método local apenas verifica se há assinatura ativa.
+        /// Para validacao completa com limite, use GatewayService.
+        /// </summary>
         public async Task<bool> ValidarLimiteHectaresAsync(Guid clienteId, decimal hectaresAdicionais)
         {
             var assinatura = await _assinaturaRepo.ObterAssinaturaAtivaDoClienteAsync(clienteId);
@@ -154,10 +145,10 @@ namespace api.coleta.Services
                 return false;
             }
 
-            var hectaresAtuais = await CalcularHectaresUtilizadosAsync(clienteId);
-            var limiteHectares = assinatura.Plano?.LimiteHectares ?? 0;
-
-            return (hectaresAtuais + hectaresAdicionais) <= limiteHectares;
+            // Limite de hectares agora é gerenciado pelo Gateway PostgreSQL
+            // Este método retorna true se há assinatura ativa (validação completa via Gateway)
+            _logger.LogWarning("ValidarLimiteHectaresAsync chamado localmente - use GatewayService para validação completa com limites");
+            return true;
         }
 
         private async Task<decimal> CalcularHectaresUtilizadosAsync(Guid? clienteId)
@@ -201,7 +192,8 @@ namespace api.coleta.Services
         }
 
         /// <summary>
-        /// Verifica licenca diretamente pelo UsuarioId (busca unificada: primeiro por UsuarioId, depois via Cliente)
+        /// Verifica licenca diretamente pelo UsuarioId (fallback local - detalhes do plano via Gateway)
+        /// Busca unificada: primeiro por UsuarioId, depois via Cliente
         /// </summary>
         public async Task<LicenseStatusDTO> VerificarLicencaDoUsuarioAsync(Guid usuarioId)
         {
@@ -221,11 +213,6 @@ namespace api.coleta.Services
 
             var clienteId = assinatura.ClienteId;
             var hectaresUtilizados = await CalcularHectaresUtilizadosAsync(clienteId);
-            var hectaresDisponiveis = assinatura.Plano?.LimiteHectares ?? 0;
-            var percentualUtilizado = hectaresDisponiveis > 0
-                ? (hectaresUtilizados / hectaresDisponiveis) * 100
-                : 0;
-
             var diasRestantes = assinatura.DiasRestantes();
             var proximoDoVencimento = diasRestantes <= 30;
 
@@ -234,18 +221,10 @@ namespace api.coleta.Services
                 TemLicenca = true,
                 LicencaAtiva = assinatura.EstaVigente(),
                 StatusMensagem = assinatura.EstaVigente()
-                    ? $"Licenca ativa - {assinatura.Plano?.Nome}"
+                    ? "Licenca ativa"
                     : "Licenca expirada",
-                PlanoAtual = assinatura.Plano != null ? new PlanoDTO
-                {
-                    Id = assinatura.Plano.Id,
-                    Nome = assinatura.Plano.Nome,
-                    Descricao = assinatura.Plano.Descricao,
-                    ValorAnual = assinatura.Plano.ValorAnual,
-                    LimiteHectares = assinatura.Plano.LimiteHectares,
-                    Ativo = assinatura.Plano.Ativo,
-                    RequereContato = assinatura.Plano.RequereContato
-                } : null,
+                // Plano details are fetched from Gateway PostgreSQL
+                PlanoAtual = null,
                 AssinaturaAtual = new AssinaturaDTO
                 {
                     Id = assinatura.Id,
@@ -262,8 +241,9 @@ namespace api.coleta.Services
                     StatusPagamento = assinatura.StatusPagamento
                 },
                 HectaresUtilizados = hectaresUtilizados,
-                HectaresDisponiveis = hectaresDisponiveis - hectaresUtilizados,
-                PercentualUtilizado = Math.Round(percentualUtilizado, 1),
+                // Limite de hectares deve ser consultado via Gateway
+                HectaresDisponiveis = 0,
+                PercentualUtilizado = 0,
                 DiasRestantes = diasRestantes,
                 ProximoDoVencimento = proximoDoVencimento,
                 DataVencimento = assinatura.DataFim,
@@ -274,11 +254,6 @@ namespace api.coleta.Services
             if (proximoDoVencimento && diasRestantes > 0)
             {
                 status.Alertas.Add($"Sua licenca expira em {diasRestantes} dias. Renove agora!");
-            }
-
-            if (percentualUtilizado >= 90)
-            {
-                status.Alertas.Add($"Voce esta utilizando {percentualUtilizado:F1}% do limite de hectares.");
             }
 
             if (!assinatura.EstaVigente())

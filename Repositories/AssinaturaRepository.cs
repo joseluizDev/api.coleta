@@ -13,16 +13,14 @@ namespace api.coleta.Repositories
         public async Task<Assinatura?> ObterPorIdAsync(Guid id)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .FirstOrDefaultAsync(a => a.Id == id && a.DeletadoEm == null);
         }
 
         public async Task<Assinatura?> ObterAssinaturaAtivaDoClienteAsync(Guid clienteId)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .Where(a => a.ClienteId == clienteId
                          && a.Ativa
                          && a.DataFim >= DateTime.Now
@@ -34,8 +32,7 @@ namespace api.coleta.Repositories
         public async Task<List<Assinatura>> ObterAssinaturasDoClienteAsync(Guid clienteId)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .Where(a => a.ClienteId == clienteId && a.DeletadoEm == null)
                 .OrderByDescending(a => a.DataInclusao)
                 .ToListAsync();
@@ -44,8 +41,7 @@ namespace api.coleta.Repositories
         public async Task<Assinatura?> ObterPorEfiPaySubscriptionIdAsync(string efiPaySubscriptionId)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .FirstOrDefaultAsync(a => a.EfiPaySubscriptionId == efiPaySubscriptionId
                                        && a.DeletadoEm == null);
         }
@@ -64,8 +60,7 @@ namespace api.coleta.Repositories
             var dataLimite = DateTime.Now.AddDays(dias);
 
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .Where(a => a.Ativa
                          && a.DataFim <= dataLimite
                          && a.DataFim >= DateTime.Now
@@ -76,8 +71,7 @@ namespace api.coleta.Repositories
         public async Task<List<Assinatura>> ObterAssinaturasExpiradasAsync()
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .Where(a => a.Ativa
                          && a.DataFim < DateTime.Now
                          && a.DeletadoEm == null)
@@ -95,8 +89,7 @@ namespace api.coleta.Repositories
         public async Task<Assinatura?> ObterAssinaturaAtivaDoUsuarioAsync(Guid usuarioId)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
+                                .Include(a => a.Cliente)
                 .Where(a => a.Cliente != null
                          && a.Cliente.UsuarioID == usuarioId
                          && a.Ativa
@@ -107,16 +100,15 @@ namespace api.coleta.Repositories
         }
 
         /// <summary>
-        /// Busca todas as assinaturas do usuário (através do Cliente)
+        /// Busca todas as assinaturas do usuário (via Cliente.UsuarioID ou UsuarioId direto)
         /// </summary>
         public async Task<List<Assinatura>> ObterAssinaturasDoUsuarioAsync(Guid usuarioId)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Cliente)
-                .Where(a => a.Cliente != null
-                         && a.Cliente.UsuarioID == usuarioId
-                         && a.DeletadoEm == null)
+                                .Include(a => a.Cliente)
+                .Where(a => a.DeletadoEm == null
+                         && ((a.Cliente != null && a.Cliente.UsuarioID == usuarioId)
+                             || a.UsuarioId == usuarioId))
                 .OrderByDescending(a => a.DataInclusao)
                 .ToListAsync();
         }
@@ -127,8 +119,7 @@ namespace api.coleta.Repositories
         public async Task<Assinatura?> ObterAssinaturaAtivaPorUsuarioAsync(Guid usuarioId)
         {
             return await Context.Assinaturas
-                .Include(a => a.Plano)
-                .Include(a => a.Usuario)
+                                .Include(a => a.Usuario)
                 .Where(a => a.UsuarioId == usuarioId
                          && a.Ativa
                          && a.DataFim >= DateTime.Now

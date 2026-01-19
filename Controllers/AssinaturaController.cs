@@ -2,7 +2,6 @@ using api.cliente.Interfaces;
 using api.cliente.Repositories;
 using api.coleta.Data;
 using api.coleta.Data.Repository;
-using api.coleta.Models.DTOs.EfiPay;
 using api.coleta.Models.DTOs.Licenciamento;
 using api.coleta.Repositories;
 using api.coleta.Services;
@@ -11,6 +10,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace api.coleta.Controllers
 {
+    /// <summary>
+    /// Controller para gerenciamento de assinaturas.
+    ///
+    /// IMPORTANTE: Os endpoints de criacao de assinatura com pagamento (PIX, Boleto, Cartao)
+    /// e planos foram migrados para o Gateway de Pagamentos Python (porta 8001).
+    ///
+    /// Endpoints do Gateway:
+    /// - POST /api/v1/assinaturas/pix - Criar assinatura com PIX
+    /// - GET /api/v1/planos - Listar planos
+    /// - POST /api/v1/subscriptions/check - Verificar licenca
+    /// </summary>
     [ApiController]
     [Route("api/assinatura")]
     [Authorize]
@@ -18,268 +28,26 @@ namespace api.coleta.Controllers
     {
         private readonly AssinaturaService _assinaturaService;
         private readonly LicenseService _licenseService;
+        private readonly IGatewayService _gatewayService;
         private readonly ClienteRepository _clienteRepo;
         private readonly UsuarioRepository _usuarioRepo;
-        private readonly PlanoRepository _planoRepo;
         private readonly IJwtToken _jwtToken;
-        private readonly IEfiPayBoletoService _boletoService;
-        private readonly IEfiPayCartaoService _cartaoService;
-        private readonly IEfiPayAssinaturaService _recorrenciaService;
-        private readonly IUnitOfWork _unitOfWork;
 
         public AssinaturaController(
             AssinaturaService assinaturaService,
             LicenseService licenseService,
+            IGatewayService gatewayService,
             ClienteRepository clienteRepo,
             UsuarioRepository usuarioRepo,
-            PlanoRepository planoRepo,
             IJwtToken jwtToken,
-            IEfiPayBoletoService boletoService,
-            IEfiPayCartaoService cartaoService,
-            IEfiPayAssinaturaService recorrenciaService,
-            IUnitOfWork unitOfWork,
             INotificador notificador) : base(notificador)
         {
             _assinaturaService = assinaturaService;
             _licenseService = licenseService;
+            _gatewayService = gatewayService;
             _clienteRepo = clienteRepo;
             _usuarioRepo = usuarioRepo;
-            _planoRepo = planoRepo;
             _jwtToken = jwtToken;
-            _boletoService = boletoService;
-            _cartaoService = cartaoService;
-            _recorrenciaService = recorrenciaService;
-            _unitOfWork = unitOfWork;
-        }
-
-        /// <summary>
-        /// Cria assinatura com pagamento PIX
-        /// </summary>
-        [HttpPost("criar-com-pix")]
-        public async Task<IActionResult> CriarAssinaturaComPix([FromBody] AssinaturaCreateComPixDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Se CPF não foi enviado, buscar do usuário logado
-            if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
-            {
-                var token = ObterIDDoToken();
-                var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-                if (userId != null)
-                {
-                    var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
-                    if (usuario != null && !string.IsNullOrWhiteSpace(usuario.CPF))
-                    {
-                        dto.CpfCnpj = usuario.CPF;
-                    }
-                }
-            }
-
-            // Validar se temos CPF/CNPJ
-            if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
-            {
-                return BadRequest(new { errors = new { CpfCnpj = new[] { "CPF ou CNPJ é obrigatório. Atualize seu perfil com um CPF válido." } } });
-            }
-
-            var resultado = await _assinaturaService.CriarAssinaturaComPagamentoPixAsync(dto);
-            return CustomResponse(resultado);
-        }
-
-        /// <summary>
-        /// Cria assinatura com pagamento PIX vinculada ao USUÁRIO (não requer cliente)
-        /// </summary>
-        [HttpPost("usuario/criar-com-pix")]
-        public async Task<IActionResult> CriarAssinaturaUsuarioComPix([FromBody] AssinaturaCreateUsuarioDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Obter usuário do token
-            var token = ObterIDDoToken();
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (userId == null)
-            {
-                return Unauthorized(new { message = "Usuário não autenticado." });
-            }
-
-            var resultado = await _assinaturaService.CriarAssinaturaUsuarioComPixAsync(userId.Value, dto);
-            return CustomResponse(resultado);
-        }
-
-        /// <summary>
-        /// Cria assinatura com pagamento Boleto vinculada ao USUÁRIO (não requer cliente)
-        /// </summary>
-        [HttpPost("usuario/criar-com-boleto")]
-        public async Task<IActionResult> CriarAssinaturaUsuarioComBoleto([FromBody] AssinaturaCreateUsuarioBoletoDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Obter usuário do token
-            var token = ObterIDDoToken();
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (userId == null)
-            {
-                return Unauthorized(new { message = "Usuário não autenticado." });
-            }
-
-            // Buscar dados do usuário
-            var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
-            if (usuario == null)
-            {
-                return NotFound(new { message = "Usuário não encontrado." });
-            }
-
-            var cpfCnpj = dto.CpfCnpj ?? usuario.CPF ?? "";
-            var email = dto.Email ?? usuario.Email ?? "usuario@email.com";
-            var telefone = usuario.Telefone;
-
-            if (string.IsNullOrWhiteSpace(cpfCnpj))
-            {
-                return BadRequest(new { errors = new { CpfCnpj = new[] { "CPF ou CNPJ é obrigatório." } } });
-            }
-
-            // Buscar plano
-            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
-            if (plano == null)
-            {
-                return NotFound("Plano não encontrado.");
-            }
-
-            try
-            {
-                var boleto = await _boletoService.CriarBoletoAsync(
-                    plano.ValorAnual,
-                    cpfCnpj,
-                    usuario.NomeCompleto ?? "Usuário",
-                    email,
-                    telefone,
-                    dto.DataVencimento,
-                    $"AgroSyste - {plano.Nome}"
-                );
-
-                // Criar assinatura vinculada ao usuário
-                var (assinatura, boletoResult) = await _assinaturaService.CriarAssinaturaUsuarioComBoletoAsync(
-                    userId.Value,
-                    new AssinaturaCreateUsuarioDTO { PlanoId = dto.PlanoId, CpfCnpj = cpfCnpj },
-                    boleto
-                );
-
-                return Ok(new
-                {
-                    assinatura,
-                    boleto = boletoResult
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Cria assinatura com pagamento Cartão vinculada ao USUÁRIO (não requer cliente)
-        /// </summary>
-        [HttpPost("usuario/criar-com-cartao")]
-        public async Task<IActionResult> CriarAssinaturaUsuarioComCartao([FromBody] AssinaturaCreateUsuarioCartaoDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (string.IsNullOrEmpty(dto.PaymentToken))
-            {
-                return BadRequest(new { errors = new { PaymentToken = new[] { "Token de pagamento é obrigatório." } } });
-            }
-
-            // Obter usuário do token
-            var token = ObterIDDoToken();
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (userId == null)
-            {
-                return Unauthorized(new { message = "Usuário não autenticado." });
-            }
-
-            // Buscar dados do usuário
-            var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
-            if (usuario == null)
-            {
-                return NotFound(new { message = "Usuário não encontrado." });
-            }
-
-            var cpfCnpj = dto.CpfCnpj ?? usuario.CPF ?? "";
-            var email = dto.Email ?? usuario.Email ?? "usuario@email.com";
-            var telefone = dto.Telefone ?? usuario.Telefone;
-
-            if (string.IsNullOrWhiteSpace(cpfCnpj))
-            {
-                return BadRequest(new { errors = new { CpfCnpj = new[] { "CPF ou CNPJ é obrigatório." } } });
-            }
-
-            if (string.IsNullOrWhiteSpace(telefone))
-            {
-                return BadRequest(new { errors = new { Telefone = new[] { "Telefone é obrigatório para pagamento com cartão." } } });
-            }
-
-            // Buscar plano
-            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
-            if (plano == null)
-            {
-                return NotFound("Plano não encontrado.");
-            }
-
-            try
-            {
-                var cartao = await _cartaoService.CriarCobrancaCartaoAsync(
-                    plano.ValorAnual,
-                    dto.PaymentToken,
-                    dto.Parcelas,
-                    cpfCnpj,
-                    usuario.NomeCompleto ?? "Usuário",
-                    email,
-                    telefone,
-                    $"AgroSyste - {plano.Nome}"
-                );
-
-                if (!cartao.Aprovado)
-                {
-                    return BadRequest(new
-                    {
-                        error = "Pagamento recusado",
-                        motivo = cartao.MotivoRecusa,
-                        podeRetentar = cartao.PodeRetentar
-                    });
-                }
-
-                // Criar assinatura vinculada ao usuário (já ativa pois cartão foi aprovado)
-                var (assinatura, pagamento) = await _assinaturaService.CriarAssinaturaUsuarioComCartaoAsync(
-                    userId.Value,
-                    new AssinaturaCreateUsuarioDTO { PlanoId = dto.PlanoId, CpfCnpj = cpfCnpj },
-                    cartao
-                );
-
-                return Ok(new
-                {
-                    assinatura,
-                    pagamento
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
         }
 
         /// <summary>
@@ -290,259 +58,6 @@ namespace api.coleta.Controllers
         {
             var resultado = await _assinaturaService.VerificarPagamentoPixAsync(id);
             return CustomResponse(resultado);
-        }
-
-        /// <summary>
-        /// Cria assinatura com pagamento via Boleto
-        /// </summary>
-        [HttpPost("criar-com-boleto")]
-        public async Task<IActionResult> CriarAssinaturaComBoleto([FromBody] AssinaturaCreateComBoletoDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Buscar dados do usuário/cliente
-            var (cpfCnpj, nomeCliente, email, telefone) = await ObterDadosClienteAsync(dto.CpfCnpj, dto.Email);
-
-            if (string.IsNullOrWhiteSpace(cpfCnpj))
-            {
-                return BadRequest(new { errors = new { CpfCnpj = new[] { "CPF ou CNPJ é obrigatório." } } });
-            }
-
-            // Buscar plano
-            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
-            if (plano == null)
-            {
-                return NotFound("Plano não encontrado.");
-            }
-
-            try
-            {
-                var boleto = await _boletoService.CriarBoletoAsync(
-                    plano.ValorAnual,
-                    cpfCnpj,
-                    nomeCliente ?? "Cliente",
-                    email ?? "cliente@email.com",
-                    telefone,
-                    dto.DataVencimento,
-                    $"AgroSyste - {plano.Nome}"
-                );
-
-                // Criar assinatura pendente
-                var assinatura = await _assinaturaService.CriarAssinaturaPendenteAsync(dto.PlanoId, dto.ClienteId, "boleto", boleto.ChargeId.ToString());
-
-                return Ok(new
-                {
-                    assinatura,
-                    boleto
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Cria assinatura com pagamento via Cartão de Crédito
-        /// </summary>
-        [HttpPost("criar-com-cartao")]
-        public async Task<IActionResult> CriarAssinaturaComCartao([FromBody] AssinaturaCreateComCartaoDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (string.IsNullOrEmpty(dto.PaymentToken))
-            {
-                return BadRequest(new { errors = new { PaymentToken = new[] { "Token de pagamento é obrigatório." } } });
-            }
-
-            // Buscar dados do usuário/cliente
-            var (cpfCnpj, nomeCliente, email, telefone) = await ObterDadosClienteAsync(dto.CpfCnpj, dto.Email);
-
-            // Usar telefone do DTO se fornecido
-            if (!string.IsNullOrWhiteSpace(dto.Telefone))
-            {
-                telefone = dto.Telefone;
-            }
-
-            if (string.IsNullOrWhiteSpace(cpfCnpj))
-            {
-                return BadRequest(new { errors = new { CpfCnpj = new[] { "CPF ou CNPJ é obrigatório." } } });
-            }
-
-            if (string.IsNullOrWhiteSpace(telefone))
-            {
-                return BadRequest(new { errors = new { Telefone = new[] { "Telefone é obrigatório para pagamento com cartão." } } });
-            }
-
-            // Buscar plano
-            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
-            if (plano == null)
-            {
-                return NotFound("Plano não encontrado.");
-            }
-
-            try
-            {
-                var cartao = await _cartaoService.CriarCobrancaCartaoAsync(
-                    plano.ValorAnual,
-                    dto.PaymentToken,
-                    dto.Parcelas,
-                    cpfCnpj,
-                    nomeCliente ?? "Cliente",
-                    email ?? "cliente@email.com",
-                    telefone,
-                    $"AgroSyste - {plano.Nome}"
-                );
-
-                if (!cartao.Aprovado)
-                {
-                    return BadRequest(new
-                    {
-                        error = "Pagamento recusado",
-                        motivo = cartao.MotivoRecusa,
-                        podeRetentar = cartao.PodeRetentar
-                    });
-                }
-
-                // Criar assinatura ativa (pagamento aprovado)
-                var assinatura = await _assinaturaService.CriarAssinaturaAtivaPorCartaoAsync(
-                    dto.PlanoId,
-                    dto.ClienteId,
-                    cartao.ChargeId.ToString(),
-                    cartao.Parcelas,
-                    cartao.ValorParcela,
-                    cartao.Bandeira
-                );
-
-                return Ok(new
-                {
-                    assinatura,
-                    pagamento = cartao
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Cria assinatura recorrente (mensal)
-        /// </summary>
-        [HttpPost("criar-recorrente")]
-        public async Task<IActionResult> CriarAssinaturaRecorrente([FromBody] AssinaturaCreateRecorrenteDTO dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Buscar dados do usuário/cliente
-            var (cpfCnpj, nomeCliente, email, telefone) = await ObterDadosClienteAsync(dto.CpfCnpj, dto.Email);
-
-            if (string.IsNullOrWhiteSpace(cpfCnpj))
-            {
-                return BadRequest(new { errors = new { CpfCnpj = new[] { "CPF ou CNPJ é obrigatório." } } });
-            }
-
-            // Buscar plano
-            var plano = await _planoRepo.ObterPorIdAsync(dto.PlanoId);
-            if (plano == null)
-            {
-                return NotFound("Plano não encontrado.");
-            }
-
-            // Verificar se plano tem ID na EfiPay
-            if (!plano.EfiPayPlanIdInt.HasValue)
-            {
-                return BadRequest(new { error = "Plano não configurado para assinaturas recorrentes." });
-            }
-
-            try
-            {
-                AssinaturaRecorrenteDTO recorrencia;
-
-                if (dto.MetodoPagamento == "credit_card")
-                {
-                    if (string.IsNullOrEmpty(dto.PaymentToken))
-                    {
-                        return BadRequest(new { errors = new { PaymentToken = new[] { "Token de pagamento é obrigatório para cartão." } } });
-                    }
-
-                    recorrencia = await _recorrenciaService.CriarAssinaturaRecorrenteCartaoAsync(
-                        plano.EfiPayPlanIdInt.Value,
-                        plano.ValorMensal,
-                        dto.PaymentToken,
-                        cpfCnpj,
-                        nomeCliente ?? "Cliente",
-                        email ?? "cliente@email.com",
-                        telefone
-                    );
-                }
-                else // banking_billet
-                {
-                    recorrencia = await _recorrenciaService.CriarAssinaturaRecorrenteBoletoAsync(
-                        plano.EfiPayPlanIdInt.Value,
-                        plano.ValorMensal,
-                        cpfCnpj,
-                        nomeCliente ?? "Cliente",
-                        email ?? "cliente@email.com",
-                        telefone
-                    );
-                }
-
-                // Criar assinatura no sistema
-                var assinatura = await _assinaturaService.CriarAssinaturaRecorrenteAsync(
-                    dto.PlanoId,
-                    dto.ClienteId,
-                    recorrencia.SubscriptionId.ToString(),
-                    dto.MetodoPagamento
-                );
-
-                return Ok(new
-                {
-                    assinatura,
-                    recorrencia
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Obtém opções de parcelamento para cartão
-        /// </summary>
-        [HttpGet("parcelas")]
-        [AllowAnonymous]
-        public async Task<IActionResult> ObterParcelas([FromQuery] string bandeira, [FromQuery] decimal valor)
-        {
-            if (string.IsNullOrEmpty(bandeira))
-            {
-                return BadRequest(new { error = "Bandeira do cartão é obrigatória." });
-            }
-
-            if (valor <= 0)
-            {
-                return BadRequest(new { error = "Valor deve ser maior que zero." });
-            }
-
-            try
-            {
-                var parcelas = await _cartaoService.ObterParcelasAsync(bandeira, valor);
-                return Ok(parcelas);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
         }
 
         /// <summary>
@@ -566,7 +81,7 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Lista assinaturas do cliente do usuário logado
+        /// Lista assinaturas do cliente do usuario logado
         /// </summary>
         [HttpGet("minhas")]
         public async Task<IActionResult> MinhasAssinaturas()
@@ -574,7 +89,7 @@ namespace api.coleta.Controllers
             var clienteId = await ObterClienteIdDoUsuarioLogadoAsync();
             if (clienteId == null)
             {
-                return NotFound("Cliente não encontrado para o usuário logado.");
+                return NotFound("Cliente nao encontrado para o usuario logado.");
             }
 
             var assinaturas = await _assinaturaService.ListarAssinaturasDoClienteAsync(clienteId.Value);
@@ -582,7 +97,7 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Obtém assinatura ativa do cliente do usuário logado
+        /// Obtem assinatura ativa do cliente do usuario logado
         /// </summary>
         [HttpGet("ativa")]
         public async Task<IActionResult> ObterAssinaturaAtiva()
@@ -616,28 +131,40 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Verifica status da licença do cliente do usuário logado
+        /// Verifica status da licenca do cliente do usuario logado.
+        /// Primeiro tenta via Gateway de Pagamentos, depois fallback para banco local.
         /// </summary>
         [HttpGet("status")]
         public async Task<IActionResult> VerificarStatus()
         {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
             var clienteId = await ObterClienteIdDoUsuarioLogadoAsync();
 
-            // Se encontrou cliente, busca licença pelo clienteId
+            // Tentar verificar via Gateway de Pagamentos primeiro
+            var gatewayResponse = await _gatewayService.VerificarLicencaAsync(userId, clienteId);
+            if (gatewayResponse != null)
+            {
+                return Ok(new
+                {
+                    temLicenca = gatewayResponse.TemLicenca,
+                    licencaAtiva = gatewayResponse.LicencaAtiva,
+                    statusMensagem = gatewayResponse.StatusMensagem,
+                    diasRestantes = gatewayResponse.DiasRestantes,
+                    plano = gatewayResponse.Plano,
+                    fonte = "gateway"
+                });
+            }
+
+            // Fallback: verificar no banco local
             if (clienteId != null)
             {
                 var statusByCliente = await _licenseService.VerificarLicencaDoClienteAsync(clienteId.Value);
-
-                // Se encontrou licença ativa, retorna
                 if (statusByCliente.LicencaAtiva)
                 {
                     return Ok(statusByCliente);
                 }
             }
-
-            // Fallback: busca diretamente pelo UsuarioId (caso cliente tenha assinatura mas UsuarioID diverge)
-            var token = ObterIDDoToken();
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
 
             if (userId != null)
             {
@@ -645,7 +172,6 @@ namespace api.coleta.Controllers
                 return Ok(statusByUser);
             }
 
-            // Se não encontrou por nenhum método
             return Ok(new
             {
                 temLicenca = false,
@@ -656,7 +182,7 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Lista assinaturas de um cliente específico (admin only)
+        /// Lista assinaturas de um cliente especifico (admin only)
         /// </summary>
         [HttpGet("cliente/{clienteId}")]
         public async Task<IActionResult> ListarAssinaturasDoCliente([FromRoute] Guid clienteId)
@@ -666,7 +192,7 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Limpa todas as assinaturas do cliente do usuário logado (desenvolvimento)
+        /// Limpa todas as assinaturas do cliente do usuario logado (desenvolvimento)
         /// </summary>
         [HttpDelete("limpar-historico")]
         public async Task<IActionResult> LimparHistorico()
@@ -674,7 +200,7 @@ namespace api.coleta.Controllers
             var clienteId = await ObterClienteIdDoUsuarioLogadoAsync();
             if (clienteId == null)
             {
-                return NotFound("Cliente não encontrado para o usuário logado.");
+                return NotFound("Cliente nao encontrado para o usuario logado.");
             }
 
             var deletados = await _assinaturaService.DeletarTodasAssinaturasDoClienteAsync(clienteId.Value);
@@ -682,34 +208,662 @@ namespace api.coleta.Controllers
         }
 
         /// <summary>
-        /// Lista histórico de pagamentos do usuário logado
+        /// Lista historico de pagamentos do usuario logado.
+        /// Busca diretamente do Gateway de Pagamentos (fonte da verdade).
         /// </summary>
         [HttpGet("historico-pagamentos")]
         public async Task<IActionResult> ListarHistoricoPagamentos()
         {
-            var clienteId = await ObterClienteIdDoUsuarioLogadoAsync();
-
-            // Tenta buscar pelo clienteId primeiro
-            if (clienteId != null)
-            {
-                var historico = await _assinaturaService.ListarHistoricoPagamentosDoClienteAsync(clienteId.Value);
-                if (historico.Any())
-                {
-                    return Ok(historico);
-                }
-            }
-
-            // Fallback: busca pelo UsuarioId diretamente
             var token = ObterIDDoToken();
             var userId = _jwtToken.ObterUsuarioIdDoToken(token);
 
-            if (userId != null)
+            if (userId == null)
             {
-                var historico = await _assinaturaService.ListarHistoricoPagamentosDoUsuarioAsync(userId.Value);
-                return Ok(historico);
+                return Unauthorized("Usuario nao autenticado");
             }
 
-            return Ok(new List<HistoricoPagamentoDTO>());
+            // Buscar pagamentos diretamente do Gateway (fonte da verdade)
+            var pagamentos = await _gatewayService.ListarPagamentosDoUsuarioAsync(userId.Value);
+
+            // Mapear para o formato esperado pelo frontend
+            var historico = pagamentos.Select(p => new HistoricoPagamentoDTO
+            {
+                Id = p.Id,
+                AssinaturaId = p.AssinaturaId,
+                PlanoNome = p.PlanoNome ?? "Plano",
+                Valor = p.Valor,
+                MetodoPagamento = p.MetodoPagamento,
+                Status = p.Status,
+                DataPagamento = p.DataPagamento
+            }).ToList();
+
+            return Ok(historico);
+        }
+
+        /// <summary>
+        /// Lista planos disponiveis via Gateway de Pagamentos
+        /// </summary>
+        [HttpGet("planos")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ListarPlanos()
+        {
+            var planos = await _gatewayService.ListarPlanosAsync();
+            return Ok(planos);
+        }
+
+        /// <summary>
+        /// Obtem opcoes de parcelamento para cartao de credito.
+        /// Calcula parcelas com e sem juros baseado no valor e bandeira.
+        /// </summary>
+        [HttpGet("parcelas")]
+        [AllowAnonymous]
+        public IActionResult ObterParcelas([FromQuery] string bandeira, [FromQuery] int valor)
+        {
+            // Valor vem em centavos, converter para reais
+            var valorReais = valor / 100m;
+
+            // Configuracoes de parcelamento (pode ser ajustado conforme necessidade)
+            var maxParcelas = 12;
+            var parcelasSemJuros = 3; // Parcelas sem juros
+            var taxaJurosMensal = 0.0199m; // 1.99% ao mes
+
+            var parcelas = new List<object>();
+
+            for (int i = 1; i <= maxParcelas; i++)
+            {
+                decimal valorParcela;
+                decimal valorTotal;
+                bool temJuros = i > parcelasSemJuros;
+                decimal percentualJuros = 0;
+
+                if (temJuros)
+                {
+                    // Calculo com juros compostos
+                    var fator = (decimal)Math.Pow((double)(1 + taxaJurosMensal), i);
+                    valorTotal = valorReais * fator;
+                    valorParcela = Math.Round(valorTotal / i, 2);
+                    percentualJuros = Math.Round((valorTotal / valorReais - 1) * 100, 2);
+                }
+                else
+                {
+                    valorTotal = valorReais;
+                    valorParcela = Math.Round(valorReais / i, 2);
+                }
+
+                // Valor minimo por parcela (R$ 5,00)
+                if (valorParcela < 5) break;
+
+                // Frontend espera 'parcela' e valor em centavos
+                parcelas.Add(new
+                {
+                    parcela = i,
+                    valor = (int)(valorParcela * 100), // Centavos
+                    valorReais = valorParcela,
+                    valorFormatado = valorParcela.ToString("C", new System.Globalization.CultureInfo("pt-BR")),
+                    valorTotal = (int)(valorTotal * 100), // Centavos
+                    valorTotalReais = Math.Round(valorTotal, 2),
+                    valorTotalFormatado = Math.Round(valorTotal, 2).ToString("C", new System.Globalization.CultureInfo("pt-BR")),
+                    temJuros,
+                    percentualJuros
+                });
+            }
+
+            return Ok(new { parcelas, bandeira });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento PIX via Gateway de Pagamentos.
+        /// Compatibilidade com frontend existente.
+        /// </summary>
+        [HttpPost("criar-com-pix")]
+        public async Task<IActionResult> CriarAssinaturaComPix([FromBody] CriarAssinaturaPixDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura PIX. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString(),
+                    dataExpiracao = DateTime.UtcNow.AddHours(24)
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento PIX vinculada ao usuario (sem cliente).
+        /// Compatibilidade com frontend existente.
+        /// </summary>
+        [HttpPost("usuario/criar-com-pix")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComPix([FromBody] CriarAssinaturaUsuarioPixDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAsync(dto.PlanoId, userId.Value, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura PIX. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString(),
+                    dataExpiracao = DateTime.UtcNow.AddHours(24)
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento Boleto via Gateway de Pagamentos.
+        /// Busca nome e CPF do usuario logado automaticamente se nao fornecidos.
+        /// </summary>
+        [HttpPost("criar-com-boleto")]
+        public async Task<IActionResult> CriarAssinaturaComBoleto([FromBody] CriarAssinaturaBoletoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Buscar dados do usuario se nao fornecidos
+            var nomePagador = dto.NomePagador;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomePagador) || string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomePagador))
+                        nomePagador = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(nomePagador))
+            {
+                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto. Atualize seu perfil." });
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaBoletoAsync(
+                dto.PlanoId, userId.Value, nomePagador, cpfCnpj, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com boleto. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    codigoBarras = response.BoletoCodigoBarras,
+                    url = response.BoletoUrl,
+                    txId = response.PagamentoId.ToString(),
+                    dataVencimento = DateTime.UtcNow.AddDays(3)
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento Boleto vinculada ao usuario (sem cliente).
+        /// Busca nome e CPF do usuario logado automaticamente se nao fornecidos.
+        /// </summary>
+        [HttpPost("usuario/criar-com-boleto")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComBoleto([FromBody] CriarAssinaturaUsuarioBoletoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Buscar dados do usuario se nao fornecidos
+            var nomePagador = dto.NomePagador;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomePagador) || string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomePagador))
+                        nomePagador = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(nomePagador))
+            {
+                return BadRequest(new { message = "Nome do pagador e obrigatorio para boleto. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para boleto. Atualize seu perfil." });
+            }
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaBoletoAsync(
+                dto.PlanoId, userId.Value, nomePagador, cpfCnpj, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com boleto. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                pagamento = new
+                {
+                    codigoBarras = response.BoletoCodigoBarras,
+                    url = response.BoletoUrl,
+                    txId = response.PagamentoId.ToString(),
+                    dataVencimento = DateTime.UtcNow.AddDays(3)
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com Pix Automatico (recorrencia) via Gateway de Pagamentos.
+        /// O Pix Automatico permite que o cliente autorize uma unica vez e as cobrancas
+        /// futuras sejam feitas automaticamente.
+        /// </summary>
+        [HttpPost("criar-com-pix-automatico")]
+        public async Task<IActionResult> CriarAssinaturaComPixAutomatico([FromBody] CriarAssinaturaPixAutomaticoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Buscar dados do usuario se nao fornecidos
+            var nomeDevedor = dto.NomeDevedor;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor) || string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomeDevedor))
+                        nomeDevedor = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor))
+            {
+                return BadRequest(new { message = "Nome do devedor e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            var periodicidade = string.IsNullOrWhiteSpace(dto.Periodicidade) ? "ANUAL" : dto.Periodicidade;
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAutomaticoAsync(
+                dto.PlanoId, userId.Value, nomeDevedor, cpfCnpj, periodicidade, dto.ClienteId);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com Pix Automatico. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                recorrencia = new
+                {
+                    idRec = response.IdRec,
+                    contrato = response.Contrato,
+                    statusRecorrencia = response.StatusRecorrencia,
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    linkAutorizacao = response.LinkAutorizacao
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com Pix Automatico vinculada ao usuario (sem cliente).
+        /// </summary>
+        [HttpPost("usuario/criar-com-pix-automatico")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComPixAutomatico([FromBody] CriarAssinaturaUsuarioPixAutomaticoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Buscar dados do usuario se nao fornecidos
+            var nomeDevedor = dto.NomeDevedor;
+            var cpfCnpj = dto.CpfCnpj;
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor) || string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nomeDevedor))
+                        nomeDevedor = usuario.NomeCompleto;
+                    if (string.IsNullOrWhiteSpace(cpfCnpj))
+                        cpfCnpj = usuario.CPF;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(nomeDevedor))
+            {
+                return BadRequest(new { message = "Nome do devedor e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            if (string.IsNullOrWhiteSpace(cpfCnpj))
+            {
+                return BadRequest(new { message = "CPF/CNPJ e obrigatorio para Pix Automatico. Atualize seu perfil." });
+            }
+
+            var periodicidade = string.IsNullOrWhiteSpace(dto.Periodicidade) ? "ANUAL" : dto.Periodicidade;
+
+            var (response, errorMessage) = await _gatewayService.CriarAssinaturaPixAutomaticoAsync(
+                dto.PlanoId, userId.Value, nomeDevedor, cpfCnpj, periodicidade, null);
+
+            if (response == null)
+            {
+                return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com Pix Automatico. Tente novamente." });
+            }
+
+            // Mapear resposta para formato esperado pelo frontend
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id
+                },
+                recorrencia = new
+                {
+                    idRec = response.IdRec,
+                    contrato = response.Contrato,
+                    statusRecorrencia = response.StatusRecorrencia,
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    linkAutorizacao = response.LinkAutorizacao
+                },
+                pagamento = new
+                {
+                    qrCode = response.PixCopiaCola,
+                    qrCodeImagem = response.PixQrCodeBase64,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento Cartao de Credito via Gateway de Pagamentos.
+        /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
+        ///
+        /// **Modo Recomendado (payment_token):**
+        /// - Envie payment_token gerado pelo SDK EfiPay no frontend
+        /// - Dados sensiveis do cartao nao passam pelo backend
+        ///
+        /// **Modo Legado (dados do cartao):**
+        /// - Envie os dados do cartao diretamente
+        /// - Usado quando SDK nao esta disponivel
+        /// </summary>
+        [HttpPost("criar-com-cartao")]
+        public async Task<IActionResult> CriarAssinaturaComCartao([FromBody] CriarAssinaturaCartaoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Determinar modo de pagamento
+            bool usarToken = !string.IsNullOrWhiteSpace(dto.PaymentToken);
+
+            if (usarToken)
+            {
+                // Modo payment_token: validar dados do cliente
+                if (string.IsNullOrWhiteSpace(dto.NomePagador))
+                {
+                    return BadRequest(new { message = "Nome do pagador e obrigatorio para pagamento com token." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+                {
+                    return BadRequest(new { message = "CPF/CNPJ e obrigatorio para pagamento com token." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoComTokenAsync(
+                    dto.PlanoId, userId.Value, dto.PaymentToken!, dto.NomePagador, dto.CpfCnpj,
+                    dto.Email, dto.Telefone, dto.Parcelas, dto.Bandeira, dto.ClienteId);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
+            else
+            {
+                // Modo legado: validar dados do cartao
+                if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
+                {
+                    return BadRequest(new { message = "Numero do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Cvv))
+                {
+                    return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
+                {
+                    return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.NomeCartao))
+                {
+                    return BadRequest(new { message = "Nome no cartao e obrigatorio." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
+                    dto.PlanoId, userId.Value, dto.NumeroCartao!, dto.Cvv!, dto.MesValidade!,
+                    dto.AnoValidade!, dto.NomeCartao!, dto.Parcelas, dto.Bandeira, dto.ClienteId);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
+        }
+
+        private IActionResult RetornarRespostaCartao(GatewayAssinaturaCartaoResponse response)
+        {
+            return Ok(new
+            {
+                assinatura = new
+                {
+                    id = response.Assinatura?.Id,
+                    ativa = response.Assinatura?.Ativa ?? false
+                },
+                pagamento = new
+                {
+                    chargeId = response.ChargeId,
+                    status = response.Status,
+                    autorizacao = response.Autorizacao,
+                    parcelas = response.Parcelas,
+                    valorTotal = response.ValorTotal,
+                    txId = response.PagamentoId.ToString()
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cria assinatura com pagamento Cartao de Credito vinculada ao usuario (sem cliente).
+        /// O pagamento e processado imediatamente. Se aprovado, a assinatura e ativada automaticamente.
+        ///
+        /// **Modo Recomendado (payment_token):**
+        /// - Envie payment_token gerado pelo SDK EfiPay no frontend
+        /// - Dados sensiveis do cartao nao passam pelo backend
+        ///
+        /// **Modo Legado (dados do cartao):**
+        /// - Envie os dados do cartao diretamente
+        /// - Usado quando SDK nao esta disponivel
+        /// </summary>
+        [HttpPost("usuario/criar-com-cartao")]
+        public async Task<IActionResult> CriarAssinaturaUsuarioComCartao([FromBody] CriarAssinaturaUsuarioCartaoDTO dto)
+        {
+            var token = ObterIDDoToken();
+            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+
+            if (userId == null)
+            {
+                return Unauthorized("Usuario nao autenticado");
+            }
+
+            // Determinar modo de pagamento
+            bool usarToken = !string.IsNullOrWhiteSpace(dto.PaymentToken);
+
+            if (usarToken)
+            {
+                // Modo payment_token: validar dados do cliente
+                if (string.IsNullOrWhiteSpace(dto.NomePagador))
+                {
+                    return BadRequest(new { message = "Nome do pagador e obrigatorio para pagamento com token." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.CpfCnpj))
+                {
+                    return BadRequest(new { message = "CPF/CNPJ e obrigatorio para pagamento com token." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoComTokenAsync(
+                    dto.PlanoId, userId.Value, dto.PaymentToken!, dto.NomePagador, dto.CpfCnpj,
+                    dto.Email, dto.Telefone, dto.Parcelas, dto.Bandeira, null);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
+            else
+            {
+                // Modo legado: validar dados do cartao
+                if (string.IsNullOrWhiteSpace(dto.NumeroCartao))
+                {
+                    return BadRequest(new { message = "Numero do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Cvv))
+                {
+                    return BadRequest(new { message = "CVV do cartao e obrigatorio." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.MesValidade) || string.IsNullOrWhiteSpace(dto.AnoValidade))
+                {
+                    return BadRequest(new { message = "Data de validade do cartao e obrigatoria." });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.NomeCartao))
+                {
+                    return BadRequest(new { message = "Nome no cartao e obrigatorio." });
+                }
+
+                var (response, errorMessage) = await _gatewayService.CriarAssinaturaCartaoAsync(
+                    dto.PlanoId, userId.Value, dto.NumeroCartao!, dto.Cvv!, dto.MesValidade!,
+                    dto.AnoValidade!, dto.NomeCartao!, dto.Parcelas, dto.Bandeira, null);
+
+                if (response == null)
+                {
+                    return BadRequest(new { message = errorMessage ?? "Erro ao criar assinatura com cartao. Tente novamente." });
+                }
+
+                return RetornarRespostaCartao(response);
+            }
         }
 
         private async Task<Guid?> ObterClienteIdDoUsuarioLogadoAsync()
@@ -728,84 +882,6 @@ namespace api.coleta.Controllers
 
             return cliente?.Id;
         }
-
-        /// <summary>
-        /// Registra um plano local na EfiPay e salva o ID retornado
-        /// </summary>
-        [HttpPost("registrar-plano-efipay/{planoId}")]
-        public async Task<IActionResult> RegistrarPlanoEfiPay([FromRoute] Guid planoId)
-        {
-            var plano = await _planoRepo.ObterPorIdAsync(planoId);
-            if (plano == null)
-            {
-                return NotFound("Plano não encontrado.");
-            }
-
-            if (plano.EfiPayPlanIdInt.HasValue)
-            {
-                return Ok(new {
-                    message = "Plano já registrado na EfiPay",
-                    efiPayPlanId = plano.EfiPayPlanIdInt.Value
-                });
-            }
-
-            try
-            {
-                // Criar plano na EfiPay (mensal, 12 repetições = 1 ano)
-                var efiPayPlan = await _recorrenciaService.CriarPlanoEfiPayAsync(
-                    $"AgroSyste - {plano.Nome}",
-                    intervaloMeses: 1,
-                    repeticoes: 12
-                );
-
-                // Salvar ID no plano local
-                plano.EfiPayPlanIdInt = efiPayPlan.PlanId;
-                _planoRepo.Atualizar(plano);
-                _unitOfWork.Commit();
-
-                return Ok(new
-                {
-                    message = "Plano registrado na EfiPay com sucesso",
-                    efiPayPlanId = efiPayPlan.PlanId,
-                    efiPayPlanName = efiPayPlan.Name
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        private async Task<(string? CpfCnpj, string? Nome, string? Email, string? Telefone)> ObterDadosClienteAsync(string? cpfCnpjDto, string? emailDto)
-        {
-            string? cpfCnpj = cpfCnpjDto;
-            string? nome = null;
-            string? email = emailDto;
-            string? telefone = null;
-
-            var token = ObterIDDoToken();
-            var userId = _jwtToken.ObterUsuarioIdDoToken(token);
-
-            if (userId != null)
-            {
-                var usuario = await _usuarioRepo.ObterPorIdAsync(userId.Value);
-                if (usuario != null)
-                {
-                    if (string.IsNullOrWhiteSpace(cpfCnpj) && !string.IsNullOrWhiteSpace(usuario.CPF))
-                    {
-                        cpfCnpj = usuario.CPF;
-                    }
-                    nome = usuario.NomeCompleto;
-                    if (string.IsNullOrWhiteSpace(email))
-                    {
-                        email = usuario.Email;
-                    }
-                    telefone = usuario.Telefone;
-                }
-            }
-
-            return (cpfCnpj, nome, email, telefone);
-        }
     }
 
     public class AtivarAssinaturaDTO
@@ -813,41 +889,93 @@ namespace api.coleta.Controllers
         public string? Observacao { get; set; }
     }
 
-    public class AssinaturaCreateComBoletoDTO
+    public class CriarAssinaturaPixDTO
     {
         public Guid PlanoId { get; set; }
-        public Guid ClienteId { get; set; }
-        public string? CpfCnpj { get; set; }
-        public string? Email { get; set; }
-        public DateTime? DataVencimento { get; set; }
+        public Guid? ClienteId { get; set; }
     }
 
-    public class AssinaturaCreateComCartaoDTO
+    public class CriarAssinaturaUsuarioPixDTO
     {
         public Guid PlanoId { get; set; }
-        public Guid ClienteId { get; set; }
+    }
+
+    public class CriarAssinaturaBoletoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+        public string NomePagador { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+    }
+
+    public class CriarAssinaturaUsuarioBoletoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public string NomePagador { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+    }
+
+    public class CriarAssinaturaPixAutomaticoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+        public string NomeDevedor { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+        public string Periodicidade { get; set; } = "ANUAL";
+    }
+
+    public class CriarAssinaturaUsuarioPixAutomaticoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public string NomeDevedor { get; set; } = string.Empty;
+        public string CpfCnpj { get; set; } = string.Empty;
+        public string Periodicidade { get; set; } = "ANUAL";
+    }
+
+    public class CriarAssinaturaCartaoDTO
+    {
+        public Guid PlanoId { get; set; }
+        public Guid? ClienteId { get; set; }
+
+        // Modo recomendado: payment_token do SDK EfiPay
+        public string? PaymentToken { get; set; }
+        public string? NomePagador { get; set; }
         public string? CpfCnpj { get; set; }
         public string? Email { get; set; }
         public string? Telefone { get; set; }
-        public string PaymentToken { get; set; } = string.Empty;
+
+        // Modo legado: dados do cartao diretamente
+        public string? NumeroCartao { get; set; }
+        public string? Cvv { get; set; }
+        public string? MesValidade { get; set; }
+        public string? AnoValidade { get; set; }
+        public string? NomeCartao { get; set; }
+
+        // Comum a ambos os modos
         public int Parcelas { get; set; } = 1;
+        public string? Bandeira { get; set; }
     }
 
-    public class AssinaturaCreateUsuarioBoletoDTO
+    public class CriarAssinaturaUsuarioCartaoDTO
     {
         public Guid PlanoId { get; set; }
-        public string? CpfCnpj { get; set; }
-        public string? Email { get; set; }
-        public DateTime? DataVencimento { get; set; }
-    }
 
-    public class AssinaturaCreateUsuarioCartaoDTO
-    {
-        public Guid PlanoId { get; set; }
+        // Modo recomendado: payment_token do SDK EfiPay
+        public string? PaymentToken { get; set; }
+        public string? NomePagador { get; set; }
         public string? CpfCnpj { get; set; }
         public string? Email { get; set; }
         public string? Telefone { get; set; }
-        public string PaymentToken { get; set; } = string.Empty;
+
+        // Modo legado: dados do cartao diretamente
+        public string? NumeroCartao { get; set; }
+        public string? Cvv { get; set; }
+        public string? MesValidade { get; set; }
+        public string? AnoValidade { get; set; }
+        public string? NomeCartao { get; set; }
+
+        // Comum a ambos os modos
         public int Parcelas { get; set; } = 1;
+        public string? Bandeira { get; set; }
     }
 }

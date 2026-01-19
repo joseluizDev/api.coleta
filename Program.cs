@@ -210,44 +210,22 @@ builder.Services.AddScoped<ContatoService>();
 builder.Services.AddHostedService<MensagemAgendadaJob>();
 
 // ===== LICENSING SYSTEM =====
-// EfiPay Configuration - Credenciais de Produção
-var basePath = AppContext.BaseDirectory;
-var certFileName = "producao-643354-AgroSyste.p12";
-var certPath = Path.Combine(basePath, certFileName);
-
-// Fallback para desenvolvimento local
-if (!File.Exists(certPath))
+// Gateway de Pagamentos (Python FastAPI)
+builder.Services.Configure<GatewaySettings>(options =>
 {
-    certPath = Path.Combine(Directory.GetCurrentDirectory(), certFileName);
-}
-
-builder.Services.Configure<EfiPaySettings>(options =>
-{
-    // Credenciais EfiPay (Produção)
-    options.ClientId = "Client_Id_17711359c8b4a9ce370814111e98a3e1c4821443";
-    options.ClientSecret = "Client_Secret_a1e623c3bd3f90262b377c9ab167def9b9d89234";
-    options.ChavePix = "43f89047-906c-4876-b9d5-1c3149cbff95";
-    options.CertificadoPath = certPath;
-
-    // Webhook URLs para EfiPay (skip-mTLS com validação de IP + HMAC)
-    // PIX: /api/webhook/efipay (Efi Pay adiciona /pix automaticamente)
-    // Cobranças/Assinaturas Recorrentes: /api/webhook/efipay/cobranca
-    // IMPORTANTE: hmac deve ser igual ao WEBHOOK_HMAC_SECRET no WebhookController
-    options.WebhookUrl = "https://apis-api-coleta.w4dxlp.easypanel.host/api/webhook/efipay?hmac=agrosyste_webhook_2024_secret&ignorar=";
-    options.UseSandbox = false; // Produção
+    options.BaseUrl = Environment.GetEnvironmentVariable("GATEWAY_URL") ?? "http://localhost:8001";
+    options.ApiKey = Environment.GetEnvironmentVariable("GATEWAY_API_KEY") ?? "agrosyste_gateway_api_key_2024";
+    options.TimeoutSeconds = 30;
 });
 
-// Licensing Repositories
-builder.Services.AddScoped<PlanoRepository>();
+// Gateway HTTP Client
+builder.Services.AddHttpClient<IGatewayService, GatewayService>();
+
+// Licensing Repositories (Planos são gerenciados pelo Gateway PostgreSQL)
 builder.Services.AddScoped<AssinaturaRepository>();
 builder.Services.AddScoped<HistoricoPagamentoRepository>();
 
-// Licensing Services
-builder.Services.AddScoped<IEfiPayService, EfiPayService>();
-builder.Services.AddScoped<IEfiPayBoletoService, EfiPayBoletoService>();
-builder.Services.AddScoped<IEfiPayCartaoService, EfiPayCartaoService>();
-builder.Services.AddScoped<IEfiPayAssinaturaService, EfiPayAssinaturaService>();
-builder.Services.AddScoped<PlanoService>();
+// Licensing Services (PlanoService removido - planos via Gateway)
 builder.Services.AddScoped<AssinaturaService>();
 builder.Services.AddScoped<LicenseService>();
 
