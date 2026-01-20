@@ -76,7 +76,7 @@ namespace api.coleta.Tests
             Assert.Equal("01/01/2024", dto.Safra);
             Assert.Equal("helber prates", dto.Funcionario);
             Assert.Equal("Observacao da coleta", dto.Observacao);
-            Assert.Equal("ZeroADez", dto.Profundidade);
+            Assert.Equal("0-10", dto.Profundidade);
             Assert.Equal(new[] { "Macronutrientes", "Micronutrientes", "Textura" }, dto.TiposAnalise);
             Assert.Equal(relatorio.JsonRelatorio, dto.JsonRelatorio);
             Assert.True(dto.IsRelatorio);
