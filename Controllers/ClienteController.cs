@@ -3,7 +3,6 @@ using api.cliente.Interfaces;
 using api.cliente.Models.DTOs;
 using api.cliente.Services;
 using api.coleta.Controllers;
-using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

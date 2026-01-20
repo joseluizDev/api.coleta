@@ -43,4 +43,26 @@ namespace api.talhao.Models.DTOs
         public double Lat { get; set; }
         public double Lng { get; set; }
     }
+
+    // DTO para listagem de talhões agrupados por fazenda
+    public class TalhaoAgrupadoPorFazendaResponseDTO
+    {
+        public Guid FazendaID { get; set; }
+        public string NomeFazenda { get; set; }
+        public List<TalhaoResumoDTO> Talhoes { get; set; }
+    }
+
+    public class TalhaoResumoDTO
+    {
+        public Guid Id { get; set; }
+        public string Nome { get; set; }
+        public double Area { get; set; }
+        public string? Observacao { get; set; }
+    }
+
+    public class AtualizarNomeTalhaoJsonDTO
+    {
+        public string Nome { get; set; }
+        public string? Observacao { get; set; }
+    }
 }

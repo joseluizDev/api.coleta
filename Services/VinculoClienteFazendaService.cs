@@ -1,8 +1,9 @@
 using api.coleta.Data.Repository;
+using System;
 using api.coleta.Models.Entidades;
 using api.coleta.Services;
+using api.coleta.Utils.Maps;
 using api.vinculoClienteFazenda.Models.DTOs;
-using AutoMapper;
 
 namespace api.vinculoClienteFazenda.Services
 {
@@ -10,8 +11,8 @@ namespace api.vinculoClienteFazenda.Services
    {
       private readonly VinculoClienteFazendaRepository _vinculoRepository;
 
-      public VinculoClienteFazendaService(VinculoClienteFazendaRepository vinculoRepository, IUnitOfWork unitOfWork, IMapper mapper)
-          : base(unitOfWork, mapper)
+      public VinculoClienteFazendaService(VinculoClienteFazendaRepository vinculoRepository, IUnitOfWork unitOfWork)
+          : base(unitOfWork)
       {
          _vinculoRepository = vinculoRepository;
       }
@@ -23,19 +24,27 @@ namespace api.vinculoClienteFazenda.Services
          {
             return null;
          }
-         return _mapper.Map<VinculoResponseDTO>(vinculo);
+         return vinculo.ToResponseDto();
       }
 
       public void SalvarVinculo(VinculoRequestDTO vinculoDto)
       {
-         var vinculoEntidade = _mapper.Map<VinculoClienteFazenda>(vinculoDto);
+         var vinculoEntidade = vinculoDto.ToEntity();
+         if (vinculoEntidade == null)
+         {
+            throw new InvalidOperationException("Não foi possível converter os dados do vínculo.");
+         }
          _vinculoRepository.Adicionar(vinculoEntidade);
          UnitOfWork.Commit();
       }
 
       public void AtualizarVinculo(VinculoRequestDTO vinculoDto)
       {
-         var vinculoEntidade = _mapper.Map<VinculoClienteFazenda>(vinculoDto);
+         var vinculoEntidade = vinculoDto.ToEntity();
+         if (vinculoEntidade == null)
+         {
+            throw new InvalidOperationException("Não foi possível converter os dados do vínculo.");
+         }
          _vinculoRepository.Atualizar(vinculoEntidade);
          UnitOfWork.Commit();
       }

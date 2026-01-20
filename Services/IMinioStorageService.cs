@@ -7,13 +7,16 @@ namespace api.minionStorage.Services
     public class MinioStorage : IMinioStorage
     {
         private readonly MinioClient _minioClient;
+        private readonly string _publicUrl;
 
-        public MinioStorage(string endpoint, string accessKey, string secretKey)
+        public MinioStorage(string endpoint, string accessKey, string secretKey, string publicUrl)
         {
             _minioClient = new MinioClient()
                 .WithEndpoint(endpoint)
                 .WithCredentials(accessKey, secretKey)
                 .Build() as MinioClient;
+
+            _publicUrl = publicUrl?.TrimEnd('/') ?? $"https://{endpoint}";
         }
 
         public async Task<string> UploadFileAsync(string bucketName, string objectName, Stream data, string type)
@@ -75,8 +78,23 @@ namespace api.minionStorage.Services
 
         public Task<string> GetUrl(string bucketName, string objectName)
         {
-            string url = $"https://apis-minio.w4dxlp.easypanel.host/{bucketName}/{objectName}";
+            string url = $"{_publicUrl}/{bucketName}/{objectName}";
             return Task.FromResult(url);
+        }
+
+        public async Task<bool> DeleteFileAsync(string bucketName, string objectName)
+        {
+            try
+            {
+                await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+                    .WithBucket(bucketName)
+                    .WithObject(objectName));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Erro ao deletar o arquivo: {ex.Message}", ex);
+            }
         }
     }
 }
