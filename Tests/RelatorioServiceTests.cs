@@ -5,6 +5,7 @@ using api.coleta.Services.Relatorio;
 using api.coleta.Tests.Fakes;
 using api.coleta.Tests.Helpers;
 using api.coleta.Data;
+using api.coleta.Utils;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -52,7 +53,7 @@ public class RelatorioServiceTests
         Assert.NotNull(resultado);
         Assert.Equal(relatorio.Id, resultado!.Id);
         Assert.Equal(coleta.NomeColeta, resultado.NomeColeta);
-        Assert.Equal(coleta.Profundidade.ToString(), resultado.Profundidade);
+        Assert.Equal(ProfundidadeFormatter.Formatar(coleta.Profundidade), resultado.Profundidade);
         Assert.Equal(relatorio.LinkBackup, resultado.LinkBackup);
         Assert.Contains("Macronutrientes", resultado.TiposAnalise);
         Assert.Equal(relatorio.JsonRelatorio, resultado.JsonRelatorio);
