@@ -336,9 +336,19 @@ namespace api.coleta.Services
                 RelatorioId = relatorio.Id,
                 ColetaId = relatorio.ColetaId,
                 NomeTalhao = relatorio.Coleta?.Talhao?.Nome ?? string.Empty,
-                NomeFazenda = relatorio.Coleta?.Fazenda?.Nome ?? string.Empty,
-                NomeSafra = relatorio.Coleta?.Safra?.Observacao ?? string.Empty
+                NomeFazenda = relatorio.Coleta?.Fazenda?.Nome ?? string.Empty
             };
+
+            // Mapear SafraDTO
+            if (relatorio.Coleta?.Safra != null)
+            {
+                resumo.Safra = new SafraDTO
+                {
+                    Observacao = relatorio.Coleta.Safra.Observacao,
+                    DataInicio = relatorio.Coleta.Safra.DataInicio,
+                    DataFim = relatorio.Coleta.Safra.DataFim
+                };
+            }
 
             // Carregar configurações personalizadas do usuário
             var configsPersonalizadasList = _nutrientConfigRepository.ListarNutrientConfigsComFallback(userId);

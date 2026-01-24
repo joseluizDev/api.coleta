@@ -96,7 +96,10 @@ public class RelatorioServiceTests
         var dto = resultado.First();
         Assert.Equal(coleta.NomeColeta, dto.NomeColeta);
         Assert.Equal(coleta.Talhao.Nome, dto.Talhao);
-        Assert.Equal(coleta.Safra!.Observacao, dto.Safra);
+        Assert.NotNull(dto.Safra);
+        Assert.Equal(coleta.Safra!.Observacao, dto.Safra.Observacao);
+        Assert.Equal(coleta.Safra!.DataInicio, dto.Safra.DataInicio);
+        Assert.Equal(coleta.Safra!.DataFim, dto.Safra.DataFim);
         Assert.Equal(coleta.UsuarioResp!.NomeCompleto, dto.Funcionario);
     }
 

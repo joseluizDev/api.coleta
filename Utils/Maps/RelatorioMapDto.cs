@@ -26,6 +26,17 @@ namespace api.coleta.Utils.Maps
                 .Select(x => x.ToString())
                 .ToList() ?? [];
 
+            SafraDTO? safraDto = null;
+            if (coleta?.Safra != null)
+            {
+                safraDto = new SafraDTO
+                {
+                    Observacao = coleta.Safra.Observacao,
+                    DataInicio = coleta.Safra.DataInicio,
+                    DataFim = coleta.Safra.DataFim
+                };
+            }
+
             return new RelatorioOuputDTO
             {
                 Id = relatorio.Id,
@@ -37,11 +48,7 @@ namespace api.coleta.Utils.Maps
                 TipoColeta = coleta != null ? coleta.TipoColeta.ToString() : "N/A",
                 Fazenda = !string.IsNullOrWhiteSpace(fazenda?.Nome) ? fazenda.Nome : "N/A",
                 NomeCliente = !string.IsNullOrWhiteSpace(cliente?.Nome) ? cliente.Nome : "N/A",
-                Safra = coleta?.Safra != null && !string.IsNullOrWhiteSpace(coleta.Safra.Observacao)
-                    ? coleta.Safra.Observacao
-                    : coleta?.Safra != null
-                        ? coleta.Safra.DataInicio.ToString("dd/MM/yyyy")
-                        : "N/A",
+                Safra = safraDto,
                 Funcionario = !string.IsNullOrWhiteSpace(coleta?.UsuarioResp?.NomeCompleto) ? coleta.UsuarioResp.NomeCompleto : "N/A",
                 Observacao = !string.IsNullOrWhiteSpace(coleta?.Observacao) ? coleta.Observacao : "N/A",
                 Profundidade = coleta != null ? ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()) : "N/A",
@@ -69,6 +76,17 @@ namespace api.coleta.Utils.Maps
                 .Select(x => x.ToString())
                 .ToList() ?? [];
 
+            SafraDTO? safraDto = null;
+            if (coleta?.Safra != null)
+            {
+                safraDto = new SafraDTO
+                {
+                    Observacao = coleta.Safra.Observacao,
+                    DataInicio = coleta.Safra.DataInicio,
+                    DataFim = coleta.Safra.DataFim
+                };
+            }
+
             return new RelatorioOuputDTO
             {
                 Id = relatorio.Id,
@@ -80,11 +98,7 @@ namespace api.coleta.Utils.Maps
                 TipoColeta = coleta != null ? coleta.TipoColeta.ToString() : "N/A",
                 Fazenda = !string.IsNullOrWhiteSpace(fazenda?.Nome) ? fazenda.Nome : "N/A",
                 NomeCliente = !string.IsNullOrWhiteSpace(cliente?.Nome) ? cliente.Nome : "N/A",
-                Safra = coleta?.Safra != null && !string.IsNullOrWhiteSpace(coleta.Safra.Observacao)
-                    ? coleta.Safra.Observacao
-                    : coleta?.Safra != null
-                        ? coleta.Safra.DataInicio.ToString("dd/MM/yyyy")
-                        : "N/A",
+                Safra = safraDto,
                 Funcionario = !string.IsNullOrWhiteSpace(coleta?.UsuarioResp?.NomeCompleto) ? coleta.UsuarioResp.NomeCompleto : "N/A",
                 Observacao = !string.IsNullOrWhiteSpace(coleta?.Observacao) ? coleta.Observacao : "N/A",
                 Profundidade = coleta != null ? ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()) : "N/A",
