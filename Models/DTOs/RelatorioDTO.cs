@@ -2,6 +2,13 @@
 
 namespace api.coleta.Models.DTOs
 {
+    public class SafraDTO
+    {
+        public string? Observacao { get; set; }
+        public DateTime DataInicio { get; set; }
+        public DateTime? DataFim { get; set; }
+    }
+
     public class RelatorioDTO
     {
         public Guid? Id { get; set; }
@@ -21,7 +28,7 @@ namespace api.coleta.Models.DTOs
         public string TipoColeta { get; set; }
         public string Fazenda { get; set; }
         public string NomeCliente { get; set; }
-        public string Safra { get; set; }
+        public SafraDTO? Safra { get; set; }
         public string Funcionario { get; set; }
         public string Observacao { get; set; }
         public string Profundidade { get; set; }
@@ -48,20 +55,20 @@ namespace api.coleta.Models.DTOs
         public string TipoColeta { get; set; }
         public string Fazenda { get; set; }
         public string NomeCliente { get; set; }
-        public string Safra { get; set; }
+        public SafraDTO? Safra { get; set; }
         public string Funcionario { get; set; }
         public string Observacao { get; set; }
         public string Profundidade { get; set; }
         public List<string> TiposAnalise { get; set; } = [];
         public string? JsonRelatorio { get; set; }
         public bool IsRelatorio { get; set; }
-        
+
         // Dados da coleta (mapa, grid, pontos)
         public ColetaDadosDTO? DadosColeta { get; set; }
-        
+
         // Classificações dos nutrientes por objeto
         public List<object>? NutrientesClassificados { get; set; }
-        
+
         /// <summary>
         /// Estatísticas de cada atributo (para gráficos mobile: histograma, min, média, max)
         /// </summary>
@@ -307,10 +314,10 @@ namespace api.coleta.Models.DTOs
         public Guid ColetaId { get; set; }
         public string NomeTalhao { get; set; } = string.Empty;
         public string NomeFazenda { get; set; } = string.Empty;
-        public string NomeSafra { get; set; } = string.Empty;
+        public SafraDTO? Safra { get; set; }
         public int TotalPontos { get; set; }
         public IndicadoresGraficosDTO IndicadoresGraficos { get; set; } = new IndicadoresGraficosDTO();
-        
+
         /// <summary>
         /// Estatísticas detalhadas de todos os atributos do relatório (para histogramas e análise estatística)
         /// </summary>

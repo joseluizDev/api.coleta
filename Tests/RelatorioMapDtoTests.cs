@@ -73,7 +73,10 @@ namespace api.coleta.Tests
             Assert.Equal("Talhao 1", dto.Talhao);
             Assert.Equal("Hexagonal", dto.TipoColeta);
             Assert.Equal("Fazenda Primavera", dto.Fazenda);
-            Assert.Equal("01/01/2024", dto.Safra);
+            Assert.NotNull(dto.Safra);
+            Assert.Equal(new DateTime(2024, 1, 1), dto.Safra.DataInicio);
+            Assert.Null(dto.Safra.DataFim);
+            Assert.Null(dto.Safra.Observacao);
             Assert.Equal("helber prates", dto.Funcionario);
             Assert.Equal("Observacao da coleta", dto.Observacao);
             Assert.Equal("0-10", dto.Profundidade);
@@ -103,7 +106,7 @@ namespace api.coleta.Tests
             Assert.Equal("N/A", dto.Talhao);
             Assert.Equal("N/A", dto.TipoColeta);
             Assert.Equal("N/A", dto.Fazenda);
-            Assert.Equal("N/A", dto.Safra);
+            Assert.Null(dto.Safra);
             Assert.Equal("N/A", dto.Funcionario);
             Assert.Equal("N/A", dto.Observacao);
             Assert.Equal("N/A", dto.Profundidade);
