@@ -291,23 +291,29 @@ namespace api.coleta.Services
             // Calcular estatísticas de todos os atributos para gráficos mobile
             var estatisticasAtributos = _statisticsService.CalcularEstatisticasAtributos(relatorio.JsonRelatorio, configsPersonalizadas);
             
-            // Carregar recomendações associadas à coleta
+            // Carregar recomendações associadas ao relatório ou coleta
             List<RecomendacaoOutputDTO>? recomendacoes = null;
-            if (relatorio.ColetaId.HasValue)
+            
+            // Primeiro tentar buscar pelo RelatorioId
+            var recomendacoesEntidades = await _recomendacaoRepository.ListarPorRelatorio(relatorio.Id);
+            
+            // Se não encontrar, tentar pelo ColetaId
+            if (recomendacoesEntidades.Count == 0 && relatorio.ColetaId != Guid.Empty)
             {
-                var recomendacoesEntidades = await _recomendacaoRepository.ListarPorColeta(relatorio.ColetaId.Value);
-                if (recomendacoesEntidades.Count > 0)
+                recomendacoesEntidades = await _recomendacaoRepository.ListarPorColeta(relatorio.ColetaId);
+            }
+            
+            if (recomendacoesEntidades.Count > 0)
+            {
+                recomendacoes = recomendacoesEntidades.Select(r => new RecomendacaoOutputDTO
                 {
-                    recomendacoes = recomendacoesEntidades.Select(r => new RecomendacaoOutputDTO
-                    {
-                        Id = r.Id,
-                        RelatorioId = r.RelatorioId,
-                        ColetaId = r.ColetaId,
-                        NomeColuna = r.NomeColuna,
-                        UnidadeMedida = r.UnidadeMedida,
-                        DataInclusao = r.DataInclusao
-                    }).ToList();
-                }
+                    Id = r.Id,
+                    RelatorioId = r.RelatorioId,
+                    ColetaId = r.ColetaId,
+                    NomeColuna = r.NomeColuna,
+                    UnidadeMedida = r.UnidadeMedida,
+                    DataInclusao = r.DataInclusao
+                }).ToList();
             }
             
             return new RelatorioCompletoOutputDTO
