@@ -18,6 +18,7 @@ namespace api.coleta.Services
         private readonly GeoJsonProcessorService _geoJsonProcessorService;
         private readonly AttributeStatisticsService _statisticsService;
         private readonly SoilIndicatorService _indicatorService;
+        private readonly RecomendacaoRepository _recomendacaoRepository;
 
         public RelatorioService(
             RelatorioRepository relatorioRepository,
@@ -27,6 +28,7 @@ namespace api.coleta.Services
             GeoJsonProcessorService geoJsonProcessorService,
             AttributeStatisticsService statisticsService,
             SoilIndicatorService indicatorService,
+            RecomendacaoRepository recomendacaoRepository,
             IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
@@ -36,6 +38,7 @@ namespace api.coleta.Services
             _geoJsonProcessorService = geoJsonProcessorService;
             _statisticsService = statisticsService;
             _indicatorService = indicatorService;
+            _recomendacaoRepository = recomendacaoRepository;
         }
 
         public async Task<string?> SalvarRelatorio(RelatorioDTO arquivo, Guid userId)
@@ -288,6 +291,25 @@ namespace api.coleta.Services
             // Calcular estatísticas de todos os atributos para gráficos mobile
             var estatisticasAtributos = _statisticsService.CalcularEstatisticasAtributos(relatorio.JsonRelatorio, configsPersonalizadas);
             
+            // Carregar recomendações associadas à coleta
+            List<RecomendacaoOutputDTO>? recomendacoes = null;
+            if (relatorio.ColetaId.HasValue)
+            {
+                var recomendacoesEntidades = await _recomendacaoRepository.ListarPorColeta(relatorio.ColetaId.Value);
+                if (recomendacoesEntidades.Count > 0)
+                {
+                    recomendacoes = recomendacoesEntidades.Select(r => new RecomendacaoOutputDTO
+                    {
+                        Id = r.Id,
+                        RelatorioId = r.RelatorioId,
+                        ColetaId = r.ColetaId,
+                        NomeColuna = r.NomeColuna,
+                        UnidadeMedida = r.UnidadeMedida,
+                        DataInclusao = r.DataInclusao
+                    }).ToList();
+                }
+            }
+            
             return new RelatorioCompletoOutputDTO
             {
                 Id = relatorioDto.Id,
@@ -308,7 +330,8 @@ namespace api.coleta.Services
                 IsRelatorio = relatorioDto.IsRelatorio,
                 DadosColeta = dadosColeta,
                 NutrientesClassificados = classificacoesPorObjeto,
-                EstatisticasAtributos = estatisticasAtributos
+                EstatisticasAtributos = estatisticasAtributos,
+                Recomendacoes = recomendacoes
             };
         }
 

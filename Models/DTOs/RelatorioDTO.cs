@@ -73,6 +73,11 @@ namespace api.coleta.Models.DTOs
         /// Estatísticas de cada atributo (para gráficos mobile: histograma, min, média, max)
         /// </summary>
         public Dictionary<string, EstatisticaAtributoDTO> EstatisticasAtributos { get; set; } = new Dictionary<string, EstatisticaAtributoDTO>();
+
+        /// <summary>
+        /// Recomendações de fertilizantes associadas a este relatório/coleta
+        /// </summary>
+        public List<RecomendacaoOutputDTO>? Recomendacoes { get; set; }
     }
 
     public class ColetaDadosDTO
