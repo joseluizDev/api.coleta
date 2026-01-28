@@ -152,11 +152,11 @@ namespace api.coleta.Services
                 if (!string.IsNullOrEmpty(visualizarMapa.NomeColeta))
                     coletaExistente.NomeColeta = visualizarMapa.NomeColeta;
 
-                if (visualizarMapa.TalhaoID != Guid.Empty)
-                    coletaExistente.TalhaoID = visualizarMapa.TalhaoID;
+                if (visualizarMapa.TalhaoID.HasValue && visualizarMapa.TalhaoID.Value != Guid.Empty)
+                    coletaExistente.TalhaoID = visualizarMapa.TalhaoID.Value;
 
-                if (visualizarMapa.FuncionarioID != Guid.Empty)
-                    coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID;
+                if (visualizarMapa.FuncionarioID.HasValue && visualizarMapa.FuncionarioID.Value != Guid.Empty)
+                    coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID.Value;
 
                 if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
                 {

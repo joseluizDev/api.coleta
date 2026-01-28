@@ -22,6 +22,7 @@ public class RelatorioServiceTests
         var geoJsonRepository = new GeoJsonRepository(context);
         var nutrientConfigRepository = new NutrientConfigRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
+        var recomendacaoRepository = new RecomendacaoRepository(context);
 
         // Criar os novos services extraídos
         var classificationService = new NutrientClassificationService();
@@ -37,6 +38,7 @@ public class RelatorioServiceTests
             geoJsonProcessorService,
             statisticsService,
             indicatorService,
+            recomendacaoRepository,
             unitOfWork);
     }
 
