@@ -38,30 +38,16 @@ namespace api.coleta.Controllers
                     return BadRequest("Dados da visualização de mapa são obrigatórios.");
                 }
 
-                // Validações específicas
-                if (visualizarMapa.TalhaoID == Guid.Empty)
+                // Validações específicas para criação (pelo menos um campo deve ser fornecido)
+                if (!visualizarMapa.TalhaoID.HasValue &&
+                    !visualizarMapa.FuncionarioID.HasValue &&
+                    string.IsNullOrEmpty(visualizarMapa.TipoColeta) &&
+                    (visualizarMapa.TipoAnalise == null || !visualizarMapa.TipoAnalise.Any()) &&
+                    string.IsNullOrEmpty(visualizarMapa.Profundidade) &&
+                    string.IsNullOrEmpty(visualizarMapa.NomeColeta) &&
+                    string.IsNullOrEmpty(visualizarMapa.Observacao))
                 {
-                    return BadRequest("TalhaoID é obrigatório.");
-                }
-
-                if (visualizarMapa.FuncionarioID == Guid.Empty)
-                {
-                    return BadRequest("FuncionarioID é obrigatório.");
-                }
-
-                if (string.IsNullOrEmpty(visualizarMapa.TipoColeta))
-                {
-                    return BadRequest("TipoColeta é obrigatório.");
-                }
-
-                if (visualizarMapa.TipoAnalise == null || !visualizarMapa.TipoAnalise.Any())
-                {
-                    return BadRequest("TipoAnalise é obrigatório.");
-                }
-
-                if (string.IsNullOrEmpty(visualizarMapa.Profundidade))
-                {
-                    return BadRequest("Profundidade é obrigatória.");
+                    return BadRequest("Pelo menos um campo deve ser fornecido para atualização.");
                 }
 
                 var token = ObterIDDoToken();
