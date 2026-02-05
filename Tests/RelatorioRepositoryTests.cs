@@ -17,10 +17,10 @@ public class RelatorioRepositoryTests
 
         var (usuarioId, _, _) = RelatorioTestData.SeedRelatorios(context);
 
-        var resultado = await repository.ListarRelatoriosPorUploadAsync(usuarioId);
+        var resultado = await repository.ListarRelatoriosPorUploadAsync(usuarioId, new api.coleta.models.dtos.QueryRelatorio());
 
-        Assert.Single(resultado);
-        Assert.All(resultado, item =>
+        Assert.Single(resultado.Items);
+        Assert.All(resultado.Items, item =>
         {
             Assert.Equal(usuarioId, item.UsuarioId);
             Assert.False(string.IsNullOrEmpty(item.LinkBackup));

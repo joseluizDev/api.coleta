@@ -1,4 +1,5 @@
 ﻿using api.coleta.Models.DTOs;
+using api.coleta.models.dtos;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Utils;
@@ -79,16 +80,25 @@ namespace api.coleta.Services
 
         }
 
-        public async Task<List<RelatorioOuputDTO>> ListarRelatoriosPorUploadAsync(Guid userId)
+        public async Task<PagedResult<RelatorioOuputDTO>> ListarRelatoriosPorUploadAsync(Guid userId, QueryRelatorio query)
         {
-
-            var relatorios = await _relatorioRepository.ListarRelatoriosPorUploadAsync(userId);
-            if (relatorios == null || relatorios.Count == 0)
+            var result = await _relatorioRepository.ListarRelatoriosPorUploadAsync(userId, query);
+            if (result.Items == null || result.Items.Count == 0)
             {
-                return [];
+                return new PagedResult<RelatorioOuputDTO>
+                {
+                    Items = [],
+                    TotalPages = 0,
+                    CurrentPage = query.Page
+                };
             }
 
-            return relatorios.MapRelatorioSemJson(); // Excludes JsonRelatorio for performance
+            return new PagedResult<RelatorioOuputDTO>
+            {
+                Items = result.Items.MapRelatorioSemJson(),
+                TotalPages = result.TotalPages,
+                CurrentPage = result.CurrentPage
+            };
         }
 
         public async Task<bool> AtualizarJsonRelatorioAsync(Guid coletaId, Guid relatorioId, Guid userId, string jsonRelatorio)

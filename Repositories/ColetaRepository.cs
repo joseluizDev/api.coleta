@@ -59,9 +59,9 @@ namespace api.coleta.Repositories
             if (query.SafraID.HasValue)
                 clientesQuery = clientesQuery.Where(c => c.SafraID == query.SafraID.Value);
 
-            // Filtro por Cliente
-            // if (query.ClienteID.HasValue)
-            //     clientesQuery = clientesQuery.Where(c => c. == query.ClienteID.Value);
+            // Filtro por Cliente (através do Talhao)
+            if (query.ClienteID.HasValue)
+                clientesQuery = clientesQuery.Where(c => c.Talhao != null && c.Talhao.Talhao != null && c.Talhao.Talhao.ClienteID == query.ClienteID.Value);
 
             // Filtro por Fazenda
             if (query.FazendaID.HasValue)
