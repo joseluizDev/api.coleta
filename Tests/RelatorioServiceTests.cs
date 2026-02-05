@@ -23,6 +23,7 @@ public class RelatorioServiceTests
         var nutrientConfigRepository = new NutrientConfigRepository(context);
         var recomendacaoRepository = new RecomendacaoRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
+        var recomendacaoRepository = new RecomendacaoRepository(context);
 
         // Criar os novos services extraídos
         var classificationService = new NutrientClassificationService();
