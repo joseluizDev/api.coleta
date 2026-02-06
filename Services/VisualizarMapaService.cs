@@ -158,6 +158,24 @@ namespace api.coleta.Services
                 if (visualizarMapa.FuncionarioID.HasValue && visualizarMapa.FuncionarioID.Value != Guid.Empty)
                     coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID.Value;
 
+                // Atualizar SafraID
+                if (visualizarMapa.SafraID.HasValue)
+                {
+                    if (visualizarMapa.SafraID.Value != Guid.Empty)
+                        coletaExistente.SafraID = visualizarMapa.SafraID.Value;
+                    else
+                        coletaExistente.SafraID = null; // Permite limpar a safra
+                }
+
+                // Atualizar FazendaID
+                if (visualizarMapa.FazendaID.HasValue)
+                {
+                    if (visualizarMapa.FazendaID.Value != Guid.Empty)
+                        coletaExistente.FazendaID = visualizarMapa.FazendaID.Value;
+                    else
+                        coletaExistente.FazendaID = null; // Permite limpar a fazenda
+                }
+
                 if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
                 {
                     if (Enum.TryParse<TipoColeta>(visualizarMapa.TipoColeta, out var tipoColeta))
@@ -181,7 +199,8 @@ namespace api.coleta.Services
                         coletaExistente.Profundidade = profundidade;
                 }
 
-                if (!string.IsNullOrEmpty(visualizarMapa.Observacao))
+                // Permite atualizar ou limpar a observação
+                if (visualizarMapa.Observacao != null)
                     coletaExistente.Observacao = visualizarMapa.Observacao;
 
                 Console.WriteLine($"Atualizando coleta com ID: {coletaExistente.Id}");
