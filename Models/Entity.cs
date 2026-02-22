@@ -10,6 +10,6 @@ public abstract class Entity
     }
 
     [Key]
-    public Guid Id { get; private set; }
+    public Guid Id { get; set; }
     public DateTime DataInclusao { get; private set; }
 }
