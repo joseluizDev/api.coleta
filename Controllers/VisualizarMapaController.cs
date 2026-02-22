@@ -78,9 +78,6 @@ namespace api.coleta.Controllers
             catch (Exception ex)
             {
                 // Log detalhado do erro
-                Console.WriteLine($"Erro detalhado ao salvar visualização de mapa:");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"InnerException: {ex.InnerException.Message}");
