@@ -316,10 +316,18 @@ var app = builder.Build();
             var tabelaExiste = false;
             try
             {
-                db.Database.ExecuteSqlRaw("SELECT 1 FROM ConfiguracaoPadraos LIMIT 1");
-                tabelaExiste = true;
+                var conn = db.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                    conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ConfiguracaoPadraos'";
+                var result = cmd.ExecuteScalar();
+                tabelaExiste = Convert.ToInt64(result) > 0;
             }
-            catch { /* tabela não existe, banco é novo */ }
+            catch (Exception exCheck)
+            {
+                logger.LogWarning(exCheck, "Falha ao verificar existência de tabelas no banco.");
+            }
 
             if (tabelaExiste)
             {
