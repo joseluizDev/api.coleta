@@ -1,4 +1,5 @@
 ﻿using api.coleta.Models.DTOs;
+using api.coleta.models.dtos;
 using api.coleta.Models.Entidades;
 using api.coleta.Repositories;
 using api.coleta.Utils;
@@ -18,6 +19,7 @@ namespace api.coleta.Services
         private readonly GeoJsonProcessorService _geoJsonProcessorService;
         private readonly AttributeStatisticsService _statisticsService;
         private readonly SoilIndicatorService _indicatorService;
+        private readonly RecomendacaoRepository _recomendacaoRepository;
 
         public RelatorioService(
             RelatorioRepository relatorioRepository,
@@ -27,6 +29,7 @@ namespace api.coleta.Services
             GeoJsonProcessorService geoJsonProcessorService,
             AttributeStatisticsService statisticsService,
             SoilIndicatorService indicatorService,
+            RecomendacaoRepository recomendacaoRepository,
             IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _relatorioRepository = relatorioRepository;
@@ -36,6 +39,7 @@ namespace api.coleta.Services
             _geoJsonProcessorService = geoJsonProcessorService;
             _statisticsService = statisticsService;
             _indicatorService = indicatorService;
+            _recomendacaoRepository = recomendacaoRepository;
         }
 
         public async Task<string?> SalvarRelatorio(RelatorioDTO arquivo, Guid userId)
@@ -76,16 +80,25 @@ namespace api.coleta.Services
 
         }
 
-        public async Task<List<RelatorioOuputDTO>> ListarRelatoriosPorUploadAsync(Guid userId)
+        public async Task<PagedResult<RelatorioOuputDTO>> ListarRelatoriosPorUploadAsync(Guid userId, QueryRelatorio query)
         {
-
-            var relatorios = await _relatorioRepository.ListarRelatoriosPorUploadAsync(userId);
-            if (relatorios == null || relatorios.Count == 0)
+            var result = await _relatorioRepository.ListarRelatoriosPorUploadAsync(userId, query);
+            if (result.Items == null || result.Items.Count == 0)
             {
-                return [];
+                return new PagedResult<RelatorioOuputDTO>
+                {
+                    Items = [],
+                    TotalPages = 0,
+                    CurrentPage = query.Page
+                };
             }
 
-            return relatorios.MapRelatorioSemJson(); // Excludes JsonRelatorio for performance
+            return new PagedResult<RelatorioOuputDTO>
+            {
+                Items = result.Items.MapRelatorioSemJson(),
+                TotalPages = result.TotalPages,
+                CurrentPage = result.CurrentPage
+            };
         }
 
         public async Task<bool> AtualizarJsonRelatorioAsync(Guid coletaId, Guid relatorioId, Guid userId, string jsonRelatorio)
@@ -288,6 +301,220 @@ namespace api.coleta.Services
             // Calcular estatísticas de todos os atributos para gráficos mobile
             var estatisticasAtributos = _statisticsService.CalcularEstatisticasAtributos(relatorio.JsonRelatorio, configsPersonalizadas);
             
+            // Carregar recomendações associadas ao relatório ou coleta
+            List<RecomendacaoComDadosDTO>? recomendacoes = null;
+            
+            // Primeiro tentar buscar pelo RelatorioId
+            var recomendacoesEntidades = await _recomendacaoRepository.ListarPorRelatorio(relatorio.Id);
+            
+            // Se não encontrar, tentar pelo ColetaId
+            if (recomendacoesEntidades.Count == 0 && relatorio.ColetaId != Guid.Empty)
+            {
+                recomendacoesEntidades = await _recomendacaoRepository.ListarPorColeta(relatorio.ColetaId);
+            }
+            
+            if (recomendacoesEntidades.Count > 0)
+            {
+                // Pré-parsear o JSON do relatório uma única vez para extrair valores por coluna
+                var jsonDataParaRecomendacoes = new List<System.Text.Json.JsonElement>();
+                if (!string.IsNullOrEmpty(relatorio.JsonRelatorio))
+                {
+                    try
+                    {
+                        var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                        var parsed = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(relatorio.JsonRelatorio, opts);
+                        if (parsed.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var elem in parsed.EnumerateArray())
+                            {
+                                if (elem.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                    jsonDataParaRecomendacoes.Add(elem);
+                            }
+                        }
+                    }
+                    catch { /* JSON inválido — continuar sem valores */ }
+                }
+
+                // Cores para recomendação: do verde (menor) ao vermelho (maior) — mesma ordem do web
+                var coresRecomendacao = new[] { "#317C53", "#90FF4C", "#E1E86E", "#EB883C", "#EB3F3F" };
+
+                recomendacoes = recomendacoesEntidades.Select(r =>
+                {
+                    var dto = new RecomendacaoComDadosDTO
+                    {
+                        Id = r.Id,
+                        RelatorioId = r.RelatorioId,
+                        ColetaId = r.ColetaId,
+                        NomeColuna = r.NomeColuna,
+                        UnidadeMedida = r.UnidadeMedida,
+                        DataInclusao = r.DataInclusao
+                    };
+
+                    // Normaliza string para comparação: lowercase, colapsa espaços múltiplos, remove acentos
+                    static string NormalizarChave(string s)
+                    {
+                        if (string.IsNullOrEmpty(s)) return string.Empty;
+                        var semAcento = string.Concat(
+                            s.Normalize(System.Text.NormalizationForm.FormD)
+                             .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                        );
+                        // colapsar múltiplos espaços e minúsculas
+                        return System.Text.RegularExpressions.Regex.Replace(semAcento.ToLowerInvariant(), @"\s+", " ").Trim();
+                    }
+
+                    var nomeNormalizado = NormalizarChave(r.NomeColuna);
+
+                    // Extrair valores numéricos por ponto para esta coluna
+                    var pontoValores = new List<(int Id, double Valor)>();
+                    foreach (var ponto in jsonDataParaRecomendacoes)
+                    {
+                        // Obter ID — aceita int ou double (ex: 2.0)
+                        int pontoId;
+                        if (ponto.TryGetProperty("ID", out var idProp) && idProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        {
+                            if (!idProp.TryGetInt32(out pontoId))
+                            {
+                                if (idProp.TryGetDouble(out double idDouble))
+                                    pontoId = (int)idDouble;
+                                else
+                                    continue;
+                            }
+                        }
+                        else
+                            continue;
+
+                        // Buscar a coluna: primeiro exato, depois normalizado
+                        System.Text.Json.JsonElement valProp;
+                        if (!ponto.TryGetProperty(r.NomeColuna, out valProp))
+                        {
+                            // Fallback: iterar propriedades e comparar normalizado
+                            bool found = false;
+                            foreach (var prop in ponto.EnumerateObject())
+                            {
+                                if (NormalizarChave(prop.Name) == nomeNormalizado)
+                                {
+                                    valProp = prop.Value;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) continue;
+                        }
+
+                        double valor;
+                        if (valProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        {
+                            if (!valProp.TryGetDouble(out valor)) continue;
+                        }
+                        else if (valProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            var strVal = valProp.GetString();
+                            if (string.IsNullOrEmpty(strVal) || !double.TryParse(strVal, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out valor))
+                                continue;
+                        }
+                        else
+                            continue;
+
+                        pontoValores.Add((pontoId, valor));
+                    }
+
+                    if (pontoValores.Count == 0)
+                        return dto;
+
+                    // Calcular intervalos de cor (mesma lógica do web)
+                    var valoresUnicos = pontoValores.Select(p => p.Valor).Distinct().OrderBy(v => v).ToList();
+                    var intervalos = new List<RecomendacaoIntervaloDTO>();
+
+                    string FormatarValor(double v)
+                    {
+                        if (v == Math.Floor(v)) return ((int)v).ToString();
+                        var f1 = Math.Round(v, 1);
+                        return f1 == Math.Floor(v) ? ((int)Math.Floor(v)).ToString() : f1.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+                    }
+
+                    if (valoresUnicos.Count <= 5)
+                    {
+                        // Faixas contínuas entre valores consecutivos: [v0-v1], [v1-v2], ..., [vn-1-vn]
+                        for (int i = 0; i < valoresUnicos.Count; i++)
+                        {
+                            double minVal = valoresUnicos[i];
+                            double maxVal = i < valoresUnicos.Count - 1 ? valoresUnicos[i + 1] : valoresUnicos[i];
+                            string label = i < valoresUnicos.Count - 1
+                                ? $"{FormatarValor(minVal)} - {FormatarValor(maxVal)}"
+                                : FormatarValor(minVal);
+                            intervalos.Add(new RecomendacaoIntervaloDTO
+                            {
+                                Minimo = minVal,
+                                Maximo = maxVal,
+                                Cor = coresRecomendacao[Math.Min(i, coresRecomendacao.Length - 1)],
+                                Label = label
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // 5 faixas de intervalo
+                        double min = valoresUnicos.First();
+                        double max = valoresUnicos.Last();
+                        double tamanho = (max - min) / 5.0;
+                        for (int i = 0; i < 5; i++)
+                        {
+                            double minVal = min + i * tamanho;
+                            double maxVal = i == 4 ? max : min + (i + 1) * tamanho;
+                            intervalos.Add(new RecomendacaoIntervaloDTO
+                            {
+                                Minimo = minVal,
+                                Maximo = maxVal,
+                                Cor = coresRecomendacao[i],
+                                Label = $"{FormatarValor(minVal)} - {FormatarValor(maxVal)}"
+                            });
+                        }
+                    }
+
+                    dto.Intervalos = intervalos;
+
+                    // Resolver cor e label por ponto
+                    RecomendacaoIntervaloDTO ResolverIntervalo(double valor)
+                    {
+                        // Percorrer os intervalos em ordem: o ponto pertence à menor faixa onde minimo <= valor <= maximo
+                        // Para o último intervalo (minimo == maximo), aceitar exatamente esse valor
+                        for (int i = 0; i < intervalos.Count; i++)
+                        {
+                            var iv = intervalos[i];
+                            if (!iv.Minimo.HasValue || !iv.Maximo.HasValue) continue;
+
+                            bool isUltimo = i == intervalos.Count - 1;
+                            if (isUltimo)
+                            {
+                                // último intervalo: aceitar >= minimo
+                                if (valor >= iv.Minimo.Value) return iv;
+                            }
+                            else
+                            {
+                                // intervalo intermediário: minimo <= valor < maximo do próximo
+                                var proxMin = intervalos[i + 1].Minimo;
+                                if (valor >= iv.Minimo.Value && (proxMin == null || valor < proxMin.Value)) return iv;
+                            }
+                        }
+                        return intervalos.Last();
+                    }
+
+                    dto.ValoresPorPonto = pontoValores.Select(p =>
+                    {
+                        var intervalo = ResolverIntervalo(p.Valor);
+                        return new RecomendacaoPontoDTO
+                        {
+                            Id = p.Id,
+                            Valor = p.Valor,
+                            Cor = intervalo.Cor,
+                            Label = intervalo.Label
+                        };
+                    }).ToList();
+
+                    return dto;
+                }).ToList();
+            }
+            
             return new RelatorioCompletoOutputDTO
             {
                 Id = relatorioDto.Id,
@@ -308,7 +535,8 @@ namespace api.coleta.Services
                 IsRelatorio = relatorioDto.IsRelatorio,
                 DadosColeta = dadosColeta,
                 NutrientesClassificados = classificacoesPorObjeto,
-                EstatisticasAtributos = estatisticasAtributos
+                EstatisticasAtributos = estatisticasAtributos,
+                Recomendacoes = recomendacoes
             };
         }
 
@@ -336,9 +564,19 @@ namespace api.coleta.Services
                 RelatorioId = relatorio.Id,
                 ColetaId = relatorio.ColetaId,
                 NomeTalhao = relatorio.Coleta?.Talhao?.Nome ?? string.Empty,
-                NomeFazenda = relatorio.Coleta?.Fazenda?.Nome ?? string.Empty,
-                NomeSafra = relatorio.Coleta?.Safra?.Observacao ?? string.Empty
+                NomeFazenda = relatorio.Coleta?.Fazenda?.Nome ?? string.Empty
             };
+
+            // Mapear SafraDTO
+            if (relatorio.Coleta?.Safra != null)
+            {
+                resumo.Safra = new SafraDTO
+                {
+                    Observacao = relatorio.Coleta.Safra.Observacao,
+                    DataInicio = relatorio.Coleta.Safra.DataInicio,
+                    DataFim = relatorio.Coleta.Safra.DataFim
+                };
+            }
 
             // Carregar configurações personalizadas do usuário
             var configsPersonalizadasList = _nutrientConfigRepository.ListarNutrientConfigsComFallback(userId);

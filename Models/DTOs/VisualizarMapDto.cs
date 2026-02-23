@@ -9,18 +9,18 @@ namespace api.coleta.Models.DTOs
     public class VisualizarMapInputDto
     {
         public Guid? Id { get; set; }
-        public Guid TalhaoID { get; set; }
+        public Guid? TalhaoID { get; set; }
         public Guid? FazendaID { get; set; }
         public Guid? SafraID { get; set; }
-        
+
         [JsonPropertyName("geoJson")]
         public JsonElement Geojson { get; set; }
-        
-        public Guid FuncionarioID { get; set; }
-        public string Observacao { get; set; }
-        public string TipoColeta { get; set; }
-        public List<string> TipoAnalise { get; set; }
-        public string Profundidade { get; set; }
+
+        public Guid? FuncionarioID { get; set; }
+        public string? Observacao { get; set; }
+        public string? TipoColeta { get; set; }
+        public List<string>? TipoAnalise { get; set; }
+        public string? Profundidade { get; set; }
         public Guid? GeojsonId { get; set; }
         public string? NomeColeta { get; set; }
     }

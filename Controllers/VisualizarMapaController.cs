@@ -38,30 +38,16 @@ namespace api.coleta.Controllers
                     return BadRequest("Dados da visualização de mapa são obrigatórios.");
                 }
 
-                // Validações específicas
-                if (visualizarMapa.TalhaoID == Guid.Empty)
+                // Validações específicas para criação (pelo menos um campo deve ser fornecido)
+                if (!visualizarMapa.TalhaoID.HasValue &&
+                    !visualizarMapa.FuncionarioID.HasValue &&
+                    string.IsNullOrEmpty(visualizarMapa.TipoColeta) &&
+                    (visualizarMapa.TipoAnalise == null || !visualizarMapa.TipoAnalise.Any()) &&
+                    string.IsNullOrEmpty(visualizarMapa.Profundidade) &&
+                    string.IsNullOrEmpty(visualizarMapa.NomeColeta) &&
+                    string.IsNullOrEmpty(visualizarMapa.Observacao))
                 {
-                    return BadRequest("TalhaoID é obrigatório.");
-                }
-
-                if (visualizarMapa.FuncionarioID == Guid.Empty)
-                {
-                    return BadRequest("FuncionarioID é obrigatório.");
-                }
-
-                if (string.IsNullOrEmpty(visualizarMapa.TipoColeta))
-                {
-                    return BadRequest("TipoColeta é obrigatório.");
-                }
-
-                if (visualizarMapa.TipoAnalise == null || !visualizarMapa.TipoAnalise.Any())
-                {
-                    return BadRequest("TipoAnalise é obrigatório.");
-                }
-
-                if (string.IsNullOrEmpty(visualizarMapa.Profundidade))
-                {
-                    return BadRequest("Profundidade é obrigatória.");
+                    return BadRequest("Pelo menos um campo deve ser fornecido para atualização.");
                 }
 
                 var token = ObterIDDoToken();
@@ -92,9 +78,6 @@ namespace api.coleta.Controllers
             catch (Exception ex)
             {
                 // Log detalhado do erro
-                Console.WriteLine($"Erro detalhado ao salvar visualização de mapa:");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"InnerException: {ex.InnerException.Message}");
@@ -183,8 +166,7 @@ namespace api.coleta.Controllers
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });
         }
 
-        [HttpDelete]
-        [Route("{id}")]
+        [HttpDelete("{id}")]
         public IActionResult Excluir([FromRoute] Guid id)
         {
             var token = ObterIDDoToken();
@@ -255,8 +237,7 @@ namespace api.coleta.Controllers
             }
         }
 
-        [HttpGet]
-        [Route("{id}")]
+        [HttpGet("{id}")]
         public IActionResult BuscarPorId([FromRoute] Guid id)
         {
             var token = ObterIDDoToken();

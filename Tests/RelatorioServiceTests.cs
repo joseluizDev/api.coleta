@@ -21,6 +21,7 @@ public class RelatorioServiceTests
         var minioStorage = new FakeMinioStorage();
         var geoJsonRepository = new GeoJsonRepository(context);
         var nutrientConfigRepository = new NutrientConfigRepository(context);
+        var recomendacaoRepository = new RecomendacaoRepository(context);
         var unitOfWork = new UnitOfWorkImplements(context);
 
         // Criar os novos services extraídos
@@ -37,6 +38,7 @@ public class RelatorioServiceTests
             geoJsonProcessorService,
             statisticsService,
             indicatorService,
+            recomendacaoRepository,
             unitOfWork);
     }
 
@@ -77,9 +79,9 @@ public class RelatorioServiceTests
         using var context = TestHelper.CreateInMemoryContext();
         var service = CreateService(context);
 
-        var resultado = await service.ListarRelatoriosPorUploadAsync(Guid.NewGuid());
+        var resultado = await service.ListarRelatoriosPorUploadAsync(Guid.NewGuid(), new api.coleta.models.dtos.QueryRelatorio());
 
-        Assert.Empty(resultado);
+        Assert.Empty(resultado.Items);
     }
 
     [Fact]
@@ -90,13 +92,16 @@ public class RelatorioServiceTests
 
         var (usuarioId, coleta, _) = RelatorioTestData.SeedRelatorios(context);
 
-        var resultado = await service.ListarRelatoriosPorUploadAsync(usuarioId);
+        var resultado = await service.ListarRelatoriosPorUploadAsync(usuarioId, new api.coleta.models.dtos.QueryRelatorio());
 
-        Assert.Single(resultado);
-        var dto = resultado.First();
+        Assert.Single(resultado.Items);
+        var dto = resultado.Items.First();
         Assert.Equal(coleta.NomeColeta, dto.NomeColeta);
         Assert.Equal(coleta.Talhao.Nome, dto.Talhao);
-        Assert.Equal(coleta.Safra!.Observacao, dto.Safra);
+        Assert.NotNull(dto.Safra);
+        Assert.Equal(coleta.Safra!.Observacao, dto.Safra.Observacao);
+        Assert.Equal(coleta.Safra!.DataInicio, dto.Safra.DataInicio);
+        Assert.Equal(coleta.Safra!.DataFim, dto.Safra.DataFim);
         Assert.Equal(coleta.UsuarioResp!.NomeCompleto, dto.Funcionario);
     }
 

@@ -32,7 +32,7 @@ namespace api.coleta.Utils.Maps
                 return null;
             }
 
-            return new Fazenda
+            var fazenda = new Fazenda
             {
                 Nome = dto.Nome,
                 Endereco = dto.Endereco,
@@ -40,6 +40,13 @@ namespace api.coleta.Utils.Maps
                 Lng = dto.Lng,
                 ClienteID = dto.ClienteID
             };
+
+            if (dto.Id.HasValue && dto.Id.Value != Guid.Empty)
+            {
+                fazenda.Id = dto.Id.Value;
+            }
+
+            return fazenda;
         }
 
         public static List<FazendaResponseDTO> ToResponseDtoList(this IEnumerable<Fazenda?>? fazendas)

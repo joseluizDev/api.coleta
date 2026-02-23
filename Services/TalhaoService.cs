@@ -310,9 +310,9 @@ namespace api.talhao.Services
         }
 
         // Listar talhões agrupados por fazenda
-        public List<TalhaoAgrupadoPorFazendaResponseDTO> ListarTalhoesAgrupadosPorFazenda(Guid userId, Guid? fazendaId = null)
+        public List<TalhaoAgrupadoPorFazendaResponseDTO> ListarTalhoesAgrupadosPorFazenda(Guid userId, Guid? fazendaId = null, Guid? clienteId = null)
         {
-            var talhoes = _talhaoRepository.ListarTodosComFazenda(userId, fazendaId);
+            var talhoes = _talhaoRepository.ListarTodosComFazenda(userId, fazendaId, clienteId);
             
             // Agrupar por fazenda
             var talhoesAgrupados = talhoes

@@ -50,4 +50,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Recomendacao> Recomendacoes { get; set; }
     public DbSet<Contato> Contatos { get; set; }
     public DbSet<Imagem> Imagens { get; set; }
+
+    // Licensing System (Planos são gerenciados pelo Gateway PostgreSQL)
+    public DbSet<Assinatura> Assinaturas { get; set; }
+    public DbSet<HistoricoPagamento> HistoricosPagamento { get; set; }
 }

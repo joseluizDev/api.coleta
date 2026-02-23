@@ -9,6 +9,12 @@
         public string Senha { get; set; }
         public Guid adminId { get; set; }
         public string? FcmToken { get; set; }
+
+        // Campos de endereço para criar cliente automaticamente
+        public string? Cep { get; set; }
+        public string? Endereco { get; set; }
+        public string? Cidade { get; set; }
+        public string? Estado { get; set; }
     }
 
     public class UsuarioResponseDTO

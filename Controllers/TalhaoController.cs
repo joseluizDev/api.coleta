@@ -149,13 +149,13 @@ namespace api.talhao.Controllers
         [HttpGet]
         [Route("listar-agrupado-por-fazenda")]
         [Authorize]
-        public IActionResult ListarTalhoesAgrupadosPorFazenda([FromQuery] Guid? fazendaId = null)
+        public IActionResult ListarTalhoesAgrupadosPorFazenda([FromQuery] Guid? fazendaId = null, [FromQuery] Guid? clienteId = null)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var talhoes = _talhaoService.ListarTalhoesAgrupadosPorFazenda(userId, fazendaId);
+                var talhoes = _talhaoService.ListarTalhoesAgrupadosPorFazenda(userId, fazendaId, clienteId);
                 return Ok(talhoes);
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });

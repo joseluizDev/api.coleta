@@ -21,7 +21,11 @@ namespace api.coleta.Utils.Maps
                 Email = usuario.Email,
                 Telefone = usuario.Telefone,
                 Senha = usuario.Senha,
-                adminId = usuario.adminId ?? Guid.Empty
+                adminId = usuario.adminId ?? Guid.Empty,
+                Cep = usuario.Cep,
+                Endereco = usuario.Endereco,
+                Cidade = usuario.Cidade,
+                Estado = usuario.Estado
             };
         }
 

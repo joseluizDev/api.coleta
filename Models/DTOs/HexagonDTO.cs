@@ -31,5 +31,4 @@ namespace api.utils.DTOs
       public int SeedUsado { get; set; } // Seed usado na geração
       public string Metodo { get; set; } // "triangulacao" ou "rejection_sampling"
    }
-
 }

@@ -47,7 +47,7 @@ namespace api.coleta.Controllers.Mobile
                 return BadRequest(new { message = "Token inválido ou usuário não encontrado." });
             }
 
-            var relatorios = await _relatorioService.ListarRelatoriosPorUploadAsync(userIdNullable.Value);
+            var relatorios = await _relatorioService.ListarRelatoriosPorUploadAsync(userIdNullable.Value, new api.coleta.models.dtos.QueryRelatorio());
             return Ok(relatorios);
         }
 

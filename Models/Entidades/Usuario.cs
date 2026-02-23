@@ -29,6 +29,19 @@ namespace api.coleta.Models.Entidades
         [MaxLength(500)]
         public string? FcmToken { get; set; }
 
+        // Campos de endereço
+        [MaxLength(8)]
+        public string? Cep { get; set; }
+
+        [MaxLength(255)]
+        public string? Endereco { get; set; }
+
+        [MaxLength(100)]
+        public string? Cidade { get; set; }
+
+        [MaxLength(2)]
+        public string? Estado { get; set; }
+
         public Guid? adminId { get; set; }
         public virtual Usuario? Admin { get; set; }
         public Usuario(){ }
@@ -40,6 +53,10 @@ namespace api.coleta.Models.Entidades
             Telefone = usuario.Telefone;
             Senha = usuario.Senha;
             FcmToken = usuario.FcmToken;
+            Cep = usuario.Cep;
+            Endereco = usuario.Endereco;
+            Cidade = usuario.Cidade;
+            Estado = usuario.Estado;
             Validador();
         }
         public Usuario Atualizar(UsuarioResquestDTO usuario)

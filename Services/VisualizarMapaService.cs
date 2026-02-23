@@ -152,11 +152,29 @@ namespace api.coleta.Services
                 if (!string.IsNullOrEmpty(visualizarMapa.NomeColeta))
                     coletaExistente.NomeColeta = visualizarMapa.NomeColeta;
 
-                if (visualizarMapa.TalhaoID != Guid.Empty)
-                    coletaExistente.TalhaoID = visualizarMapa.TalhaoID;
+                if (visualizarMapa.TalhaoID.HasValue && visualizarMapa.TalhaoID.Value != Guid.Empty)
+                    coletaExistente.TalhaoID = visualizarMapa.TalhaoID.Value;
 
-                if (visualizarMapa.FuncionarioID != Guid.Empty)
-                    coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID;
+                if (visualizarMapa.FuncionarioID.HasValue && visualizarMapa.FuncionarioID.Value != Guid.Empty)
+                    coletaExistente.UsuarioRespID = visualizarMapa.FuncionarioID.Value;
+
+                // Atualizar SafraID
+                if (visualizarMapa.SafraID.HasValue)
+                {
+                    if (visualizarMapa.SafraID.Value != Guid.Empty)
+                        coletaExistente.SafraID = visualizarMapa.SafraID.Value;
+                    else
+                        coletaExistente.SafraID = null; // Permite limpar a safra
+                }
+
+                // Atualizar FazendaID
+                if (visualizarMapa.FazendaID.HasValue)
+                {
+                    if (visualizarMapa.FazendaID.Value != Guid.Empty)
+                        coletaExistente.FazendaID = visualizarMapa.FazendaID.Value;
+                    else
+                        coletaExistente.FazendaID = null; // Permite limpar a fazenda
+                }
 
                 if (!string.IsNullOrEmpty(visualizarMapa.TipoColeta))
                 {
@@ -181,7 +199,8 @@ namespace api.coleta.Services
                         coletaExistente.Profundidade = profundidade;
                 }
 
-                if (!string.IsNullOrEmpty(visualizarMapa.Observacao))
+                // Permite atualizar ou limpar a observação
+                if (visualizarMapa.Observacao != null)
                     coletaExistente.Observacao = visualizarMapa.Observacao;
 
                 Console.WriteLine($"Atualizando coleta com ID: {coletaExistente.Id}");
@@ -277,7 +296,7 @@ namespace api.coleta.Services
 
         public bool? ExcluirColeta(Guid userID, Guid id)
         {
-            Coleta buscarColeta = _visualizarMapaRepository.BuscarVisualizarMapaPorIdTalhao(userID, id);
+            Coleta buscarColeta = _visualizarMapaRepository.BuscarVisualizarMapaPorId(userID, id);
             if (buscarColeta != null)
             {
                 _visualizarMapaRepository.DeletarVisualizarMapa(buscarColeta);

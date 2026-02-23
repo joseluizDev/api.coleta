@@ -1,5 +1,6 @@
 ﻿using api.cliente.Interfaces;
 using api.coleta.Models.DTOs;
+using api.coleta.models.dtos;
 using api.coleta.Services;
 using api.safra.Services;
 using Microsoft.AspNetCore.Http;
@@ -60,13 +61,13 @@ namespace api.coleta.Controllers
 
         [HttpGet]
         [Route("buscar")]
-        public async Task<IActionResult> ListarRelatoriosPorUpload()
+        public async Task<IActionResult> ListarRelatoriosPorUpload([FromQuery] QueryRelatorio query)
         {
             var token = ObterIDDoToken();
             Guid userId = (Guid)_jwtToken.ObterUsuarioIdDoToken(token);
             if (userId != null)
             {
-                var relatorios = await _relatorioService.ListarRelatoriosPorUploadAsync(userId);
+                var relatorios = await _relatorioService.ListarRelatoriosPorUploadAsync(userId, query);
                 return Ok(relatorios);
             }
             return BadRequest(new { message = "Token inválido ou ID do usuário não encontrado." });

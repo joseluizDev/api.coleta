@@ -1,0 +1,7 @@
+﻿services:
+  api.licenca:
+    image: api.licenca
+    build:
+      context: .
+      dockerfile: api.licenca/Dockerfile
+
