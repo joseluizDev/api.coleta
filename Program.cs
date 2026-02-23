@@ -307,6 +307,43 @@ var app = builder.Build();
 
     try
     {
+        // Baseline: se o banco já tem tabelas mas __EFMigrationsHistory está vazio,
+        // registrar as migrations que já foram aplicadas manualmente ao banco.
+        var appliedMigrations = db.Database.GetAppliedMigrations().ToList();
+        if (!appliedMigrations.Any())
+        {
+            // Verificar se o banco já tem tabelas existentes (ex: ConfiguracaoPadraos)
+            var tabelaExiste = false;
+            try
+            {
+                db.Database.ExecuteSqlRaw("SELECT 1 FROM ConfiguracaoPadraos LIMIT 1");
+                tabelaExiste = true;
+            }
+            catch { /* tabela não existe, banco é novo */ }
+
+            if (tabelaExiste)
+            {
+                logger.LogInformation("Banco existente sem histórico de migrations. Aplicando baseline...");
+
+                // Migrations já aplicadas ao banco (tabelas já existem)
+                var migrationsBaseline = new[]
+                {
+                    "20251226144718_InitialCreate",
+                    "20251227162801_SyncLicensingSystem",
+                    "20251227192938_AddPaymentMethodFields",
+                    "20251227200159_AddEfiPayPlanIdIntColumn"
+                };
+
+                foreach (var migration in migrationsBaseline)
+                {
+                    db.Database.ExecuteSqlRaw(
+                        "INSERT IGNORE INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ({0}, {1})",
+                        migration, "8.0.2");
+                    logger.LogInformation("Baseline: registrada migration {Migration}", migration);
+                }
+            }
+        }
+
         var pendingMigrations = db.Database.GetPendingMigrations().ToList();
 
         if (pendingMigrations.Any())
