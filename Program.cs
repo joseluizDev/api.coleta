@@ -299,10 +299,7 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 
 var app = builder.Build();
 
-// Aplicar migrations automaticamente se configurado
-var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS_ON_STARTUP")?.ToLower() == "true";
-
-if (applyMigrations)
+// Aplicar migrations automaticamente no startup
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -330,8 +327,6 @@ if (applyMigrations)
     catch (Exception ex)
     {
         logger.LogError(ex, "Erro ao aplicar migrations. A aplicação continuará, mas o banco pode estar desatualizado.");
-        // Em produção, você pode querer lançar a exceção para impedir o startup
-        // throw;
     }
 }
 
