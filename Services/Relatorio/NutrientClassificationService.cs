@@ -5,7 +5,7 @@ namespace api.coleta.Services.Relatorio
     /// <summary>
     /// Serviço responsável pela classificação de nutrientes usando configurações personalizadas.
     /// Extraído do RelatorioService para melhor separação de responsabilidades.
-    /// </summary>
+    /// </summary>  
     public class NutrientClassificationService
     {
         /// <summary>
@@ -21,6 +21,9 @@ namespace api.coleta.Services.Relatorio
             double valor,
             Dictionary<string, NutrientConfig> configsPersonalizadas)
         {
+            // Normalize attribute name: trim leading/trailing whitespace
+            atributo = atributo?.Trim() ?? string.Empty;
+
             // Tentar buscar pelo nome exato do atributo
             if (!configsPersonalizadas.TryGetValue(atributo, out var config))
             {

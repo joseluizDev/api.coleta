@@ -294,6 +294,34 @@ namespace api.coleta.Models.DTOs
     }
 
     /// <summary>
+    /// DTO para indicadores de Semente (Tetrazólio)
+    /// </summary>
+    public class SementeTetrazoliDTO
+    {
+        // Seção 1: Qualidade da Semente
+        public IndicadorDTO Germinacao { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Vigor { get; set; } = new IndicadorDTO();
+        public IndicadorDTO ViabilidadeTetrazolio { get; set; } = new IndicadorDTO();
+        public IndicadorDTO VigorTetrazolio { get; set; } = new IndicadorDTO();
+
+        // Seção 2: Análise Tetrazólio (1-8) - todos os danos
+        public IndicadorDTO DanoMecanico18 { get; set; } = new IndicadorDTO();
+        public IndicadorDTO DanoUmidade18 { get; set; } = new IndicadorDTO();
+        public IndicadorDTO DanoPercevejo18 { get; set; } = new IndicadorDTO();
+
+        // Seção 3: Análise Tetrazólio (6-8) - danos letais
+        public IndicadorDTO DanoMecanico68 { get; set; } = new IndicadorDTO();
+        public IndicadorDTO DanoUmidade68 { get; set; } = new IndicadorDTO();
+        public IndicadorDTO DanoPercevejo68 { get; set; } = new IndicadorDTO();
+
+        // Seção 4: Outros indicativos
+        public IndicadorDTO SementeEnvelhecida { get; set; } = new IndicadorDTO();
+        public IndicadorDTO Umidade { get; set; } = new IndicadorDTO();
+        public IndicadorDTO NocivasToleradas { get; set; } = new IndicadorDTO();
+        public IndicadorDTO NocivasProibidas { get; set; } = new IndicadorDTO();
+    }
+
+    /// <summary>
     /// DTO para todos os indicadores de gráficos
     /// </summary>
     public class IndicadoresGraficosDTO
@@ -309,6 +337,11 @@ namespace api.coleta.Models.DTOs
         /// Resumo visual para o gráfico de barras horizontal (Interpretação Visual da Análise de Solo)
         /// </summary>
         public ResumoVisualSoloDTO ResumoVisual { get; set; } = new ResumoVisualSoloDTO();
+
+        /// <summary>
+        /// Indicadores específicos para análise de Semente (Tetrazólio)
+        /// </summary>
+        public SementeTetrazoliDTO Semente { get; set; } = new SementeTetrazoliDTO();
     }
 
     /// <summary>

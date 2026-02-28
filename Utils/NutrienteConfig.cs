@@ -416,6 +416,110 @@ class NutrienteConfig
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Sódio (Na) em mg/dm³ - valores de exemplo; ajuste conforme necessidade de domínio."
+            },
+            ["Dano Mecânico (1-8)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo" },
+                    new { min = 6, max = 10, classificacao = "Baixo" },
+                    new { min = 10, max = 19, classificacao = "Médio" },
+                    new { min = 19, max = 25, classificacao = "Alto" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Dano Mecânico (1-8) em % - níveis de risco."
+            },
+            ["Dano Mecânico (6-8)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo" },
+                    new { min = 6, max = 7, classificacao = "Baixo" },
+                    new { min = 7, max = 10, classificacao = "Médio" },
+                    new { min = 10, max = 20, classificacao = "Alto" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Dano Mecânico (6-8) em % - níveis de risco."
+            },
+            ["Dano Umidade (1-8)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
+                    new { min = 5, max = 10, classificacao = "Baixo" },
+                    new { min = 10, max = 20, classificacao = "Médio" },
+                    new { min = 20, max = 25, classificacao = "Alto" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Dano por Umidade (1-8) em % - níveis de risco."
+            },
+            ["Dano Umidade (6-8)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
+                    new { min = 5, max = 7, classificacao = "Baixo" },
+                    new { min = 7, max = 10, classificacao = "Médio" },
+                    new { min = 10, max = 20, classificacao = "Alto" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Dano por Umidade (6-8) em % - níveis de risco."
+            },
+            ["Dano Percevejo (1-8)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 3, classificacao = "Muito Baixo" },
+                    new { min = 3, max = 8, classificacao = "Baixo" },
+                    new { min = 8, max = 15, classificacao = "Médio" },
+                    new { min = 15, max = 25, classificacao = "Alto" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Dano por Percevejo (1-8) em % - níveis de risco."
+            },
+            ["Dano Percevejo (6-8)"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
+                    new { min = 5, max = 7, classificacao = "Baixo" },
+                    new { min = 7, max = 10, classificacao = "Médio" },
+                    new { min = 10, max = 20, classificacao = "Alto" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Dano por Percevejo (6-8) em % - níveis de risco."
+            },
+            ["Viabilidade Tetrazólio"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 70, classificacao = "Muito Baixo", cor = "#EB3F3F" },
+                    new { min = 70, max = 79, classificacao = "Baixo", cor = "#EB883C" },
+                    new { min = 79, max = 84, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 84, max = 94, classificacao = "Alto", cor = "#90FF4C" },
+                    new { min = 94, max = (double?)null, classificacao = "Muito Alto", cor = "#317C53" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Viabilidade Tetrazólio em % - tecidos viáveis."
+            },
+            ["Vigor Tetrazólio"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 70, classificacao = "Muito Baixo", cor = "#EB3F3F" },
+                    new { min = 70, max = 74, classificacao = "Baixo", cor = "#EB883C" },
+                    new { min = 74, max = 84, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 84, max = 89, classificacao = "Alto", cor = "#90FF4C" },
+                    new { min = 89, max = (double?)null, classificacao = "Muito Alto", cor = "#317C53" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação do Vigor Tetrazólio em % - tecidos viáveis com vigor."
             }
         }
     };
@@ -479,7 +583,15 @@ class NutrienteConfig
         ["Soma de bases"] = "SB (cmolc/dm³)",
         ["SB"] = "SB (cmolc/dm³)",
         ["CTC efetiva"] = "CTC Efetiva (t)",
-        ["t"] = "CTC Efetiva (t)"
+        ["t"] = "CTC Efetiva (t)",
+        ["Dano Mecânico (1-8)"] = "Dano Mecânico (1-8)",
+        ["Dano Umidade (1-8)"] = "Dano Umidade (1-8)",
+        ["Dano Percevejo (1-8)"] = "Dano Percevejo (1-8)",
+        ["Dano Mecânico (6-8)"] = "Dano Mecânico (6-8)",
+        ["Dano Umidade (6-8)"] = "Dano Umidade (6-8)",
+        ["Dano Percevejo (6-8)"] = "Dano Percevejo (6-8)",
+        ["Nocivas Proibidas"] = "Nocivas Proibidas",
+        ["Nocivas Toleradas"] = "Nocivas Toleradas"
     };
 
 
@@ -1001,6 +1113,9 @@ class NutrienteConfig
         {
             averageValue = 0.0;
         }
+
+        // Normalize attribute name: trim leading/trailing whitespace
+        attribute = attribute?.Trim() ?? string.Empty;
 
         // Map short key to full key if exists
         string fullAttribute = NutrientKeyMapping.ContainsKey(attribute) ? NutrientKeyMapping[attribute] : attribute;
