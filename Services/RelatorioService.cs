@@ -655,6 +655,31 @@ namespace api.coleta.Services
             var chavesZn = new[] { "Zn", "Zinco", "Zinco - Zn (mg/dm³)" };
             var chavesS = new[] { "S", "Enxofre", "Enxofre - S (mg/dm³)", "S-SO4" };
 
+            // Chaves para Semente (Tetrazólio)
+            double sumGerminacao = 0, sumVigor = 0, sumViabilidadeTz = 0, sumVigorTz = 0;
+            int countGerminacao = 0, countVigor = 0, countViabilidadeTz = 0, countVigorTz = 0;
+            double sumDanoMecanico18 = 0, sumDanoUmidade18 = 0, sumDanoPercevejo18 = 0;
+            int countDanoMecanico18 = 0, countDanoUmidade18 = 0, countDanoPercevejo18 = 0;
+            double sumDanoMecanico68 = 0, sumDanoUmidade68 = 0, sumDanoPercevejo68 = 0;
+            int countDanoMecanico68 = 0, countDanoUmidade68 = 0, countDanoPercevejo68 = 0;
+            double sumSementeEnvelhecida = 0, sumUmidadeSem = 0, sumNocivasToleradas = 0, sumNocivasProibidas = 0;
+            int countSementeEnvelhecida = 0, countUmidadeSem = 0, countNocivasToleradas = 0, countNocivasProibidas = 0;
+
+            var chavesGerminacao = new[] { "Germinação", "Germinacao", "GERMINACAO", "Germ", "germ" };
+            var chavesVigor = new[] { "Vigor", "vigor", "VIGOR" };
+            var chavesViabilidadeTz = new[] { "Viabilidade Tetrazólio", "Viabilidade Tetrazolio", "ViabilidadeTetrazolio", "Viabilidade Tz", "Viabilidade" };
+            var chavesVigorTz = new[] { "Vigor Tetrazólio", "Vigor Tetrazolio", "VigorTetrazolio", "Vigor Tz", "Vigor Tz." };
+            var chavesDanoMecanico18 = new[] { "Dano Mecânico (1-8)", "Dano Mecanico (1-8)", "DanoMecanico18", "Dano Mecânico 1-8", "D.Mec.1-8" };
+            var chavesDanoUmidade18 = new[] { "Dano Umidade (1-8)", "DanoUmidade18", "Dano Umidade 1-8", "D.Umid.1-8" };
+            var chavesDanoPercevejo18 = new[] { "Dano Percevejo (1-8)", "DanoPercevejo18", "Dano Percevejo 1-8", "D.Perc.1-8" };
+            var chavesDanoMecanico68 = new[] { "Dano Mecânico (6-8)", "Dano Mecanico (6-8)", "DanoMecanico68", "Dano Mecânico 6-8", "D.Mec.6-8" };
+            var chavesDanoUmidade68 = new[] { "Dano Umidade (6-8)", "DanoUmidade68", "Dano Umidade 6-8", "D.Umid.6-8" };
+            var chavesDanoPercevejo68 = new[] { "Dano Percevejo (6-8)", "DanoPercevejo68", "Dano Percevejo 6-8", "D.Perc.6-8" };
+            var chavesSementeEnvelhecida = new[] { "Semente Envelhecida", "SementeEnvelhecida", "S.Envelhecida", "Envelhecida" };
+            var chavesUmidadeSem = new[] { "Umidade", "Umid.", "UMIDADE" };
+            var chavesNocivasToleradas = new[] { "Nócivas Toleradas", "Nocivas Toleradas", "NocivasToleradas", "N.Toleradas" };
+            var chavesNocivasProibidas = new[] { "Nócivas Proibidas", "Nocivas Proibidas", "NocivasProibidas", "N.Proibidas" };
+
             // Atributos a ignorar na coleta de estatísticas
             var atributosIgnorados = new HashSet<string> { "ID", "id", "prof.", "profundidade", "Profundidade" };
 
@@ -739,6 +764,22 @@ namespace api.coleta.Services
                 _indicatorService.BuscarEAcumularValor(ponto, chavesB, ref sumB, ref countB);
                 _indicatorService.BuscarEAcumularValor(ponto, chavesZn, ref sumZn, ref countZn);
                 _indicatorService.BuscarEAcumularValor(ponto, chavesS, ref sumS, ref countS);
+
+                // Semente (Tetrazólio)
+                _indicatorService.BuscarEAcumularValor(ponto, chavesGerminacao, ref sumGerminacao, ref countGerminacao);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesVigor, ref sumVigor, ref countVigor);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesViabilidadeTz, ref sumViabilidadeTz, ref countViabilidadeTz);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesVigorTz, ref sumVigorTz, ref countVigorTz);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesDanoMecanico18, ref sumDanoMecanico18, ref countDanoMecanico18);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesDanoUmidade18, ref sumDanoUmidade18, ref countDanoUmidade18);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesDanoPercevejo18, ref sumDanoPercevejo18, ref countDanoPercevejo18);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesDanoMecanico68, ref sumDanoMecanico68, ref countDanoMecanico68);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesDanoUmidade68, ref sumDanoUmidade68, ref countDanoUmidade68);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesDanoPercevejo68, ref sumDanoPercevejo68, ref countDanoPercevejo68);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesSementeEnvelhecida, ref sumSementeEnvelhecida, ref countSementeEnvelhecida);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesUmidadeSem, ref sumUmidadeSem, ref countUmidadeSem);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesNocivasToleradas, ref sumNocivasToleradas, ref countNocivasToleradas);
+                _indicatorService.BuscarEAcumularValor(ponto, chavesNocivasProibidas, ref sumNocivasProibidas, ref countNocivasProibidas);
             }
 
             resumo.TotalPontos = totalPontos;
@@ -813,6 +854,22 @@ namespace api.coleta.Services
             resumo.IndicadoresGraficos.ResumoVisual.Mg = _indicatorService.CalcularIndicadorComReferencia("Mg", sumMg, countMg, configsPersonalizadas, mediaCTCRef, "CTC");
             resumo.IndicadoresGraficos.ResumoVisual.Ca = _indicatorService.CalcularIndicadorComReferencia("Ca", sumCa, countCa, configsPersonalizadas, mediaCTCRef, "CTC");
             resumo.IndicadoresGraficos.ResumoVisual.K = _indicatorService.CalcularIndicadorComReferencia("K", sumK, countK, configsPersonalizadas, mediaCTCRef, "CTC");
+
+            // 8. Semente (Tetrazólio)
+            resumo.IndicadoresGraficos.Semente.Germinacao = _indicatorService.CalcularIndicador("Germinação", sumGerminacao, countGerminacao, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.Vigor = _indicatorService.CalcularIndicador("Vigor", sumVigor, countVigor, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.ViabilidadeTetrazolio = _indicatorService.CalcularIndicador("Viabilidade Tetrazólio", sumViabilidadeTz, countViabilidadeTz, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.VigorTetrazolio = _indicatorService.CalcularIndicador("Vigor Tetrazólio", sumVigorTz, countVigorTz, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.DanoMecanico18 = _indicatorService.CalcularIndicador("Dano Mecânico (1-8)", sumDanoMecanico18, countDanoMecanico18, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.DanoUmidade18 = _indicatorService.CalcularIndicador("Dano Umidade (1-8)", sumDanoUmidade18, countDanoUmidade18, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.DanoPercevejo18 = _indicatorService.CalcularIndicador("Dano Percevejo (1-8)", sumDanoPercevejo18, countDanoPercevejo18, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.DanoMecanico68 = _indicatorService.CalcularIndicador("Dano Mecânico (6-8)", sumDanoMecanico68, countDanoMecanico68, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.DanoUmidade68 = _indicatorService.CalcularIndicador("Dano Umidade (6-8)", sumDanoUmidade68, countDanoUmidade68, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.DanoPercevejo68 = _indicatorService.CalcularIndicador("Dano Percevejo (6-8)", sumDanoPercevejo68, countDanoPercevejo68, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.SementeEnvelhecida = _indicatorService.CalcularIndicador("Semente Envelhecida", sumSementeEnvelhecida, countSementeEnvelhecida, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.Umidade = _indicatorService.CalcularIndicador("Umidade", sumUmidadeSem, countUmidadeSem, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.NocivasToleradas = _indicatorService.CalcularIndicador("Nócivas Toleradas", sumNocivasToleradas, countNocivasToleradas, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.NocivasProibidas = _indicatorService.CalcularIndicador("Nócivas Proibidas", sumNocivasProibidas, countNocivasProibidas, configsPersonalizadas);
 
             return resumo;
         }

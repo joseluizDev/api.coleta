@@ -30,6 +30,7 @@ namespace api.coleta.Services.Relatorio
             ref double soma,
             ref int contador)
         {
+            // Tentativa 1: correspondência exata
             foreach (var chave in chaves)
             {
                 if (ponto.TryGetProperty(chave, out var prop) &&
@@ -38,7 +39,24 @@ namespace api.coleta.Services.Relatorio
                 {
                     soma += valor;
                     contador++;
-                    break; // Encontrou, não precisa continuar
+                    return;
+                }
+            }
+
+            // Tentativa 2: correspondência com trim (chaves com espaços no início/fim)
+            if (ponto.ValueKind == JsonValueKind.Object)
+            {
+                var chavesNormalizadas = chaves.Select(c => c.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var propriedade in ponto.EnumerateObject())
+                {
+                    if (chavesNormalizadas.Contains(propriedade.Name.Trim()) &&
+                        propriedade.Value.ValueKind == JsonValueKind.Number &&
+                        propriedade.Value.TryGetDouble(out double valor))
+                    {
+                        soma += valor;
+                        contador++;
+                        return;
+                    }
                 }
             }
         }

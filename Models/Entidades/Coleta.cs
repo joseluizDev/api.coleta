@@ -48,7 +48,8 @@ namespace api.coleta.Models.Entidades
         Microbiologica,
         BioAs,
         Compactacao,
-        Outros
+        Outros,
+        SementeTetrazolio
     }
 
     public enum Profundidade
