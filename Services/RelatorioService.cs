@@ -199,7 +199,10 @@ namespace api.coleta.Services
                             // Processar TODOS os atributos do objeto JSON
                             foreach (var propriedade in ponto.EnumerateObject())
                             {
-                                string atributo = propriedade.Name;
+                                // Normalizar o nome da coluna para a forma canônica.
+                                // Ex: "PMELICH 1" e "P MELICH 1" (grafias de laboratórios diferentes)
+                                // são tratados como o mesmo atributo "P MELICH 1".
+                                string atributo = NutrienteConfig.NormalizarNomeColuna(propriedade.Name);
                                 var prop = propriedade.Value;
                                 
                                 // Pular ID e prof.
@@ -531,7 +534,10 @@ namespace api.coleta.Services
                 Observacao = relatorioDto.Observacao,
                 Profundidade = relatorioDto.Profundidade,
                 TiposAnalise = relatorioDto.TiposAnalise,
-                JsonRelatorio = relatorioDto.JsonRelatorio,
+                // Normalizar nomes de colunas no jsonRelatorio antes de retornar ao cliente.
+                // Isso garante que "PMELICH 1" e "P MELICH 1" (variações de laboratório)
+                // apareçam sempre com o mesmo nome canônico no frontend.
+                JsonRelatorio = NutrienteConfig.NormalizarJsonRelatorio(relatorioDto.JsonRelatorio),
                 IsRelatorio = relatorioDto.IsRelatorio,
                 DadosColeta = dadosColeta,
                 NutrientesClassificados = classificacoesPorObjeto,

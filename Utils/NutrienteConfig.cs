@@ -594,6 +594,79 @@ class NutrienteConfig
         ["Nocivas Toleradas"] = "Nocivas Toleradas"
     };
 
+    /// <summary>
+    /// Mapeia grafias variantes de nomes de colunas para uma forma canônica.
+    /// Garante que diferentes laboratórios que enviam o mesmo atributo com escrita diferente
+    /// (ex: "PMELICH 1" vs "P MELICH 1") sejam sempre representados pelo mesmo nome na API.
+    /// </summary>
+    public static readonly Dictionary<string, string> CanonicalColumnNames = new Dictionary<string, string>
+    {
+        ["PMELICH 1"]  = "P MELICH 1",
+        ["P Mehlich"]  = "P MELICH 1",
+        ["P Melich 1"] = "P MELICH 1",
+        ["P MELICH1"]  = "P MELICH 1",
+        ["P Resina"]   = "P RESINA",
+    };
+
+    /// <summary>
+    /// Retorna a forma canônica de um nome de coluna, normalizando grafias variantes conhecidas.
+    /// </summary>
+    public static string NormalizarNomeColuna(string rawName)
+    {
+        if (string.IsNullOrEmpty(rawName)) return rawName;
+        var trimmed = rawName.Trim();
+        return CanonicalColumnNames.TryGetValue(trimmed, out var canonical) ? canonical : trimmed;
+    }
+
+    /// <summary>
+    /// Normaliza os nomes de colunas de um JSON de relatório aplicando NormalizarNomeColuna
+    /// em todas as chaves de cada objeto do array. Chamado ao retornar jsonRelatorio
+    /// para garantir consistência independente do laboratório de origem.
+    /// </summary>
+    public static string NormalizarJsonRelatorio(string jsonRelatorio)
+    {
+        if (string.IsNullOrEmpty(jsonRelatorio)) return jsonRelatorio;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonRelatorio);
+            var root = doc.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Array) return jsonRelatorio;
+
+            var buffer = new System.Text.StringBuilder("[");
+            bool firstObj = true;
+            foreach (var element in root.EnumerateArray())
+            {
+                if (!firstObj) buffer.Append(',');
+                firstObj = false;
+
+                if (element.ValueKind != System.Text.Json.JsonValueKind.Object)
+                {
+                    buffer.Append(element.GetRawText());
+                    continue;
+                }
+
+                buffer.Append('{');
+                bool firstProp = true;
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (!firstProp) buffer.Append(',');
+                    firstProp = false;
+                    var canonicalKey = NormalizarNomeColuna(prop.Name);
+                    buffer.Append(System.Text.Json.JsonSerializer.Serialize(canonicalKey));
+                    buffer.Append(':');
+                    buffer.Append(prop.Value.GetRawText());
+                }
+                buffer.Append('}');
+            }
+            buffer.Append(']');
+            return buffer.ToString();
+        }
+        catch
+        {
+            return jsonRelatorio;
+        }
+    }
+
 
     public static readonly Dictionary<string, object> config_dependentes = new Dictionary<string, object>
     {
