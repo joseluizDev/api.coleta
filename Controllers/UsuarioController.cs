@@ -23,6 +23,27 @@ namespace api.coleta.Controllers
             _jwtToken = jwtToken;
         }
 
+        [HttpPost("refresh-token")]
+        public IActionResult RefreshToken()
+        {
+            try
+            {
+                var expiredToken = ObterIDDoToken();
+                if (string.IsNullOrWhiteSpace(expiredToken))
+                    return BadRequest("Token não fornecido.");
+
+                var newToken = _usuarioService.RefreshToken(expiredToken);
+                if (string.IsNullOrEmpty(newToken))
+                    return BadRequest("Não foi possível atualizar o token.");
+
+                return Ok(new { Token = newToken });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao atualizar o token: " + ex.Message);
+            }
+        }
+
         [HttpGet("login")]
         public IActionResult Login([FromQuery] UsuarioLoginDTO usuarioLogin)
         {
@@ -55,6 +76,7 @@ namespace api.coleta.Controllers
         }
 
         [HttpPost("cadastrar/funcionario")]
+        [Authorize]
         public IActionResult Cadastrar([FromBody] UsuarioResquestDTO usuario)
         {
             try
@@ -146,6 +168,7 @@ namespace api.coleta.Controllers
 
         [HttpGet]
         [Route("funcionario/listar")]
+        [Authorize]
         public IActionResult ListarFuncionario()
         {
             var token = ObterIDDoToken();
@@ -161,6 +184,7 @@ namespace api.coleta.Controllers
 
         [HttpGet]
         [Route("funcionario")]
+        [Authorize]
         public IActionResult Funcionarios([FromQuery] QueryFuncionario query)
         {
             var token = ObterIDDoToken();
@@ -176,6 +200,7 @@ namespace api.coleta.Controllers
 
         [HttpDelete]
         [Route("funcionario/deletar/{id}")]
+        [Authorize]
         public IActionResult ListarFuncionario([FromRoute] Guid id)
         {
             var token = ObterIDDoToken();
@@ -191,6 +216,7 @@ namespace api.coleta.Controllers
 
         [HttpGet]
         [Route("funcionario/buscar/{id}")]
+        [Authorize]
         public IActionResult BuscarFuncionarioPorId([FromRoute] Guid id)
         {
             var token = ObterIDDoToken();
@@ -209,6 +235,7 @@ namespace api.coleta.Controllers
 
         [HttpPut]
         [Route("funcionario/atualizar")]
+        [Authorize]
         public IActionResult AtualizarFuncionario([FromBody] FuncionarioRequestDTO funcionario)
         {
             var token = ObterIDDoToken();

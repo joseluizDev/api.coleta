@@ -67,18 +67,29 @@ namespace BackAppPromo.Infrastructure.Authentication
 
         public Guid? ObterUsuarioIdDoToken(string token)
         {
-            var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
-
-            if (jwtToken == null)
+            if (string.IsNullOrWhiteSpace(token))
                 return null;
 
-            var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "unique_name");
-            //var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name);
-            if (userIdClaim == null)
-                return null;
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                if (!handler.CanReadToken(token))
+                    return null;
 
-            return Guid.TryParse(userIdClaim.Value, out var userId) ? userId : (Guid?)null;
+                var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
+                if (jwtToken == null)
+                    return null;
+
+                var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "unique_name");
+                if (userIdClaim == null)
+                    return null;
+
+                return Guid.TryParse(userIdClaim.Value, out var userId) ? userId : (Guid?)null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

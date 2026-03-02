@@ -336,6 +336,17 @@ if (applyMigrations)
 
 app.UseCors(corsPolicyName);
 
+// Global exception handler para garantir CORS headers em respostas de erro
+app.UseExceptionHandler(appError =>
+{
+    appError.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("{\"errors\":[\"Erro interno do servidor\"]}");
+    });
+});
+
 // Fix licensing tables if needed (recreate with correct schema)
 using (var scope = app.Services.CreateScope())
 {
@@ -462,9 +473,9 @@ app.UseAuthorization();
 // Uncomment to enable license validation:
 // app.UseLicenseValidation();
 
-app.MapControllers();
-
 app.UseOutputCache();
+
+app.MapControllers();
 
 app.Run();
 
