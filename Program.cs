@@ -329,9 +329,8 @@ if (applyMigrations)
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Erro ao aplicar migrations. A aplicação continuará, mas o banco pode estar desatualizado.");
-        // Em produção, você pode querer lançar a exceção para impedir o startup
-        // throw;
+        logger.LogError(ex, "Erro ao aplicar migrations.");
+        throw;
     }
 }
 
