@@ -421,11 +421,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo" },
-                    new { min = 6, max = 10, classificacao = "Baixo" },
-                    new { min = 10, max = 19, classificacao = "Médio" },
-                    new { min = 19, max = 25, classificacao = "Alto" },
-                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 6, max = 10, classificacao = "Baixo", cor = "#90FF4C"  },
+                    new { min = 10, max = 19, classificacao = "Médio" , cor = "#E1E86E"  },
+                    new { min = 19, max = 25, classificacao = "Alto",  cor = "#EB883C" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano Mecânico (1-8) em % - níveis de risco."
@@ -434,11 +434,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo" },
-                    new { min = 6, max = 7, classificacao = "Baixo" },
-                    new { min = 7, max = 10, classificacao = "Médio" },
-                    new { min = 10, max = 20, classificacao = "Alto" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 6, max = 7, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 7, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano Mecânico (6-8) em % - níveis de risco."
@@ -447,11 +447,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
-                    new { min = 5, max = 10, classificacao = "Baixo" },
-                    new { min = 10, max = 20, classificacao = "Médio" },
-                    new { min = 20, max = 25, classificacao = "Alto" },
-                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 5, max = 10, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 10, max = 20, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 20, max = 25, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Umidade (1-8) em % - níveis de risco."
@@ -460,11 +460,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
-                    new { min = 5, max = 7, classificacao = "Baixo" },
-                    new { min = 7, max = 10, classificacao = "Médio" },
-                    new { min = 10, max = 20, classificacao = "Alto" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 5, max = 7, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 7, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Umidade (6-8) em % - níveis de risco."
@@ -473,11 +473,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 3, classificacao = "Muito Baixo" },
-                    new { min = 3, max = 8, classificacao = "Baixo" },
-                    new { min = 8, max = 15, classificacao = "Médio" },
-                    new { min = 15, max = 25, classificacao = "Alto" },
-                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 3, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 3, max = 8, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 8, max = 15, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 15, max = 25, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Percevejo (1-8) em % - níveis de risco."
@@ -486,11 +486,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
-                    new { min = 5, max = 7, classificacao = "Baixo" },
-                    new { min = 7, max = 10, classificacao = "Médio" },
-                    new { min = 10, max = 20, classificacao = "Alto" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 5, max = 7, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 7, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Percevejo (6-8) em % - níveis de risco."
