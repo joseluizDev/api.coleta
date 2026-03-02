@@ -520,6 +520,58 @@ class NutrienteConfig
                 },
                 dependencia = (object)null,
                 descricao = "Classificação do Vigor Tetrazólio em % - tecidos viáveis com vigor."
+            },
+            ["Semente Esverdeada"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 2, classificacao = "Muito Baixo", cor = "#317C53" },
+                    new { min = 2, max = 3, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 3, max = 5, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 5, max = 10, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 10, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Semente Esverdeada em % - quanto menor, melhor."
+            },
+            ["Umidade"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 10, classificacao = "Muito Baixo", cor = "#EB3F3F" },
+                    new { min = 10, max = 13, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 13, max = 16, classificacao = "Adequado", cor = "#317C53" },
+                    new { min = 16, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Umidade da Semente em % - faixa ideal entre 13-16%."
+            },
+            ["Nocivas Proibidas"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317C53" },
+                    new { min = 5, max = 6, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 6, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Nocivas Proibidas em % - quanto menor, melhor."
+            },
+            ["Nocivas Toleradas"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317C53" },
+                    new { min = 5, max = 6, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 6, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Nocivas Toleradas em % - quanto menor, melhor."
             }
         }
     };
@@ -591,7 +643,11 @@ class NutrienteConfig
         ["Dano Umidade (6-8)"] = "Dano Umidade (6-8)",
         ["Dano Percevejo (6-8)"] = "Dano Percevejo (6-8)",
         ["Nocivas Proibidas"] = "Nocivas Proibidas",
-        ["Nocivas Toleradas"] = "Nocivas Toleradas"
+        ["Nocivas Toleradas "] = "Nocivas Toleradas",
+        ["Nocivas Toleradas"] = "Nocivas Toleradas",
+        ["Semente Esverdeada"] = "Semente Esverdeada",
+        ["Semente Esverdeada "] = "Semente Esverdeada",
+        ["Umidade"] = "Umidade"
     };
 
     /// <summary>
