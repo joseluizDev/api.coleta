@@ -142,7 +142,7 @@ namespace api.coleta.Controllers
             var clienteId = await ObterClienteIdDoUsuarioLogadoAsync();
 
             // Tentar verificar via Gateway de Pagamentos primeiro
-            var gatewayResponse = await _gatewayService.VerificarLicencaAsync(userId, clienteId);
+            var (gatewayResponse, gatewayDisponivel) = await _gatewayService.VerificarLicencaAsync(userId, clienteId);
             if (gatewayResponse != null)
             {
                 return Ok(new
@@ -164,11 +164,26 @@ namespace api.coleta.Controllers
                 {
                     return Ok(statusByCliente);
                 }
+
+                // Se gateway respondeu 402 real (disponivel mas sem licenca), respeitar
+                // Se gateway indisponivel, continuar tentando fallback por usuario
+                if (gatewayDisponivel)
+                {
+                    return Ok(statusByCliente);
+                }
             }
 
             if (userId != null)
             {
                 var statusByUser = await _licenseService.VerificarLicencaDoUsuarioAsync(userId.Value);
+
+                // Se gateway indisponivel e banco local diz sem licenca, dar beneficio da duvida
+                if (!gatewayDisponivel && !statusByUser.LicencaAtiva && statusByUser.TemLicenca)
+                {
+                    statusByUser.LicencaAtiva = true;
+                    statusByUser.StatusMensagem = "Licenca ativa (verificacao offline)";
+                }
+
                 return Ok(statusByUser);
             }
 
