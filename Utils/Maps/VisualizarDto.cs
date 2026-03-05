@@ -36,6 +36,8 @@ public static class VisualizarDto
             Profundidade = Enum.Parse<Profundidade>(map.Profundidade),
             Observacao = map.Observacao,
             NomeColeta = map.NomeColeta,
+            Cultivo = map.Cultivo,
+            Cultivar = map.Cultivar,
 
             GeojsonID = (Guid)map.GeojsonId,
         };

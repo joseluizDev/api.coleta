@@ -26,6 +26,10 @@ namespace api.coleta.Models.Entidades
         public Guid? FazendaID { get; set; }
         public virtual Fazenda? Fazenda { get; set; }
         public virtual ICollection<Relatorio>? Relatorios { get; set; }
+        [MaxLength(100)]
+        public string? Cultivo { get; set; }
+        [MaxLength(200)]
+        public string? Cultivar { get; set; }
 
         public Coleta()
         {

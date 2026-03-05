@@ -17,6 +17,49 @@ namespace api.utils.Controllers
             _utilsService = utilsService;
         }
 
+        [HttpGet("cultivos-cultivares")]
+        public IActionResult GetCultivosCultivares()
+        {
+            try
+            {
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "cultivos_cultivares.json");
+                if (!System.IO.File.Exists(filePath))
+                    return NotFound(new { error = "Arquivo de cultivos/cultivares não encontrado." });
+
+                var json = System.IO.File.ReadAllText(filePath);
+                var data = JsonSerializer.Deserialize<Dictionary<string, List<JsonElement>>>(json);
+                if (data == null)
+                    return BadRequest(new { error = "Erro ao processar cultivos/cultivares." });
+
+                var result = data.Keys
+                    .OrderBy(k => k)
+                    .Select(cultivo => new
+                    {
+                        cultivo,
+                        cultivares = data[cultivo]
+                            .Select(c =>
+                            {
+                                if (!c.TryGetProperty("CULTIVAR", out var v)) return null;
+                                var str = v.ValueKind == JsonValueKind.String
+                                    ? v.GetString()
+                                    : v.ToString();
+                                return str?.Trim();
+                            })
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Distinct()
+                            .OrderBy(s => s)
+                            .ToList()
+                    })
+                    .ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
         [HttpPost("generate-hexagons")]
         public IActionResult GenerateHexagons([FromBody] HexagonRequestDto request)
         {
