@@ -299,10 +299,7 @@ builder.Services.AddMvc().AddJsonOptions(opts =>
 
 var app = builder.Build();
 
-// Aplicar migrations automaticamente se configurado
-var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS_ON_STARTUP")?.ToLower() == "true";
-
-if (applyMigrations)
+// Aplicar migrations automaticamente no startup
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -310,6 +307,51 @@ if (applyMigrations)
 
     try
     {
+        // Baseline: se o banco já tem tabelas mas __EFMigrationsHistory está vazio,
+        // registrar as migrations que já foram aplicadas manualmente ao banco.
+        var appliedMigrations = db.Database.GetAppliedMigrations().ToList();
+        if (!appliedMigrations.Any())
+        {
+            // Verificar se o banco já tem tabelas existentes (ex: ConfiguracaoPadraos)
+            var tabelaExiste = false;
+            try
+            {
+                var conn = db.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                    conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ConfiguracaoPadraos'";
+                var result = cmd.ExecuteScalar();
+                tabelaExiste = Convert.ToInt64(result) > 0;
+            }
+            catch (Exception exCheck)
+            {
+                logger.LogWarning(exCheck, "Falha ao verificar existência de tabelas no banco.");
+            }
+
+            if (tabelaExiste)
+            {
+                logger.LogInformation("Banco existente sem histórico de migrations. Aplicando baseline...");
+
+                // Migrations já aplicadas ao banco (tabelas já existem)
+                var migrationsBaseline = new[]
+                {
+                    "20251226144718_InitialCreate",
+                    "20251227162801_SyncLicensingSystem",
+                    "20251227192938_AddPaymentMethodFields",
+                    "20251227200159_AddEfiPayPlanIdIntColumn"
+                };
+
+                foreach (var migration in migrationsBaseline)
+                {
+                    db.Database.ExecuteSqlRaw(
+                        "INSERT IGNORE INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ({0}, {1})",
+                        migration, "8.0.2");
+                    logger.LogInformation("Baseline: registrada migration {Migration}", migration);
+                }
+            }
+        }
+
         var pendingMigrations = db.Database.GetPendingMigrations().ToList();
 
         if (pendingMigrations.Any())
