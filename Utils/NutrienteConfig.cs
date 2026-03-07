@@ -421,11 +421,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo" },
-                    new { min = 6, max = 10, classificacao = "Baixo" },
-                    new { min = 10, max = 19, classificacao = "Médio" },
-                    new { min = 19, max = 25, classificacao = "Alto" },
-                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 6, max = 10, classificacao = "Baixo", cor = "#90FF4C"  },
+                    new { min = 10, max = 19, classificacao = "Médio" , cor = "#E1E86E"  },
+                    new { min = 19, max = 25, classificacao = "Alto",  cor = "#EB883C" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano Mecânico (1-8) em % - níveis de risco."
@@ -434,11 +434,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo" },
-                    new { min = 6, max = 7, classificacao = "Baixo" },
-                    new { min = 7, max = 10, classificacao = "Médio" },
-                    new { min = 10, max = 20, classificacao = "Alto" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 6, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 6, max = 7, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 7, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano Mecânico (6-8) em % - níveis de risco."
@@ -447,11 +447,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
-                    new { min = 5, max = 10, classificacao = "Baixo" },
-                    new { min = 10, max = 20, classificacao = "Médio" },
-                    new { min = 20, max = 25, classificacao = "Alto" },
-                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 5, max = 10, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 10, max = 20, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 20, max = 25, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Umidade (1-8) em % - níveis de risco."
@@ -460,11 +460,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
-                    new { min = 5, max = 7, classificacao = "Baixo" },
-                    new { min = 7, max = 10, classificacao = "Médio" },
-                    new { min = 10, max = 20, classificacao = "Alto" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 5, max = 7, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 7, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Umidade (6-8) em % - níveis de risco."
@@ -473,11 +473,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 3, classificacao = "Muito Baixo" },
-                    new { min = 3, max = 8, classificacao = "Baixo" },
-                    new { min = 8, max = 15, classificacao = "Médio" },
-                    new { min = 15, max = 25, classificacao = "Alto" },
-                    new { min = 25, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 3, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 3, max = 8, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 8, max = 15, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 15, max = 25, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 25, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Percevejo (1-8) em % - níveis de risco."
@@ -486,11 +486,11 @@ class NutrienteConfig
             {
                 intervalos = new object[]
                 {
-                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo" },
-                    new { min = 5, max = 7, classificacao = "Baixo" },
-                    new { min = 7, max = 10, classificacao = "Médio" },
-                    new { min = 10, max = 20, classificacao = "Alto" },
-                    new { min = 20, max = (double?)null, classificacao = "Muito Alto" }
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
+                    new { min = 5, max = 7, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 7, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
                 descricao = "Classificação de Dano por Percevejo (6-8) em % - níveis de risco."
@@ -520,6 +520,58 @@ class NutrienteConfig
                 },
                 dependencia = (object)null,
                 descricao = "Classificação do Vigor Tetrazólio em % - tecidos viáveis com vigor."
+            },
+            ["Semente Esverdeada"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 2, classificacao = "Muito Baixo", cor = "#317C53" },
+                    new { min = 2, max = 3, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 3, max = 5, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 5, max = 10, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 10, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Semente Esverdeada em % - quanto menor, melhor."
+            },
+            ["Umidade"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 10, classificacao = "Muito Baixo", cor = "#EB3F3F" },
+                    new { min = 10, max = 13, classificacao = "Baixo", cor = "#E1E86E" },
+                    new { min = 13, max = 16, classificacao = "Adequado", cor = "#317C53" },
+                    new { min = 16, max = 20, classificacao = "Alto", cor = "#E1E86E" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Umidade da Semente em % - faixa ideal entre 13-16%."
+            },
+            ["Nocivas Proibidas"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317C53" },
+                    new { min = 5, max = 6, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 6, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Nocivas Proibidas em % - quanto menor, melhor."
+            },
+            ["Nocivas Toleradas"] = new
+            {
+                intervalos = new object[]
+                {
+                    new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317C53" },
+                    new { min = 5, max = 6, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 6, max = 10, classificacao = "Médio", cor = "#E1E86E" },
+                    new { min = 10, max = 20, classificacao = "Alto", cor = "#EB883C" },
+                    new { min = 20, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
+                },
+                dependencia = (object)null,
+                descricao = "Classificação de Nocivas Toleradas em % - quanto menor, melhor."
             }
         }
     };
@@ -591,8 +643,85 @@ class NutrienteConfig
         ["Dano Umidade (6-8)"] = "Dano Umidade (6-8)",
         ["Dano Percevejo (6-8)"] = "Dano Percevejo (6-8)",
         ["Nocivas Proibidas"] = "Nocivas Proibidas",
-        ["Nocivas Toleradas"] = "Nocivas Toleradas"
+        ["Nocivas Toleradas "] = "Nocivas Toleradas",
+        ["Nocivas Toleradas"] = "Nocivas Toleradas",
+        ["Semente Esverdeada"] = "Semente Esverdeada",
+        ["Semente Esverdeada "] = "Semente Esverdeada",
+        ["Umidade"] = "Umidade"
     };
+
+    /// <summary>
+    /// Mapeia grafias variantes de nomes de colunas para uma forma canônica.
+    /// Garante que diferentes laboratórios que enviam o mesmo atributo com escrita diferente
+    /// (ex: "PMELICH 1" vs "P MELICH 1") sejam sempre representados pelo mesmo nome na API.
+    /// </summary>
+    public static readonly Dictionary<string, string> CanonicalColumnNames = new Dictionary<string, string>
+    {
+        ["PMELICH 1"]  = "P MELICH 1",
+        ["P Mehlich"]  = "P MELICH 1",
+        ["P Melich 1"] = "P MELICH 1",
+        ["P MELICH1"]  = "P MELICH 1",
+        ["P Resina"]   = "P RESINA",
+    };
+
+    /// <summary>
+    /// Retorna a forma canônica de um nome de coluna, normalizando grafias variantes conhecidas.
+    /// </summary>
+    public static string NormalizarNomeColuna(string rawName)
+    {
+        if (string.IsNullOrEmpty(rawName)) return rawName;
+        var trimmed = rawName.Trim();
+        return CanonicalColumnNames.TryGetValue(trimmed, out var canonical) ? canonical : trimmed;
+    }
+
+    /// <summary>
+    /// Normaliza os nomes de colunas de um JSON de relatório aplicando NormalizarNomeColuna
+    /// em todas as chaves de cada objeto do array. Chamado ao retornar jsonRelatorio
+    /// para garantir consistência independente do laboratório de origem.
+    /// </summary>
+    public static string NormalizarJsonRelatorio(string jsonRelatorio)
+    {
+        if (string.IsNullOrEmpty(jsonRelatorio)) return jsonRelatorio;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonRelatorio);
+            var root = doc.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Array) return jsonRelatorio;
+
+            var buffer = new System.Text.StringBuilder("[");
+            bool firstObj = true;
+            foreach (var element in root.EnumerateArray())
+            {
+                if (!firstObj) buffer.Append(',');
+                firstObj = false;
+
+                if (element.ValueKind != System.Text.Json.JsonValueKind.Object)
+                {
+                    buffer.Append(element.GetRawText());
+                    continue;
+                }
+
+                buffer.Append('{');
+                bool firstProp = true;
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (!firstProp) buffer.Append(',');
+                    firstProp = false;
+                    var canonicalKey = NormalizarNomeColuna(prop.Name);
+                    buffer.Append(System.Text.Json.JsonSerializer.Serialize(canonicalKey));
+                    buffer.Append(':');
+                    buffer.Append(prop.Value.GetRawText());
+                }
+                buffer.Append('}');
+            }
+            buffer.Append(']');
+            return buffer.ToString();
+        }
+        catch
+        {
+            return jsonRelatorio;
+        }
+    }
 
 
     public static readonly Dictionary<string, object> config_dependentes = new Dictionary<string, object>

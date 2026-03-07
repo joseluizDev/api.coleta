@@ -199,7 +199,10 @@ namespace api.coleta.Services
                             // Processar TODOS os atributos do objeto JSON
                             foreach (var propriedade in ponto.EnumerateObject())
                             {
-                                string atributo = propriedade.Name;
+                                // Normalizar o nome da coluna para a forma canônica.
+                                // Ex: "PMELICH 1" e "P MELICH 1" (grafias de laboratórios diferentes)
+                                // são tratados como o mesmo atributo "P MELICH 1".
+                                string atributo = NutrienteConfig.NormalizarNomeColuna(propriedade.Name);
                                 var prop = propriedade.Value;
                                 
                                 // Pular ID e prof.
@@ -531,7 +534,10 @@ namespace api.coleta.Services
                 Observacao = relatorioDto.Observacao,
                 Profundidade = relatorioDto.Profundidade,
                 TiposAnalise = relatorioDto.TiposAnalise,
-                JsonRelatorio = relatorioDto.JsonRelatorio,
+                // Normalizar nomes de colunas no jsonRelatorio antes de retornar ao cliente.
+                // Isso garante que "PMELICH 1" e "P MELICH 1" (variações de laboratório)
+                // apareçam sempre com o mesmo nome canônico no frontend.
+                JsonRelatorio = NutrienteConfig.NormalizarJsonRelatorio(relatorioDto.JsonRelatorio),
                 IsRelatorio = relatorioDto.IsRelatorio,
                 DadosColeta = dadosColeta,
                 NutrientesClassificados = classificacoesPorObjeto,
@@ -675,7 +681,7 @@ namespace api.coleta.Services
             var chavesDanoMecanico68 = new[] { "Dano Mecânico (6-8)", "Dano Mecanico (6-8)", "DanoMecanico68", "Dano Mecânico 6-8", "D.Mec.6-8" };
             var chavesDanoUmidade68 = new[] { "Dano Umidade (6-8)", "DanoUmidade68", "Dano Umidade 6-8", "D.Umid.6-8" };
             var chavesDanoPercevejo68 = new[] { "Dano Percevejo (6-8)", "DanoPercevejo68", "Dano Percevejo 6-8", "D.Perc.6-8" };
-            var chavesSementeEnvelhecida = new[] { "Semente Envelhecida", "SementeEnvelhecida", "S.Envelhecida", "Envelhecida" };
+            var chavesSementeEnvelhecida = new[] { "Semente Esverdeada", "Semente Envelhecida", "SementeEsverdeada", "SementeEnvelhecida", "S.Esverdeada", "S.Envelhecida", "Esverdeada", "Envelhecida" };
             var chavesUmidadeSem = new[] { "Umidade", "Umid.", "UMIDADE" };
             var chavesNocivasToleradas = new[] { "Nócivas Toleradas", "Nocivas Toleradas", "NocivasToleradas", "N.Toleradas" };
             var chavesNocivasProibidas = new[] { "Nócivas Proibidas", "Nocivas Proibidas", "NocivasProibidas", "N.Proibidas" };
@@ -866,7 +872,7 @@ namespace api.coleta.Services
             resumo.IndicadoresGraficos.Semente.DanoMecanico68 = _indicatorService.CalcularIndicador("Dano Mecânico (6-8)", sumDanoMecanico68, countDanoMecanico68, configsPersonalizadas);
             resumo.IndicadoresGraficos.Semente.DanoUmidade68 = _indicatorService.CalcularIndicador("Dano Umidade (6-8)", sumDanoUmidade68, countDanoUmidade68, configsPersonalizadas);
             resumo.IndicadoresGraficos.Semente.DanoPercevejo68 = _indicatorService.CalcularIndicador("Dano Percevejo (6-8)", sumDanoPercevejo68, countDanoPercevejo68, configsPersonalizadas);
-            resumo.IndicadoresGraficos.Semente.SementeEnvelhecida = _indicatorService.CalcularIndicador("Semente Envelhecida", sumSementeEnvelhecida, countSementeEnvelhecida, configsPersonalizadas);
+            resumo.IndicadoresGraficos.Semente.SementeEnvelhecida = _indicatorService.CalcularIndicador("Semente Esverdeada", sumSementeEnvelhecida, countSementeEnvelhecida, configsPersonalizadas);
             resumo.IndicadoresGraficos.Semente.Umidade = _indicatorService.CalcularIndicador("Umidade", sumUmidadeSem, countUmidadeSem, configsPersonalizadas);
             resumo.IndicadoresGraficos.Semente.NocivasToleradas = _indicatorService.CalcularIndicador("Nócivas Toleradas", sumNocivasToleradas, countNocivasToleradas, configsPersonalizadas);
             resumo.IndicadoresGraficos.Semente.NocivasProibidas = _indicatorService.CalcularIndicador("Nócivas Proibidas", sumNocivasProibidas, countNocivasProibidas, configsPersonalizadas);

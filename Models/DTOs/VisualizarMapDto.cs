@@ -23,6 +23,8 @@ namespace api.coleta.Models.DTOs
         public string? Profundidade { get; set; }
         public Guid? GeojsonId { get; set; }
         public string? NomeColeta { get; set; }
+        public string? Cultivo { get; set; }
+        public string? Cultivar { get; set; }
     }
 
     public class QueryVisualizarMap
@@ -57,5 +59,7 @@ namespace api.coleta.Models.DTOs
         public List<string> TipoAnalise { get; set; }
         public string Profundidade { get; set; }
         public string? NomeColeta { get; set; }
+        public string? Cultivo { get; set; }
+        public string? Cultivar { get; set; }
     }
 }

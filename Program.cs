@@ -371,11 +371,23 @@ var app = builder.Build();
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Erro ao aplicar migrations. A aplicação continuará, mas o banco pode estar desatualizado.");
+        logger.LogError(ex, "Erro ao aplicar migrations.");
+        throw;
     }
 }
 
 app.UseCors(corsPolicyName);
+
+// Global exception handler para garantir CORS headers em respostas de erro
+app.UseExceptionHandler(appError =>
+{
+    appError.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("{\"errors\":[\"Erro interno do servidor\"]}");
+    });
+});
 
 // Fix licensing tables if needed (recreate with correct schema)
 using (var scope = app.Services.CreateScope())
@@ -503,9 +515,9 @@ app.UseAuthorization();
 // Uncomment to enable license validation:
 // app.UseLicenseValidation();
 
-app.MapControllers();
-
 app.UseOutputCache();
+
+app.MapControllers();
 
 app.Run();
 

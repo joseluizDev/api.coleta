@@ -51,7 +51,9 @@ namespace api.coleta.Utils.Maps
                 TipoColeta = coleta.TipoColeta.ToString(),
                 TipoAnalise = coleta.TipoAnalise?.Select(x => x.ToString()).ToList(),
                 Profundidade = ProfundidadeFormatter.Formatar(coleta.Profundidade.ToString()),
-                NomeColeta = coleta.NomeColeta
+                NomeColeta = coleta.NomeColeta,
+                Cultivo = coleta.Cultivo,
+                Cultivar = coleta.Cultivar
             };
         }
 

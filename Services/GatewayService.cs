@@ -9,7 +9,7 @@ namespace api.coleta.Services
 {
     public interface IGatewayService
     {
-        Task<GatewayLicenseResponse?> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null);
+        Task<(GatewayLicenseResponse? Response, bool GatewayDisponivel)> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null);
         Task<GatewayPlanoResponse[]> ListarPlanosAsync();
         Task<(GatewayAssinaturaPixResponse? Response, string? ErrorMessage)> CriarAssinaturaPixAsync(Guid planoId, Guid usuarioId, Guid? clienteId = null);
         Task<(GatewayAssinaturaBoletoResponse? Response, string? ErrorMessage)> CriarAssinaturaBoletoAsync(Guid planoId, Guid usuarioId, string nomePagador, string cpfCnpj, Guid? clienteId = null);
@@ -46,9 +46,10 @@ namespace api.coleta.Services
         }
 
         /// <summary>
-        /// Verifica licenca do usuario/cliente no gateway de pagamentos
+        /// Verifica licenca do usuario/cliente no gateway de pagamentos.
+        /// Retorna (Response, GatewayDisponivel) para distinguir erro de rede de 402 real.
         /// </summary>
-        public async Task<GatewayLicenseResponse?> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null)
+        public async Task<(GatewayLicenseResponse? Response, bool GatewayDisponivel)> VerificarLicencaAsync(Guid? usuarioId = null, Guid? clienteId = null)
         {
             try
             {
@@ -57,29 +58,30 @@ namespace api.coleta.Services
 
                 if (response.StatusCode == HttpStatusCode.PaymentRequired)
                 {
-                    // Licenca expirada ou nao encontrada
+                    // Licenca expirada ou nao encontrada - gateway respondeu corretamente
                     var error = await response.Content.ReadFromJsonAsync<GatewayErrorResponse>();
                     _logger.LogWarning("Licenca invalida: {Error}", error?.Error);
-                    return null;
+                    return (null, true);
                 }
 
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError("Erro ao verificar licenca: {StatusCode}", response.StatusCode);
-                    return null;
+                    return (null, false);
                 }
 
-                return await response.Content.ReadFromJsonAsync<GatewayLicenseResponse>();
+                var result = await response.Content.ReadFromJsonAsync<GatewayLicenseResponse>();
+                return (result, true);
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Erro de conexao com gateway de pagamentos");
-                return null;
+                return (null, false);
             }
             catch (TaskCanceledException ex)
             {
                 _logger.LogError(ex, "Timeout na chamada ao gateway de pagamentos");
-                return null;
+                return (null, false);
             }
         }
 

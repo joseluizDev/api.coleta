@@ -55,7 +55,7 @@ namespace api.coleta.Models.Entidades
         // Business Logic Methods
         public bool EstaVigente()
         {
-            return Ativa && DataFim >= DateTime.Now && DeletadoEm == null;
+            return Ativa && DataFim >= DateTime.UtcNow && DeletadoEm == null;
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace api.coleta.Models.Entidades
         public int DiasRestantes()
         {
             if (!EstaVigente()) return 0;
-            return (DataFim - DateTime.Now).Days;
+            return (DataFim - DateTime.UtcNow).Days;
         }
 
         public bool ProximoDoVencimento(int diasAlerta = 30)
