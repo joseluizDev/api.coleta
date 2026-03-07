@@ -203,6 +203,13 @@ namespace api.coleta.Services
                 if (visualizarMapa.Observacao != null)
                     coletaExistente.Observacao = visualizarMapa.Observacao;
 
+                // Atualizar cultivo e cultivar (permite limpar)
+                if (visualizarMapa.Cultivo != null)
+                    coletaExistente.Cultivo = visualizarMapa.Cultivo;
+
+                if (visualizarMapa.Cultivar != null)
+                    coletaExistente.Cultivar = visualizarMapa.Cultivar;
+
                 Console.WriteLine($"Atualizando coleta com ID: {coletaExistente.Id}");
 
                 // Atualizar a coleta no repositório
