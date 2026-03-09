@@ -123,6 +123,11 @@ builder.Services.Configure<GoogleApiSettings>(options =>
         ?? throw new InvalidOperationException("GOOGLE_API_KEY não configurado no .env");
 });
 
+builder.Services.Configure<OpenWeatherMapSettings>(options =>
+{
+    options.ApiKey = Environment.GetEnvironmentVariable("OPENWEATHERMAP_API_KEY") ?? string.Empty;
+});
+
 
 builder.Services.AddScoped<IJwtToken, JwtTokenService>();
 
