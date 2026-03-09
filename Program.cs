@@ -125,8 +125,7 @@ builder.Services.Configure<GoogleApiSettings>(options =>
 
 builder.Services.Configure<OpenWeatherMapSettings>(options =>
 {
-    options.ApiKey = Environment.GetEnvironmentVariable("OPENWEATHERMAP_API_KEY")
-        ?? throw new InvalidOperationException("OPENWEATHERMAP_API_KEY não configurado no .env");
+    options.ApiKey = Environment.GetEnvironmentVariable("OPENWEATHERMAP_API_KEY") ?? string.Empty;
 });
 
 

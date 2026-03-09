@@ -26,6 +26,9 @@ namespace api.coleta.Controllers
         [Authorize]
         public async Task<IActionResult> ObterClimaAtual([FromQuery] double lat, [FromQuery] double lon)
         {
+            if (string.IsNullOrEmpty(_settings.ApiKey))
+                return BadRequest(new { errors = new[] { "OPENWEATHERMAP_API_KEY não configurado no servidor" } });
+
             var client = _httpClientFactory.CreateClient();
             var url = $"{_settings.BaseUrl}/weather?lat={lat}&lon={lon}&appid={_settings.ApiKey}&units=metric&lang=pt_br";
 
@@ -43,6 +46,9 @@ namespace api.coleta.Controllers
         [Authorize]
         public async Task<IActionResult> ObterPrevisao([FromQuery] double lat, [FromQuery] double lon, [FromQuery] int dias = 3)
         {
+            if (string.IsNullOrEmpty(_settings.ApiKey))
+                return BadRequest(new { errors = new[] { "OPENWEATHERMAP_API_KEY não configurado no servidor" } });
+
             var client = _httpClientFactory.CreateClient();
             var cnt = dias * 8;
             var url = $"{_settings.BaseUrl}/forecast?lat={lat}&lon={lon}&appid={_settings.ApiKey}&units=metric&lang=pt_br&cnt={cnt}";
