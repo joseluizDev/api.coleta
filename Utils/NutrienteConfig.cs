@@ -200,9 +200,9 @@ class NutrienteConfig
                 intervalos = new object[]
                 {
                     new { min = (double?)null, max = 5, classificacao = "Muito Baixo", cor = "#317c53" },
-                    new { min = 5, max = 10, classificacao = "Baixo", cor = "#90FF4C" },
+                    new { min = 5, max = 10, classificacao = "Adequado", cor = "#90FF4C" },
                     new { min = 10, max = 20, classificacao = "Médio", cor = "#E1E86E" },
-                    new { min = 20, max = 40, classificacao = "Adequado", cor = "#EB883C" },
+                    new { min = 20, max = 40, classificacao = "Alto", cor = "#EB883C" },
                     new { min = 40, max = (double?)null, classificacao = "Muito Alto", cor = "#EB3F3F" }
                 },
                 dependencia = (object)null,
