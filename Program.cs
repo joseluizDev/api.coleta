@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
 {
     ["Jwt:SecretKey"] = Environment.GetEnvironmentVariable("JWT_SECRET_KEY"),
+    ["Jwt:RefreshSecretKey"] = Environment.GetEnvironmentVariable("JWT_REFRESH_SECRET_KEY"),
     ["Jwt:Issuer"] = Environment.GetEnvironmentVariable("JWT_ISSUER"),
     ["Jwt:Audience"] = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
 });

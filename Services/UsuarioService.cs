@@ -14,12 +14,14 @@ public class UsuarioService : ServiceBase
 {
     private readonly UsuarioRepository _usuarioRepository;
     private readonly IJwtToken _jwtToken;
+    private readonly RefreshTokenStore _refreshTokenStore;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IJwtToken jwtToken)
+    public UsuarioService(UsuarioRepository usuarioRepository, IUnitOfWork unitOfWork, IJwtToken jwtToken, RefreshTokenStore refreshTokenStore)
         : base(unitOfWork)
     {
         _usuarioRepository = usuarioRepository;
         _jwtToken = jwtToken;
+        _refreshTokenStore = refreshTokenStore;
     }
 
     public UsuarioResquestDTO? BuscarUsuarioPorId(Guid id, string? fcmToken = null)
@@ -41,7 +43,7 @@ public class UsuarioService : ServiceBase
         return usuario.ToRequestDto();
     }
 
-    public String? Login(string email, string senha)
+    public TokenPairDTO? Login(string email, string senha)
     {
         var usuario = _usuarioRepository.Login(email, senha);
         if (usuario == null)
@@ -49,7 +51,7 @@ public class UsuarioService : ServiceBase
             return null;
         }
 
-        return _jwtToken.GerarToken(usuario);
+        return _jwtToken.GerarParDeTokens(usuario);
     }
 
     public UsuarioResponseDTO CadastrarNovo(UsuarioResquestDTO usuario)
@@ -158,7 +160,7 @@ public class UsuarioService : ServiceBase
         return usuario.Select(u => u.ToResponseDto()).ToList();
     }
 
-    public String? LoginMobile(UsuarioLoginDTO usuario)
+    public TokenPairDTO? LoginMobile(UsuarioLoginDTO usuario)
     {
         var u = _usuarioRepository.LoginMobile(usuario.Email, usuario.Senha);
         if (u == null)
@@ -166,7 +168,7 @@ public class UsuarioService : ServiceBase
             return null;
         }
 
-        return _jwtToken.GerarToken(u);
+        return _jwtToken.GerarParDeTokens(u);
     }
 
     public FuncionarioResponseDTO BuscarFuncionarioPorId(Guid id, Guid userId)
@@ -179,9 +181,10 @@ public class UsuarioService : ServiceBase
         return usuario.ToFuncionarioResponseDto();
     }
 
-    public string? RefreshToken(string token)
+    public TokenPairDTO? RefreshToken(string refreshToken)
     {
-        var userId = _jwtToken.ObterUsuarioIdDoToken(token);
+        // Valida o refresh token (assinatura + memória)
+        var userId = _jwtToken.ObterUsuarioIdDoRefreshToken(refreshToken);
         if (userId == null)
         {
             return null;
@@ -193,7 +196,21 @@ public class UsuarioService : ServiceBase
             return null;
         }
 
-        return _jwtToken.GerarToken(usuario);
+        // Rotação: revoga o refresh token antigo
+        _refreshTokenStore.Revogar(refreshToken);
+
+        // Gera novo par de tokens
+        return _jwtToken.GerarParDeTokens(usuario);
+    }
+
+    public void Logout(string refreshToken)
+    {
+        _refreshTokenStore.Revogar(refreshToken);
+    }
+
+    public void LogoutCompleto(Guid userId)
+    {
+        _refreshTokenStore.RevogarTodosDoUsuario(userId);
     }
 
     public FuncionarioResponseDTO? AtualizarFuncionario(Guid userId, FuncionarioRequestDTO funcionarioDto)

@@ -28,6 +28,7 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("DB_PASSWORD", "test_password");
         Environment.SetEnvironmentVariable("APPLY_MIGRATIONS_ON_STARTUP", "false");
         Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "test_jwt_secret_key_12345678901234567890");
+        Environment.SetEnvironmentVariable("JWT_REFRESH_SECRET_KEY", "test_jwt_refresh_secret_key_12345678901234567890");
         Environment.SetEnvironmentVariable("JWT_ISSUER", "test_issuer");
         Environment.SetEnvironmentVariable("JWT_AUDIENCE", "test_audience");
         Environment.SetEnvironmentVariable("MINIO_ENDPOINT", "localhost:9000");
@@ -49,7 +50,12 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting(WebHostDefaults.ContentRootKey, Directory.GetCurrentDirectory());
+        var projectDir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".."));
+        var wwwrootDir = Path.Combine(projectDir, "wwwroot");
+        if (!Directory.Exists(wwwrootDir))
+            Directory.CreateDirectory(wwwrootDir);
+        builder.UseSetting(WebHostDefaults.ContentRootKey, projectDir);
+        builder.UseSetting("APPLY_MIGRATIONS_ON_STARTUP", "false");
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<ApplicationDbContext>();

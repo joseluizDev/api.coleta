@@ -24,23 +24,41 @@ namespace api.coleta.Controllers
         }
 
         [HttpPost("refresh-token")]
-        public IActionResult RefreshToken()
+        public IActionResult RefreshToken([FromBody] RefreshTokenRequestDTO? body)
         {
             try
             {
-                var expiredToken = ObterIDDoToken();
-                if (string.IsNullOrWhiteSpace(expiredToken))
-                    return BadRequest("Token não fornecido.");
+                // Aceita refresh token do body ou do header Authorization
+                var refreshToken = body?.RefreshToken ?? ObterIDDoToken();
+                if (string.IsNullOrWhiteSpace(refreshToken))
+                    return BadRequest(new { errors = new[] { "Refresh token não fornecido." } });
 
-                var newToken = _usuarioService.RefreshToken(expiredToken);
-                if (string.IsNullOrEmpty(newToken))
-                    return BadRequest("Não foi possível atualizar o token.");
+                var tokens = _usuarioService.RefreshToken(refreshToken);
+                if (tokens == null)
+                    return Unauthorized(new { errors = new[] { "Refresh token inválido ou expirado." } });
 
-                return Ok(new { Token = newToken });
+                return Ok(tokens);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, "Ocorreu um erro ao atualizar o token: " + ex.Message);
+            }
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout([FromBody] RefreshTokenRequestDTO? body)
+        {
+            try
+            {
+                var refreshToken = body?.RefreshToken ?? ObterIDDoToken();
+                if (!string.IsNullOrWhiteSpace(refreshToken))
+                    _usuarioService.Logout(refreshToken);
+
+                return Ok(new { message = "Logout realizado com sucesso." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao realizar logout: " + ex.Message);
             }
         }
 
@@ -49,11 +67,11 @@ namespace api.coleta.Controllers
         {
             try
             {
-                var usuario = _usuarioService.Login(usuarioLogin.Email, usuarioLogin.Senha);
-                if (usuario == null)
+                var tokens = _usuarioService.Login(usuarioLogin.Email, usuarioLogin.Senha);
+                if (tokens == null)
                     return NotFound("Usuário não encontrado.");
 
-                return Ok(new { Token = usuario });
+                return Ok(tokens);
             }
             catch (Exception ex)
             {

@@ -31,10 +31,11 @@ public class UsuarioControllerIntegrationTests : IAsyncLifetime
         await _factory.DisposeAsync();
     }
 
+    // ========== CADASTRO ==========
+
     [Fact]
     public async Task CadastrarNovo_DeveRetornarSucessoComUsuarioCriado()
     {
-        // CPF válido: 529.982.247-25 (sem pontuação: 52998224725)
         var novoUsuario = new UsuarioResquestDTO
         {
             NomeCompleto = "João da Silva",
@@ -124,8 +125,10 @@ public class UsuarioControllerIntegrationTests : IAsyncLifetime
         Assert.Contains("CPF já cadastrado", body);
     }
 
+    // ========== LOGIN ==========
+
     [Fact]
-    public async Task Login_ComCredenciaisValidas_DeveRetornarToken()
+    public async Task Login_ComCredenciaisValidas_DeveRetornarTokenPair()
     {
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -145,7 +148,9 @@ public class UsuarioControllerIntegrationTests : IAsyncLifetime
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.True(response.IsSuccessStatusCode, $"Status: {response.StatusCode}, Body: {body}");
-        Assert.Contains("token", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("accessToken", body);
+        Assert.Contains("refreshToken", body);
+        Assert.Contains("expiresIn", body);
     }
 
     [Fact]
@@ -154,5 +159,120 @@ public class UsuarioControllerIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/usuario/login?email=naoexiste@teste.com&senha=senhaerrada");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    // ========== REFRESH TOKEN ==========
+
+    [Fact]
+    public async Task RefreshToken_ComRefreshTokenValido_DeveRetornarNovoParDeTokens()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var usuario = new Usuario
+        {
+            NomeCompleto = "Usuário Refresh",
+            CPF = "11122233300",
+            Email = "refresh@teste.com",
+            Telefone = "11333333333",
+            Senha = "senha123"
+        };
+        context.Usuarios.Add(usuario);
+        await context.SaveChangesAsync();
+
+        // Login para obter tokens (FakeJwtToken retorna "fake-refresh-token")
+        var loginResponse = await _client.GetAsync("/api/usuario/login?email=refresh@teste.com&senha=senha123");
+        Assert.True(loginResponse.IsSuccessStatusCode);
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+        Assert.Contains("accessToken", loginBody);
+        Assert.Contains("refreshToken", loginBody);
+    }
+
+    [Fact]
+    public async Task RefreshToken_SemToken_DeveRetornarBadRequest()
+    {
+        var response = await _client.PostAsJsonAsync("/api/usuario/refresh-token", new RefreshTokenRequestDTO());
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Refresh token não fornecido", body);
+    }
+
+    // ========== LOGOUT ==========
+
+    [Fact]
+    public async Task Logout_DeveRetornarSucesso()
+    {
+        var body = new RefreshTokenRequestDTO { RefreshToken = "qualquer-token" };
+        var response = await _client.PostAsJsonAsync("/api/usuario/logout", body);
+
+        Assert.True(response.IsSuccessStatusCode);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Logout realizado com sucesso", responseBody);
+    }
+
+    [Fact]
+    public async Task Logout_SemBody_DeveRetornarSucesso()
+    {
+        var response = await _client.PostAsync("/api/usuario/logout",
+            new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.True(response.IsSuccessStatusCode);
+    }
+
+    // ========== MOBILE ==========
+
+    [Fact]
+    public async Task LoginMobile_ComCredenciaisValidas_DeveRetornarTokenPair()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var usuario = new Usuario
+        {
+            NomeCompleto = "Usuário Mobile",
+            CPF = "44455566677",
+            Email = "mobile@teste.com",
+            Telefone = "11222222222",
+            Senha = "senha123"
+        };
+        context.Usuarios.Add(usuario);
+        await context.SaveChangesAsync();
+
+        var loginDto = new UsuarioLoginDTO { Email = "mobile@teste.com", Senha = "senha123" };
+        var response = await _client.PostAsJsonAsync("/api/mobile/usuario/login", loginDto);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.True(response.IsSuccessStatusCode, $"Status: {response.StatusCode}, Body: {body}");
+        Assert.Contains("accessToken", body);
+        Assert.Contains("refreshToken", body);
+    }
+
+    [Fact]
+    public async Task LoginMobile_ComCredenciaisInvalidas_DeveRetornarNotFound()
+    {
+        var loginDto = new UsuarioLoginDTO { Email = "naoexiste@teste.com", Senha = "senhaerrada" };
+        var response = await _client.PostAsJsonAsync("/api/mobile/usuario/login", loginDto);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RefreshTokenMobile_SemToken_DeveRetornarBadRequest()
+    {
+        var response = await _client.PostAsJsonAsync("/api/mobile/usuario/refresh-token", new RefreshTokenRequestDTO());
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Refresh token não fornecido", body);
+    }
+
+    [Fact]
+    public async Task LogoutMobile_DeveRetornarSucesso()
+    {
+        var body = new RefreshTokenRequestDTO { RefreshToken = "qualquer-token" };
+        var response = await _client.PostAsJsonAsync("/api/mobile/usuario/logout", body);
+
+        Assert.True(response.IsSuccessStatusCode);
     }
 }

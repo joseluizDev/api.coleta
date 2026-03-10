@@ -37,6 +37,13 @@ namespace api.coleta.Configuration
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
+            // Pular migrations para InMemory database (testes)
+            if (db.Database.IsInMemory())
+            {
+                logger.LogInformation("InMemory database detectado. Pulando migrations.");
+                return app;
+            }
+
             try
             {
                 ApplyMigrationBaseline(db, logger);
@@ -69,6 +76,9 @@ namespace api.coleta.Configuration
         {
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            if (db.Database.IsInMemory())
+                return app;
 
             try
             {

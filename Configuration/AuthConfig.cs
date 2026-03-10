@@ -11,6 +11,8 @@ namespace api.coleta.Configuration
         {
             var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
                 ?? throw new InvalidOperationException("JWT_SECRET_KEY não configurado no .env");
+            var jwtRefreshSecretKey = Environment.GetEnvironmentVariable("JWT_REFRESH_SECRET_KEY")
+                ?? throw new InvalidOperationException("JWT_REFRESH_SECRET_KEY não configurado no .env");
             var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
                 ?? throw new InvalidOperationException("JWT_ISSUER não configurado no .env");
             var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
@@ -34,6 +36,7 @@ namespace api.coleta.Configuration
                     };
                 });
 
+            services.AddSingleton<api.coleta.Services.RefreshTokenStore>();
             services.AddScoped<IJwtToken, JwtTokenService>();
 
             return services;

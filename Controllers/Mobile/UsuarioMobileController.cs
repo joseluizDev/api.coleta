@@ -12,7 +12,7 @@ namespace api.coleta.Controllers.Mobile
         private readonly UsuarioService _usuarioService;
         private readonly IJwtToken _jwtToken;
 
-        public UsuarioMobileController(UsuarioService usuarioService, INotificador notificador, IJwtToken jwtToken): base(notificador)
+        public UsuarioMobileController(UsuarioService usuarioService, INotificador notificador, IJwtToken jwtToken) : base(notificador)
         {
             _usuarioService = usuarioService;
             _jwtToken = jwtToken;
@@ -67,12 +67,12 @@ namespace api.coleta.Controllers.Mobile
         {
             try
             {
-                var token = _usuarioService.LoginMobile(usuario);
-                if (string.IsNullOrEmpty(token))
+                var tokens = _usuarioService.LoginMobile(usuario);
+                if (tokens == null)
                 {
                     return NotFound("Usuário ou senha inválidos.");
                 }
-                return Ok(new { Token = token });
+                return Ok(tokens);
             }
             catch (Exception ex)
             {
@@ -81,28 +81,40 @@ namespace api.coleta.Controllers.Mobile
         }
 
         [HttpPost("refresh-token")]
-        public IActionResult RefreshToken()
+        public IActionResult RefreshToken([FromBody] RefreshTokenRequestDTO? body)
         {
             try
             {
-                var expiredToken = ObterIDDoToken();
+                var refreshToken = body?.RefreshToken ?? ObterIDDoToken();
+                if (string.IsNullOrWhiteSpace(refreshToken))
+                    return BadRequest(new { errors = new[] { "Refresh token não fornecido." } });
 
-                if (string.IsNullOrWhiteSpace(expiredToken))
-                {
-                    return BadRequest("Token não fornecido.");
-                }
+                var tokens = _usuarioService.RefreshToken(refreshToken);
+                if (tokens == null)
+                    return Unauthorized(new { errors = new[] { "Refresh token inválido ou expirado." } });
 
-                var newToken = _usuarioService.RefreshToken(expiredToken);
-                if (string.IsNullOrEmpty(newToken))
-                {
-                    return BadRequest("Não foi possível atualizar o token.");
-                }
-
-                return Ok(new { Token = newToken });
+                return Ok(tokens);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, "Ocorreu um erro ao atualizar o token: " + ex.Message);
+            }
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout([FromBody] RefreshTokenRequestDTO? body)
+        {
+            try
+            {
+                var refreshToken = body?.RefreshToken ?? ObterIDDoToken();
+                if (!string.IsNullOrWhiteSpace(refreshToken))
+                    _usuarioService.Logout(refreshToken);
+
+                return Ok(new { message = "Logout realizado com sucesso." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro ao realizar logout: " + ex.Message);
             }
         }
 
