@@ -55,7 +55,5 @@ namespace api.coleta.Controllers
             _coletaService.DeletarColeta(id);
             return Ok(new { message = "Coleta deletada com sucesso." });
         }
-
-
     }
 }
