@@ -64,5 +64,7 @@ namespace api.talhao.Models.DTOs
     {
         public string Nome { get; set; }
         public string? Observacao { get; set; }
+        public double? Area { get; set; }
+        public List<Coordenada>? Coordenadas { get; set; }
     }
 }

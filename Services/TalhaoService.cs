@@ -299,7 +299,16 @@ namespace api.talhao.Services
                     {
                         talhaoJson.Observacao = dto.Observacao;
                     }
-                    
+                    // Atualizar coordenadas e área se fornecidas
+                    if (dto.Coordenadas != null && dto.Coordenadas.Count >= 3)
+                    {
+                        talhaoJson.Coordenadas = System.Text.Json.JsonSerializer.Serialize(dto.Coordenadas);
+                    }
+                    if (dto.Area.HasValue && dto.Area.Value > 0)
+                    {
+                        talhaoJson.Area = dto.Area.Value.ToString("F2");
+                    }
+
                     _talhaoRepository.AtualizarTalhaoJson(talhaoJson);
                     UnitOfWork.Commit();
                     return true;
